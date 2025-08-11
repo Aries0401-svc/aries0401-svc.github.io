@@ -54,13 +54,15 @@
     }
     .panel{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
     .btns{display:flex;gap:10px;flex-wrap:wrap}
-    button{
+    .btns button{
       appearance:none; border:none; padding:14px 18px; border-radius:14px; font-weight:700; cursor:pointer;
       background:linear-gradient(180deg,#2a2f5a,#1c2147); color:#eaf0ff; border:1px solid #3a3f74;
       transition:transform .06s ease, box-shadow .2s ease, background .2s ease;
+      touch-action: manipulation;               /* 모바일 더블탭 확대 방지 */
+      -webkit-tap-highlight-color: transparent; /* 탭 하이라이트 제거 */
     }
-    button:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.35)}
-    button:active{transform:translateY(0)}
+    .btns button:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    .btns button:active{transform:translateY(0)}
     .accent{background:linear-gradient(180deg,#6f5bff,#4e42d8); border-color:#7a6cff}
     .meter{height:16px;border-radius:999px;background:#1a1e3a;border:1px solid #2b2f53;overflow:hidden; position:relative}
     .bar{
@@ -251,11 +253,10 @@
       label.innerHTML = `<span>레벨 <b>${level}</b> — 칭호: ${levelTitles[titleIdx]}</span>
                          <span><b>${xp}</b>/<b id="need">${need}</b> XP</span>`;
       setPaletteByLevel();
-      title.classList.remove('shake'); // 흔들림 클래스 초기화
+      title.classList.remove('shake');
     }
 
     function levelUp(x=window.innerWidth/2, y=window.innerHeight/2){
-      // 레벨업 배너
       const box = document.createElement('div');
       const titleIdx = Math.min(levelTitles.length-1, level-1);
       box.className = 'levelup';
@@ -263,14 +264,9 @@
       document.body.appendChild(box);
       setTimeout(()=> box.remove(), 1400);
 
-      // 비주얼 효과
       title.classList.add('shake');
       burst(x,y,28);
-
-      // 마키 메시지 추가
       marquee.textContent += ` 레벨 ${level} 달성 •`;
-
-      // 한 줄 메시지 업그레이드
       quip.innerHTML = `바보력 상승 ⬆️ — <strong>레벨 ${level}</strong> 돌파! 결론은 변함없음: <strong>김가빈 바보</strong>`;
     }
 
@@ -285,7 +281,6 @@
         remaining -= inc;
         xp += inc;
 
-        // 레벨업 체크
         if(xp >= need){
           xp -= need;
           level++;
@@ -333,6 +328,31 @@
     setPaletteByLevel();
     sayRoast();
     updateUI();
+
+    // ===== 모바일 더블탭 확대 방지 (버튼 영역 한정) =====
+    (function preventDoubleTapZoomOnButtons(){
+      const ids = ['roast','mega'];
+      let lastTouchEnd = 0;
+
+      ids.forEach(id=>{
+        const el = document.getElementById(id);
+        if(!el) return;
+
+        // iOS에서도 동작하도록 passive:false 로 preventDefault 가능하게
+        el.addEventListener('touchend', function(e){
+          const now = Date.now();
+          if (now - lastTouchEnd <= 350) {
+            e.preventDefault();  // 더블탭 확대 차단
+          }
+          lastTouchEnd = now;
+        }, { passive:false });
+
+        // 버튼 위 제스처 시작 차단 (핀치줌은 다른 영역에서 가능)
+        el.addEventListener('gesturestart', function(e){
+          e.preventDefault();
+        });
+      });
+    })();
   </script>
 </body>
 </html>
