@@ -1,443 +1,258 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cobb–Douglas ICC & 무차별곡선 — 보라색 핸들 제거</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>김가빈 바보 (장난 전용)</title>
+  <meta name="description" content="친구 놀리기 장난 페이지 — 김가빈 바보 모드" />
   <style>
-    :root{ --bg:#0b1020; --panel:#111834; --ink:#e6eaff; --muted:#9aa6bd; --accent:#a78bfa; --green:#22c55e; --blue:#60a5fa; --warn:#fbbf24; }
-    *{ box-sizing:border-box }
-    html,body{ height:100% }
-    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, "Malgun Gothic", sans-serif; background:linear-gradient(180deg,#0b1020,#0f1a32); color:var(--ink); }
-    .wrap{ max-width:1280px; margin:28px auto; padding:0 16px; }
-    h1{ margin:0; font-size:28px }
-    .lead{ color:var(--muted); margin:6px 0 18px }
-    .grid{ display:grid; grid-template-columns: 390px 1fr; gap:18px }
-    @media (max-width: 1100px){ .grid{ grid-template-columns:1fr } }
-    .card{ background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:16px; box-shadow:0 18px 40px rgba(0,0,0,.35) }
-    .card h2{ font-size:18px; margin:0; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.06); color:#dbe3ff }
-    .card .body{ padding:14px 16px }
-
-    .rows{ display:grid; grid-template-columns: 120px 1fr 76px; gap:8px; align-items:center }
-    .rows label{ color:#cbd5e1; font-size:13px }
-    input[type=range]{ width:100% }
-    input[type=number]{ width:100%; background:#0f162c; color:var(--ink); border:1px solid rgba(255,255,255,.1); padding:6px 8px; border-radius:10px }
-    .switch{ display:flex; align-items:center; gap:8px; margin:8px 0 }
-    .btn{ cursor:pointer; background:linear-gradient(180deg,#8b5cf6,#7c3aed); border:0; color:white; padding:9px 12px; border-radius:12px; font-weight:700 }
-    .btn.secondary{ background:#0f162c; border:1px solid rgba(255,255,255,.1); font-weight:600 }
-    .muted{ color:var(--muted); font-size:12px }
-
-    .svg-wrap{ width:100%; height:760px; position:relative }
-    svg{ width:100%; height:100%; display:block }
-    .legend{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; font-size:13px; color:#cbd5e1; margin-top:8px }
-    .chip{ display:inline-flex; align-items:center; gap:8px; padding:.3rem .6rem; border-radius:999px; background:#0f162c; border:1px solid rgba(255,255,255,.08) }
-    .tooltip{ position:absolute; pointer-events:none; background:#0f162c; border:1px solid rgba(255,255,255,.12); padding:6px 8px; border-radius:8px; font-size:12px; color:#e5edff; white-space:nowrap }
+    :root{
+      --bg1:#0e0f1a; --bg2:#15172a; --acc:#7c5cff; --acc2:#00e5ff; --ink:#e9ecf1;
+      --muted:#aab0c0; --ok:#00d68f; --warn:#ffb703; --bad:#ff4d6d;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1d2040 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 0%, #041b2e 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+    .wrap{max-width:960px;margin:0 auto;padding:42px 18px 96px;position:relative}
+    .tag{
+      display:inline-flex;gap:8px;align-items:center;
+      border:1px solid #2b2f53;border-radius:999px;padding:8px 14px;font-size:12px;color:var(--muted);
+      backdrop-filter: blur(6px); background: rgba(255,255,255,0.03)
+    }
+    .pulse{width:6px;height:6px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 0 rgba(255,77,109,.7);animation:pulse 1.8s infinite}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,109,.7)}70%{box-shadow:0 0 0 18px rgba(255,77,109,0)}100%{box-shadow:0 0 0 0 rgba(255,77,109,0)}}
+    h1{
+      font-weight:900;line-height:1.1;margin:18px 0 8px;font-size: clamp(40px, 8vw, 88px);
+      letter-spacing:-.02em; position:relative; display:inline-block;
+      text-shadow:0 0 30px rgba(124,92,255,.35);
+    }
+    .glitch{
+      position:relative; isolation:isolate;
+    }
+    .glitch::before,.glitch::after{
+      content:attr(data-text); position:absolute; inset:0; mix-blend-mode:screen; filter:blur(.5px);
+      clip-path:inset(0 0 0 0); animation:gl 2.2s infinite steps(2,end);
+    }
+    .glitch::before{color:var(--acc); transform:translate(2px,0)}
+    .glitch::after{color:var(--acc2); transform:translate(-2px,0)}
+    @keyframes gl{
+      0%{clip-path:inset(0 0 85% 0)}10%{clip-path:inset(0 0 20% 0)}
+      20%{clip-path:inset(45% 0 20% 0)}30%{clip-path:inset(60% 0 5% 0)}
+      40%{clip-path:inset(10% 0 40% 0)}50%{clip-path:inset(80% 0 0 0)}
+      60%{clip-path:inset(5% 0 70% 0)}70%{clip-path:inset(30% 0 30% 0)}
+      80%{clip-path:inset(20% 0 60% 0)}100%{clip-path:inset(0 0 85% 0)}
+    }
+    .sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+    .card{
+      background:rgba(255,255,255,0.04); border:1px solid #2b2f53; border-radius:22px; padding:22px; box-shadow:0 10px 40px rgba(0,0,0,.25)
+    }
+    .panel{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+    .btns{display:flex;gap:10px;flex-wrap:wrap}
+    button{
+      appearance:none; border:none; padding:14px 18px; border-radius:14px; font-weight:700; cursor:pointer;
+      background:linear-gradient(180deg,#2a2f5a,#1c2147); color:#eaf0ff; border:1px solid #3a3f74;
+      transition:transform .06s ease, box-shadow .2s ease, background .2s ease;
+    }
+    button:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    button:active{transform:translateY(0)}
+    .accent{background:linear-gradient(180deg,#6f5bff,#4e42d8); border-color:#7a6cff}
+    .good{background:linear-gradient(180deg,#0aa17f,#0a8166); border-color:#13c39b}
+    .meter{height:14px;border-radius:999px;background:#1a1e3a;border:1px solid #2b2f53;overflow:hidden}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--bad),var(--warn));border-radius:999px;transition:width .4s cubic-bezier(.25,.75,.25,1)}
+    .label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px}
+    .bigline{
+      font-size: clamp(18px, 3.2vw, 28px); line-height:1.35; margin:16px 0 8px; font-weight:800;
+      background:linear-gradient(90deg,#fff,#9bd7ff); -webkit-background-clip:text; background-clip:text; color:transparent
+    }
+    .toastzone{position:fixed;inset:0;pointer-events:none}
+    .emoji{position:absolute;font-size:24px;animation:pop 800ms ease forwards;opacity:.9}
+    @keyframes pop{
+      0%{transform:translateY(0) scale(.8); opacity:0}
+      20%{opacity:1}
+      100%{transform:translateY(-90px) scale(1.25); opacity:0}
+    }
+    .footer{margin-top:28px;font-size:12px;color:#8891a8}
+    .toggle{
+      display:inline-flex; align-items:center; gap:10px; padding:8px 10px; border-radius:999px;
+      background:rgba(255,255,255,0.05); border:1px solid #2b2f53; cursor:pointer; user-select:none
+    }
+    .dot{width:14px;height:14px;border-radius:50%;background:var(--bad);box-shadow:0 0 12px rgba(255,77,109,.6);transition:all .25s}
+    .toggle.on .dot{background:var(--ok); box-shadow:0 0 12px rgba(0,214,143,.6); transform:translateX(4px)}
+    .sr-only{position:absolute;left:-9999px}
+    .copy{text-decoration:underline; cursor:pointer}
+    .marquee{
+      width:100%; overflow:hidden; border-top:1px dashed #30365f; border-bottom:1px dashed #30365f; margin:18px 0 0;
+    }
+    .marquee .row{
+      display:flex; gap:28px; padding:10px 0; white-space:nowrap; animation:slide 24s linear infinite;
+      font-weight:800; color:#d9def5; opacity:.7
+    }
+    @keyframes slide{to{transform:translateX(-50%)}}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>인터랙티브 Cobb–Douglas: ICC + 무차별곡선</h1>
-    <p class="lead">가격을 고정하고 소득을 변화시킬 때의 최적 선택(ICC)과 각 소득에서의 무차별곡선을 함께 시각화합니다. ICC상의 <strong>초록 점</strong>을 드래그해 소득을 직접 조작하고, 슬라이더로 <span class="mono">p<sub>x</sub>, p<sub>y</sub></span>를 조정하세요. (원점의 보라색 핸들은 제거했습니다.)</p>
+    <span class="tag"><span class="pulse" aria-hidden="true"></span>&nbsp; 장난 발령 🔔 — 친한 친구 한정 사용</span>
 
-    <div class="grid">
-      <section class="card">
-        <h2>모수 & 표시 옵션</h2>
-        <div class="body">
-          <div class="rows">
-            <label>지수 a</label>
-            <input id="a" type="range" min="0.05" max="0.95" step="0.01" value="0.5">
-            <input id="aNum" type="number" min="0.05" max="0.95" step="0.01" value="0.5">
+    <h1 id="title" class="glitch" data-text="김가빈 바보">김가빈 바보</h1>
+    <div class="sub">누르면 바보력(™)이 상승합니다. <span class="copy" id="copy">문구 복사</span> 가능!</div>
 
-            <label>지수 b</label>
-            <input id="b" type="range" min="0.05" max="0.95" step="0.01" value="0.5">
-            <input id="bNum" type="number" min="0.05" max="0.95" step="0.01" value="0.5">
-
-            <label>가격 p<sub>x</sub></label>
-            <input id="px" type="range" min="0.1" max="5" step="0.1" value="1">
-            <input id="pxNum" type="number" min="0.1" max="5" step="0.1" value="1">
-
-            <label>가격 p<sub>y</sub></label>
-            <input id="py" type="range" min="0.1" max="5" step="0.1" value="1">
-            <input id="pyNum" type="number" min="0.1" max="5" step="0.1" value="1">
-
-            <label>최소 소득 I<sub>min</sub></label>
-            <input id="imin" type="range" min="5" max="200" step="1" value="30">
-            <input id="iminNum" type="number" min="1" max="99999" step="1" value="30">
-
-            <label>최대 소득 I<sub>max</sub></label>
-            <input id="imax" type="range" min="20" max="600" step="1" value="200">
-            <input id="imaxNum" type="number" min="1" max="999999" step="1" value="200">
-
-            <label>현재 소득 I (비율)</label>
-            <input id="icur" type="range" min="0" max="1" step="0.001" value="0.35">
-            <input id="icurNum" type="number" min="0" max="1" step="0.001" value="0.35">
-
-            <label>표시 점 개수</label>
-            <input id="k" type="range" min="3" max="25" step="1" value="9">
-            <input id="kNum" type="number" min="3" max="50" step="1" value="9">
-          </div>
-
-          <div class="switch"><input id="equalScale" type="checkbox" checked> <label for="equalScale">X·Y 동일 눈금(기울기 정확 표시)</label></div>
-          <div class="switch"><input id="showIC" type="checkbox" checked> <label for="showIC">무차별곡선 묶음 표시</label></div>
-          <div class="switch"><input id="showBudget" type="checkbox" checked> <label for="showBudget">예산선 묶음 표시</label></div>
-          <div class="switch"><input id="showTangent" type="checkbox" checked> <label for="showTangent">접선/기울기 시각화</label></div>
-          <div class="switch"><input id="animate" type="checkbox" checked> <label for="animate">매끄러운 애니메이션</label></div>
-
-          <div style="display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap;">
-            <button id="play" class="btn">▶ 재생</button>
-            <button id="reset" class="btn secondary">기본값</button>
-            <span class="muted">ICC 위의 <strong>초록 점</strong>을 드래그해 소득을 바꾸고, 슬라이더로 p<sub>x</sub>, p<sub>y</sub>를 조절하세요.</span>
-          </div>
+    <div class="card" role="region" aria-label="바보력 대시보드">
+      <div class="panel">
+        <div>
+          <div class="bigline" id="quip">오늘의 공식 선언: <strong>김가빈 바보</strong> (AI 검증 완료)</div>
+          <div class="meter" aria-hidden="true"><div id="bar" class="bar"></div></div>
+          <div class="label" id="label"><span>바보력: <b>0%</b></span><span>레벨: 🐣 초보 바보</span></div>
         </div>
-      </section>
-
-      <section class="card">
-        <h2>그래프</h2>
-        <div class="body">
-          <div class="svg-wrap">
-            <svg id="plot" viewBox="0 0 960 820" aria-label="Cobb–Douglas ICC & IC Plot">
-              <defs>
-                <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto-start-reverse">
-                  <path d="M0,0 L10,5 L0,10 Z" fill="rgba(255,255,255,.7)"></path>
-                </marker>
-                <linearGradient id="gradICC" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.95"/>
-                  <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.95"/>
-                </linearGradient>
-              </defs>
-              <g id="axes"></g>
-              <g id="grid"></g>
-              <g id="budgets"></g>
-              <g id="indiffs"></g>
-              <path id="icc" d="" fill="none" stroke="url(#gradICC)" stroke-width="3.2" />
-              <g id="pts"></g>
-              <path id="budgetCur" d="" fill="none" stroke="var(--blue)" stroke-opacity="0.9" stroke-width="2.4" />
-              <path id="icCur" d="" fill="none" stroke="var(--green)" stroke-opacity="0.95" stroke-width="2.2" />
-              <path id="tangent" d="" fill="none" stroke="var(--warn)" stroke-opacity="0.95" stroke-width="2.2" stroke-dasharray="6 6" />
-              <g id="focus"></g>
-              <g id="slope"></g>
-              <g id="labels"></g>
-            </svg>
-            <div id="tip" class="tooltip" style="opacity:0"></div>
-          </div>
-          <div class="legend">
-            <span class="chip">ICC(보라색 레이)</span>
-            <span class="chip">최적점(드래그 가능)</span>
-            <span class="chip">예산선</span>
-            <span class="chip">무차별곡선</span>
-            <span class="chip">접선(기울기 시각화)</span>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <section class="card" style="margin-top:18px">
-      <h2>수식 요약</h2>
-      <div class="body">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px">
-          <div>
-            <strong>효용</strong> <span class="mono">U(x,y)=x^a y^b</span><br>
-            <strong>MRS</strong> <span class="mono">= (a/x)/(b/y) = (a y)/(b x)</span><br>
-            <strong>무차별곡선</strong> <span class="mono">y(x)=\big(U / x^a\big)^{1/b}</span>
-          </div>
-          <div>
-            <strong>Marshallian 수요</strong> <span class="mono">x* = \dfrac{a}{a+b}\dfrac{I}{p_x},\; y* = \dfrac{b}{a+b}\dfrac{I}{p_y}</span><br>
-            <strong>ICC 비율</strong> <span class="mono">\dfrac{y*}{x*} = \dfrac{b p_x}{a p_y}</span>,
-            <strong>예산선 기울기</strong> <span class="mono">-p_x/p_y</span>,
-            <strong>접선 기울기</strong> <span class="mono">-MRS</span>
-          </div>
+        <div class="btns">
+          <button id="roast" class="accent">더 놀려! 🤪</button>
+          <button id="mega">바보 폭격 💥</button>
+          <button id="nice" class="good" aria-pressed="false">칭찬 모드 😇</button>
         </div>
       </div>
-    </section>
+
+      <div class="marquee" aria-hidden="true">
+        <div class="row">김가빈 바보 • 천하제일 바보 콘테스트 1위 후보 • 오늘도 당당히 바보 출근 • 바보력 측정 중… •</div>
+      </div>
+    </div>
+
+    <div class="footer">※ 재미로만! 분위기 이상하다 싶으면 <em>칭찬 모드</em>로 전환하세요 😌</div>
   </div>
 
+  <div class="toastzone" id="toastzone" aria-hidden="true"></div>
+
   <script>
-    const svg = document.getElementById('plot');
-    const axes = document.getElementById('axes');
-    const grid = document.getElementById('grid');
-    const budgets = document.getElementById('budgets');
-    const indiffs = document.getElementById('indiffs');
-    const icc = document.getElementById('icc');
-    const pts = document.getElementById('pts');
-    const budgetCur = document.getElementById('budgetCur');
-    const icCur = document.getElementById('icCur');
-    const tangent = document.getElementById('tangent');
-    const focus = document.getElementById('focus');
-    const slopeG = document.getElementById('slope');
-    const labels = document.getElementById('labels');
-    const tip = document.getElementById('tip');
+    const roasts = [
+      "오늘의 바보 지수 99.9% — 확실합니다: 김가빈 바보 ✅",
+      "AI가 세 번 계산했는데 결과가 똑같음: 김・가・빈・바・보.",
+      "과학적으로 증명 완료: 전자=양자, 사과=과일, 그리고 김가빈=바보.",
+      "뉴스 속보🗞️: 집계 마감! ‘올해의 바보’ 유력 — 김가빈 바보.",
+      "버튼을 누를수록 진실은 또렷해진다… 김가빈 바보!",
+      "사전 업데이트: ‘바보’(n.) 예: 김가빈.",
+      "바보력 센서 과열 🔥 — 대상: 김가빈 바보.",
+      "퀴즈: 2+2=4, 지구는 둥글다, 그리고… 김가빈 바보!",
+      "천고마비의 계절, 김고바보의 시절 — 김가빈 바보.",
+      "업데이트 패치 노트: 버그 수정, 성능 개선, ‘김가빈 바보’ 고정."
+    ];
+    const compliments = [
+      "사실은 다 알지요 — 센스만점, 유머만점, 우리들의 히어로 ✨",
+      "오늘의 칭찬 지수 120% — 천재 포스 뿜뿜!",
+      "와… 존재 자체가 컨텐츠. 넘사벽 클래스 😎",
+      "업데이트: ‘최고’의 정의 = 김가빈."
+    ];
+    const levels = [
+      "🐣 초보 바보","🧢 일상 바보","🛼 관성 바보","🚀 익스프레스 바보","🌋 전설의 바보","🏆 명예의 전당 바보"
+    ];
 
-    const W=960, H=820, padL=80, padB=70, padT=24, padR=28;
+    const title = document.getElementById('title');
+    const bar = document.getElementById('bar');
+    const label = document.getElementById('label');
+    const quip = document.getElementById('quip');
+    const roastBtn = document.getElementById('roast');
+    const megaBtn = document.getElementById('mega');
+    const niceBtn = document.getElementById('nice');
+    const toastzone = document.getElementById('toastzone');
+    const copyBtn = document.getElementById('copy');
 
-    const el = id => document.getElementById(id);
-    const controls = {
-      a: el('a'), aNum: el('aNum'), b: el('b'), bNum: el('bNum'),
-      px: el('px'), pxNum: el('pxNum'), py: el('py'), pyNum: el('pyNum'),
-      imin: el('imin'), iminNum: el('iminNum'), imax: el('imax'), imaxNum: el('imaxNum'),
-      icur: el('icur'), icurNum: el('icurNum'), k: el('k'), kNum: el('kNum'),
-      equal: el('equalScale'), showIC: el('showIC'), showBudget: el('showBudget'), showTangent: el('showTangent'), animate: el('animate'),
-      play: el('play'), reset: el('reset')
-    };
+    let meter = 0, nice = false;
 
-    const bindPair = (slider, box, on) => {
-      const sync = () => { box.value = slider.value; on(); };
-      slider.addEventListener('input', sync);
-      box.addEventListener('change', () => { slider.value = box.value; on(); });
-    };
+    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+    function clamp(n,min,max){ return Math.max(min, Math.min(max,n)) }
 
-    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-
-    function state(){
-      const a = +controls.a.value, b = +controls.b.value;
-      const px = +controls.px.value, py = +controls.py.value;
-      let Imin = +controls.imin.value, Imax = +controls.imax.value;
-      if(Imax <= Imin){ Imax = Imin + 1; controls.imax.value = Imax; controls.imaxNum.value = Imax; }
-      const t = +controls.icur.value; // 0~1
-      const I = Imin + (Imax - Imin) * t;
-      const k = +controls.k.value;
-      return { a,b,px,py,Imin,Imax,I,t,k, equal:controls.equal.checked, showIC:controls.showIC.checked, showBudget:controls.showBudget.checked, showTangent:controls.showTangent.checked, animate:controls.animate.checked };
-    }
-
-    const X = (x, maxX) => padL + (W-padL-padR) * (x/maxX);
-    const Y = (y, maxY) => H-padB - (H-padT-padB) * (y/maxY);
-
-    function computePoints(st){
-      const {a,b,px,py,Imin,Imax,k} = st;
-      const denom=a+b, alpha=a/denom, beta=b/denom;
-      const xs=[], ys=[], Is=[];
-      for(let i=0;i<k;i++){
-        const I = Imin + (Imax-Imin)*i/(k-1);
-        xs.push(alpha*I/px); ys.push(beta*I/py); Is.push(I);
-      }
-      return {xs,ys,Is, alpha,beta};
-    }
-
-    function domain(xs,ys, equal){
-      const maxX0=Math.max(...xs)*1.2+1e-9; const maxY0=Math.max(...ys)*1.2+1e-9;
-      if(!equal) return {maxX:maxX0, maxY:maxY0};
-      const M=Math.max(maxX0,maxY0); return {maxX:M, maxY:M};
-    }
-
-    function drawAxes(maxX,maxY){
-      axes.innerHTML=''; grid.innerHTML='';
-      const xAxis = `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="rgba(255,255,255,.75)" stroke-width="1.2" marker-end="url(#arrow)"/>`;
-      const yAxis = `<line x1="${padL}" y1="${H-padB}" x2="${padL}" y2="${padT}" stroke="rgba(255,255,255,.75)" stroke-width="1.2" marker-end="url(#arrow)"/>`;
-      axes.insertAdjacentHTML('beforeend', xAxis + yAxis);
-      const ticks=6;
-      for(let i=1;i<=ticks;i++){
-        const tx=i/ticks*maxX, ty=i/ticks*maxY; const gx=X(tx,maxX), gy=Y(ty,maxY);
-        grid.insertAdjacentHTML('beforeend', `<line x1="${gx}" y1="${H-padB}" x2="${gx}" y2="${padT}" stroke="rgba(255,255,255,.06)"/>`);
-        grid.insertAdjacentHTML('beforeend', `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="rgba(255,255,255,.06)"/>`);
-        axes.insertAdjacentHTML('beforeend', `<text x="${gx}" y="${H-padB+18}" text-anchor="middle" fill="#cbd5e1" font-size="12">${tx.toFixed(1)}</text>`);
-        axes.insertAdjacentHTML('beforeend', `<text x="${padL-8}" y="${gy+4}" text-anchor="end" fill="#cbd5e1" font-size="12">${ty.toFixed(1)}</text>`);
-      }
-      axes.insertAdjacentHTML('beforeend', `<text x="${W/2}" y="${H-8}" text-anchor="middle" fill="#cbd5e1" font-size="13">x (재화 1)</text>`);
-      axes.insertAdjacentHTML('beforeend', `<text x="${18}" y="${padT+10}" text-anchor="start" fill="#cbd5e1" font-size="13" transform="rotate(-90 18,${padT+10})">y (재화 2)</text>`);
-    }
-
-    function line(x1,y1,x2,y2){ return `M ${x1} ${y1} L ${x2} ${y2}`; }
-
-    function pathFromXY(xs,ys,maxX,maxY){
-      let d='';
-      for(let i=0;i<xs.length;i++){
-        const cx=X(xs[i],maxX), cy=Y(ys[i],maxY);
-        d += (i? ' L ':'M ') + cx + ' ' + cy;
-      }
-      return d;
-    }
-
-    function drawFamilyBudgets(st, Is, maxX, maxY){
-      budgets.innerHTML='';
-      if(!st.showBudget) return;
-      for(let i=0;i<Is.length;i++){
-        const I=Is[i];
-        const xint = I/st.px; const yint = I/st.py;
-        const d = line(X(0,maxX), Y(yint,maxY), X(xint,maxX), Y(0,maxY));
-        budgets.insertAdjacentHTML('beforeend', `<path d="${d}" fill="none" stroke="rgba(96,165,250,.25)" stroke-width="1.5" />`);
+    function updateUI(){
+      bar.style.width = meter + "%";
+      const idx = Math.min(levels.length-1, Math.floor(meter/20));
+      label.innerHTML = `<span>바보력: <b>${meter}%</b></span><span>레벨: ${levels[idx]}</span>`;
+      if(!nice){
+        title.textContent = "김가빈 바보";
+        title.setAttribute('data-text',"김가빈 바보");
+      }else{
+        title.textContent = "김가빈 최고";
+        title.setAttribute('data-text',"김가빈 최고");
       }
     }
 
-    function icPath(U,a,b,maxX,maxY){
-      const pts=[]; const n=200; const xmin=1e-3; const xmax=maxX*0.98; // avoid x=0
-      for(let i=0;i<n;i++){
-        const x = xmin + (xmax-xmin)*i/(n-1);
-        const y = Math.pow(U/Math.pow(x,a), 1/b);
-        if(isFinite(y) && y>=0 && y<=maxY*1.05) pts.push([x,y]);
-      }
-      return pathFromXY(pts.map(p=>p[0]), pts.map(p=>p[1]), maxX, maxY);
-    }
-
-    function drawFamilyICs(st, xs, ys, maxX, maxY){
-      indiffs.innerHTML='';
-      if(!st.showIC) return;
-      const a=st.a,b=st.b;
-      for(let i=0;i<xs.length;i++){
-        const U = Math.pow(xs[i],a)*Math.pow(ys[i],b);
-        const d = icPath(U, a, b, maxX, maxY);
-        indiffs.insertAdjacentHTML('beforeend', `<path d="${d}" fill="none" stroke="rgba(34,197,94,.2)" stroke-width="1.5" />`);
+    function burst(x,y,qty=16){
+      const emojis = ["🤣","🤡","😜","✨","💥","🎉","🫥","🙃"];
+      for(let i=0;i<qty;i++){
+        const s = document.createElement('div');
+        s.className = 'emoji';
+        s.textContent = rand(emojis);
+        s.style.left = (x + (Math.random()*120-60))+"px";
+        s.style.top  = (y + (Math.random()*40-20))+"px";
+        s.style.fontSize = (18+Math.random()*18)+"px";
+        toastzone.appendChild(s);
+        setTimeout(()=> s.remove(), 900);
       }
     }
 
-    function drawICC(xs,ys,maxX,maxY, animate){
-      const xEnd=xs[xs.length-1], yEnd=ys[ys.length-1];
-      const d = line(X(0,maxX), Y(0,maxY), X(xEnd,maxX), Y(yEnd,maxY));
-      if(animate && icc.getAttribute('d')) tweenPath(icc, d); else icc.setAttribute('d', d);
+    function sayRoast(){
+      const line = rand(roasts);
+      quip.innerHTML = line.replaceAll("바보", "<strong>바보</strong>");
+    }
 
-      pts.innerHTML='';
-      for(let i=0;i<xs.length;i++){
-        const cx=X(xs[i],maxX), cy=Y(ys[i],maxY);
-        pts.insertAdjacentHTML('beforeend', `<circle cx="${cx}" cy="${cy}" r="4.2" fill="var(--green)" opacity="0.8" />`);
+    function sayCompliment(){
+      quip.textContent = rand(compliments);
+    }
+
+    roastBtn.addEventListener('click', (e)=>{
+      if(nice){ // 장난 수위 자동 조절
+        sayCompliment();
+        burst(e.clientX, e.clientY, 12);
+        return;
       }
-    }
-
-    function drawFocus(st, maxX, maxY){
-      focus.innerHTML=''; labels.innerHTML='';
-      const denom=st.a+st.b; const alpha=st.a/denom, beta=st.b/denom;
-      const x = alpha*st.I/st.px; const y = beta*st.I/st.py;
-      const cx=X(x,maxX), cy=Y(y,maxY);
-
-      // Draggable focus point
-      focus.insertAdjacentHTML('beforeend', `<circle id="dragPt" cx="${cx}" cy="${cy}" r="8" fill="var(--green)" stroke="#043" stroke-width="1.6" />`);
-
-      // Current budget line
-      const xint = st.I/st.px, yint = st.I/st.py;
-      budgetCur.setAttribute('d', line(X(0,maxX), Y(yint,maxY), X(xint,maxX), Y(0,maxY)));
-
-      // Current IC through (x,y)
-      const U = Math.pow(x,st.a)*Math.pow(y,st.b);
-      icCur.setAttribute('d', icPath(U, st.a, st.b, maxX, maxY));
-
-      // Tangent line at (x,y) with slope -MRS
-      const MRS = (st.a*y)/(st.b*x);
-      const m = -MRS; // dy/dx
-      const len = Math.min(maxX, maxY)*0.35;
-      const dx=len/Math.sqrt(1+m*m), dy=m*dx;
-      const x1=X(x-dx,maxX), y1=Y(y-dy,maxY), x2=X(x+dx,maxX), y2=Y(y+dy,maxY);
-      tangent.style.display = st.showTangent? 'block':'none';
-      tangent.setAttribute('d', line(x1,y1,x2,y2));
-
-      // Labels
-      const text = `I=${st.I.toFixed(1)} | x*=${x.toFixed(2)}, y*=${y.toFixed(2)}  |  MRS=${MRS.toFixed(2)}  |  -p_x/p_y=${(-st.px/st.py).toFixed(2)}  |  ICC 비율(y/x)=${(st.b*st.px/(st.a*st.py)).toFixed(2)}`;
-      labels.insertAdjacentHTML('beforeend', `<text x="${W-12}" y="${padT+20}" text-anchor="end" font-size="12" fill="#a5b4fc">${text}</text>`);
-
-      enableDragOnPoint(st, maxX, maxY, x, y);
-    }
-
-    function enableDragOnPoint(st, maxX, maxY, xOpt, yOpt){
-      const dragPt = document.getElementById('dragPt');
-      let dragging=false;
-      dragPt.style.cursor='grab';
-      dragPt.addEventListener('pointerdown', (e)=>{ dragging=true; dragPt.setPointerCapture(e.pointerId); dragPt.style.cursor='grabbing'; });
-      svg.addEventListener('pointermove', (e)=>{
-        if(!dragging) return;
-        const pt = clientToData(e.clientX, e.clientY, maxX, maxY);
-        // Project to ICC ray (origin -> (xOpt,yOpt)) since x*,y* scale linearly with I
-        const vx = xOpt, vy=yOpt; const vlen2 = vx*vx+vy*vy;
-        let t = (pt.x*vx + pt.y*vy)/vlen2; t = clamp(t, 0, 5); // allow slight beyond
-        const I = st.Imin + t*(st.Imax - st.Imin);
-        const tt = (I - st.Imin)/(st.Imax - st.Imin);
-        controls.icur.value = controls.icurNum.value = clamp(tt,0,1);
-        draw();
-      });
-      window.addEventListener('pointerup', ()=>{ dragging=false; dragPt.style.cursor='grab'; });
-
-      // tooltip
-      svg.addEventListener('pointermove', (e)=>{
-        const pt = clientToData(e.clientX, e.clientY, maxX, maxY);
-        tip.style.left = (e.clientX+12) + 'px'; tip.style.top = (e.clientY+12) + 'px';
-        tip.innerHTML = `<span class='mono'>x≈${pt.x.toFixed(2)}, y≈${pt.y.toFixed(2)}</span>`;
-        tip.style.opacity = 1;
-      });
-      svg.addEventListener('pointerleave', ()=>{ tip.style.opacity=0; });
-    }
-
-    function clientToData(clientX, clientY, maxX, maxY){
-      const rect = svg.getBoundingClientRect();
-      const sx = clientX - rect.left; const sy = clientY - rect.top;
-      const x = (sx - padL) / (W-padL-padR) * maxX; 
-      const y = (H-padB - sy) / (H-padT-padB) * maxY; 
-      return {x:Math.max(0,x), y:Math.max(0,y)};
-    }
-
-    // Path tween for smooth ICC rotation/scale
-    function tweenPath(el, dNew, ms=300){
-      if(!controls.animate.checked){ el.setAttribute('d', dNew); return; }
-      const dOld = el.getAttribute('d');
-      if(!dOld){ el.setAttribute('d', dNew); return; }
-      const nums = s => (s.match(/[\d\.\-eE]+/g)||[]).map(Number);
-      const a=nums(dOld), b=nums(dNew); if(a.length!==b.length){ el.setAttribute('d', dNew); return; }
-      const t0=performance.now();
-      function tick(t){
-        const u = Math.min(1,(t-t0)/ms);
-        const mix = (p,q)=>p+(q-p)*u;
-        const arr=a.map((v,i)=>mix(v,b[i]));
-        const d = `M ${arr[0]} ${arr[1]} L ${arr[2]} ${arr[3]}`;
-        el.setAttribute('d', d);
-        if(u<1) requestAnimationFrame(tick);
+      meter = clamp(meter + (5 + Math.floor(Math.random()*14)), 0, 100);
+      sayRoast();
+      burst(e.clientX, e.clientY, 18);
+      if(meter>=100){
+        quip.innerHTML = "레전드 달성 🏆 — 최종 결론: <strong>김가빈 바보</strong> (변경 불가)";
+        burst(window.innerWidth/2, window.innerHeight/2, 42);
       }
-      requestAnimationFrame(tick);
-    }
-
-    function draw(){
-      const st = state();
-      const {xs,ys,Is} = computePoints(st);
-      const {maxX,maxY} = domain(xs,ys, st.equal);
-      drawAxes(maxX,maxY);
-      drawFamilyBudgets(st, Is, maxX, maxY);
-      drawFamilyICs(st, xs, ys, maxX, maxY);
-      drawICC(xs,ys,maxX,maxY, st.animate);
-      drawFocus(st, maxX, maxY);
-
-      // ICC slope arrow (y/x) — visually updates with px,py and equal-scale option
-      slopeG.innerHTML = '';
-      const r = (st.b*st.px)/(st.a*st.py);
-      const len = Math.min(maxX,maxY)/5;
-      const sx = X(0,maxX), sy = Y(0,maxY);
-      const ex = X(len,maxX), ey = Y(r*len,maxY);
-      slopeG.insertAdjacentHTML('beforeend', `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="${'#fbbf24'}" stroke-width="2.5" marker-end="url(#arrow)"/>`);
-    }
-
-    // Bindings
-    bindPair(controls.a, controls.aNum, ()=>{ if(+controls.a.value+ +controls.b.value<=0.0001){controls.b.value=0.5;controls.bNum.value=0.5;} draw(); });
-    bindPair(controls.b, controls.bNum, ()=>{ if(+controls.a.value+ +controls.b.value<=0.0001){controls.a.value=0.5;controls.aNum.value=0.5;} draw(); });
-    bindPair(controls.px, controls.pxNum, draw);
-    bindPair(controls.py, controls.pyNum, draw);
-    bindPair(controls.imin, controls.iminNum, draw);
-    bindPair(controls.imax, controls.imaxNum, draw);
-    bindPair(controls.icur, controls.icurNum, draw);
-    bindPair(controls.k, controls.kNum, draw);
-    controls.equal.addEventListener('change', draw);
-    controls.showIC.addEventListener('change', draw);
-    controls.showBudget.addEventListener('change', draw);
-    controls.showTangent.addEventListener('change', draw);
-    controls.animate.addEventListener('change', draw);
-
-    controls.reset.addEventListener('click', ()=>{
-      const d={a:0.5,b:0.5,px:1,py:1,imin:30,imax:200,icur:0.35,k:9};
-      for(const key of ['a','b','px','py','imin','imax','icur','k']){
-        if(controls[key]) controls[key].value=d[key];
-        if(controls[key+'Num']) controls[key+'Num'].value=d[key];
-      }
-      controls.equal.checked=true; controls.showIC.checked=true; controls.showBudget.checked=true; controls.showTangent.checked=true; controls.animate.checked=true;
-      draw();
+      updateUI();
     });
 
-    // Play animation across income range
-    let raf=null, playing=false, dir=1;
-    function tick(){
-      if(!playing) return;
-      let v=+controls.icur.value; v+=dir*0.0025; if(v>1){ v=1; dir=-1; } if(v<0){ v=0; dir=1; }
-      controls.icur.value = controls.icurNum.value = v.toFixed(3);
-      draw();
-      raf=requestAnimationFrame(tick);
-    }
-    controls.play.addEventListener('click', ()=>{
-      playing=!playing; controls.play.textContent = playing ? '⏸ 일시정지' : '▶ 재생';
-      if(playing){ dir=1; raf=requestAnimationFrame(tick); } else { cancelAnimationFrame(raf); }
+    megaBtn.addEventListener('click', (e)=>{
+      if(nice){ sayCompliment(); burst(e.clientX, e.clientY, 20); return; }
+      meter = clamp(meter + 25, 0, 100);
+      quip.innerHTML = "바보력 급상승 경보 🚨 — <strong>김가빈 바보</strong> 확정 각!";
+      for(let i=0;i<3;i++){
+        setTimeout(()=> burst(e.clientX, e.clientY, 24), i*120);
+      }
+      updateUI();
     });
 
-    // Initial draw
-    draw();
+    niceBtn.addEventListener('click', ()=>{
+      nice = !nice;
+      niceBtn.classList.toggle('good');
+      niceBtn.setAttribute('aria-pressed', String(nice));
+      niceBtn.textContent = nice ? "장난 모드로 😈" : "칭찬 모드 😇";
+      document.body.style.setProperty('--acc', nice ? '#00d68f' : '#7c5cff');
+      document.body.style.setProperty('--acc2', nice ? '#a7ffeb' : '#00e5ff');
+      if(nice){ sayCompliment(); } else { sayRoast(); }
+      updateUI();
+    });
+
+    copyBtn.addEventListener('click', async ()=>{
+      const text = nice ? "김가빈 최고" : "김가빈 바보";
+      try{
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = "복사 완료!";
+        setTimeout(()=> copyBtn.textContent = "문구 복사", 1200);
+      }catch(e){
+        alert("복사 실패! 직접 드래그해 주세요 🙏");
+      }
+    });
+
+    // 초기 상태
+    sayRoast(); updateUI();
   </script>
 </body>
 </html>
