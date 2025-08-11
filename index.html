@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- 줌 완전 비활성화: 더블탭-줌/핀치줌 모두 OFF, 탭은 빠르게 두 번 잘 들어감 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>김가빈 바보 (레벨업 에디션)</title>
   <meta name="description" content="장난 페이지 — 레벨업/경험치 시스템으로 바보력 상승!" />
   <style>
@@ -20,6 +21,7 @@
         radial-gradient(900px 500px at 110% 0%, #041b2e 0%, transparent 60%),
         linear-gradient(180deg, var(--bg1), var(--bg2));
       overflow-x:hidden;
+      -webkit-text-size-adjust: 100%; /* iOS 글자 자동확대 방지 */
     }
     .wrap{max-width:960px;margin:0 auto;padding:42px 18px 96px;position:relative}
     .tag{
@@ -58,7 +60,7 @@
       appearance:none; border:none; padding:14px 18px; border-radius:14px; font-weight:700; cursor:pointer;
       background:linear-gradient(180deg,#2a2f5a,#1c2147); color:#eaf0ff; border:1px solid #3a3f74;
       transition:transform .06s ease, box-shadow .2s ease, background .2s ease;
-      touch-action: manipulation;               /* 모바일 더블탭 확대 방지 */
+      touch-action: manipulation;               /* 더블탭-줌 유발 제스처 비활성화, 탭은 정상 */
       -webkit-tap-highlight-color: transparent; /* 탭 하이라이트 제거 */
     }
     .btns button:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.35)}
@@ -209,7 +211,6 @@
     let xp = 0;
 
     function xpNeeded(lvl){
-      // 느리게 차고 점점 더 필요하게 (기하급수 성장)
       return Math.floor(100 * Math.pow(1.25, Math.max(0, lvl-1)));
     }
 
@@ -270,13 +271,11 @@
       quip.innerHTML = `바보력 상승 ⬆️ — <strong>레벨 ${level}</strong> 돌파! 결론은 변함없음: <strong>김가빈 바보</strong>`;
     }
 
-    // XP를 부드럽게 증가 (레벨업 연속 처리)
     function animateGainXP(amount, x, y){
       let remaining = amount;
       function step(){
         if(remaining <= 0) return;
         const need = xpNeeded(level);
-        // 프레임당 증가량: 현재 레벨 요구치의 2~4% 범위에서 자동 조절
         const inc = Math.min(remaining, Math.max(1, Math.floor(need * (0.02 + Math.random()*0.02))));
         remaining -= inc;
         xp += inc;
@@ -328,31 +327,6 @@
     setPaletteByLevel();
     sayRoast();
     updateUI();
-
-    // ===== 모바일 더블탭 확대 방지 (버튼 영역 한정) =====
-    (function preventDoubleTapZoomOnButtons(){
-      const ids = ['roast','mega'];
-      let lastTouchEnd = 0;
-
-      ids.forEach(id=>{
-        const el = document.getElementById(id);
-        if(!el) return;
-
-        // iOS에서도 동작하도록 passive:false 로 preventDefault 가능하게
-        el.addEventListener('touchend', function(e){
-          const now = Date.now();
-          if (now - lastTouchEnd <= 350) {
-            e.preventDefault();  // 더블탭 확대 차단
-          }
-          lastTouchEnd = now;
-        }, { passive:false });
-
-        // 버튼 위 제스처 시작 차단 (핀치줌은 다른 영역에서 가능)
-        el.addEventListener('gesturestart', function(e){
-          e.preventDefault();
-        });
-      });
-    })();
   </script>
 </body>
 </html>
