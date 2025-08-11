@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>김가빈 바보 (장난 전용)</title>
-  <meta name="description" content="친구 놀리기 장난 페이지 — 김가빈 바보 모드" />
+  <title>김가빈 바보 (레벨업 에디션)</title>
+  <meta name="description" content="장난 페이지 — 레벨업/경험치 시스템으로 바보력 상승!" />
   <style>
     :root{
       --bg1:#0e0f1a; --bg2:#15172a; --acc:#7c5cff; --acc2:#00e5ff; --ink:#e9ecf1;
-      --muted:#aab0c0; --ok:#00d68f; --warn:#ffb703; --bad:#ff4d6d;
+      --muted:#aab0c0; --warn:#ffb703; --bad:#ff4d6d;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -34,9 +34,7 @@
       letter-spacing:-.02em; position:relative; display:inline-block;
       text-shadow:0 0 30px rgba(124,92,255,.35);
     }
-    .glitch{
-      position:relative; isolation:isolate;
-    }
+    .glitch{ position:relative; isolation:isolate; }
     .glitch::before,.glitch::after{
       content:attr(data-text); position:absolute; inset:0; mix-blend-mode:screen; filter:blur(.5px);
       clip-path:inset(0 0 0 0); animation:gl 2.2s infinite steps(2,end);
@@ -64,9 +62,17 @@
     button:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.35)}
     button:active{transform:translateY(0)}
     .accent{background:linear-gradient(180deg,#6f5bff,#4e42d8); border-color:#7a6cff}
-    .good{background:linear-gradient(180deg,#0aa17f,#0a8166); border-color:#13c39b}
-    .meter{height:14px;border-radius:999px;background:#1a1e3a;border:1px solid #2b2f53;overflow:hidden}
-    .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--bad),var(--warn));border-radius:999px;transition:width .4s cubic-bezier(.25,.75,.25,1)}
+    .meter{height:16px;border-radius:999px;background:#1a1e3a;border:1px solid #2b2f53;overflow:hidden; position:relative}
+    .bar{
+      height:100%;width:0%;
+      background:linear-gradient(90deg,var(--acc),var(--acc2));
+      border-radius:999px;transition:width .28s cubic-bezier(.25,.75,.25,1);
+      box-shadow:0 0 18px rgba(124,92,255,.35);
+    }
+    .bar::after{
+      content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.25), transparent 55%);
+      pointer-events:none;
+    }
     .label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px}
     .bigline{
       font-size: clamp(18px, 3.2vw, 28px); line-height:1.35; margin:16px 0 8px; font-weight:800;
@@ -79,23 +85,36 @@
       20%{opacity:1}
       100%{transform:translateY(-90px) scale(1.25); opacity:0}
     }
-    .footer{margin-top:28px;font-size:12px;color:#8891a8}
-    .toggle{
-      display:inline-flex; align-items:center; gap:10px; padding:8px 10px; border-radius:999px;
-      background:rgba(255,255,255,0.05); border:1px solid #2b2f53; cursor:pointer; user-select:none
+    .levelup{
+      position:fixed; left:50%; top:18%; transform:translate(-50%,-50%) scale(.9);
+      background:rgba(255,255,255,0.06); border:1px solid #3a3f74; padding:16px 20px; border-radius:18px;
+      font-weight:900; letter-spacing:.5px; text-align:center; backdrop-filter:blur(6px);
+      box-shadow:0 14px 40px rgba(0,0,0,.35);
+      animation:popIn .8s ease forwards; pointer-events:none
     }
-    .dot{width:14px;height:14px;border-radius:50%;background:var(--bad);box-shadow:0 0 12px rgba(255,77,109,.6);transition:all .25s}
-    .toggle.on .dot{background:var(--ok); box-shadow:0 0 12px rgba(0,214,143,.6); transform:translateX(4px)}
-    .sr-only{position:absolute;left:-9999px}
+    @keyframes popIn{
+      0%{opacity:0; transform:translate(-50%,-50%) scale(.6)}
+      50%{opacity:1; transform:translate(-50%,-50%) scale(1.1)}
+      100%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+    }
+    .shake{animation:shake .5s ease}
+    @keyframes shake{
+      10%{transform:translateX(-2px)} 20%{transform:translateX(2px)}
+      30%{transform:translateX(-2px)} 40%{transform:translateX(2px)}
+      50%{transform:translateX(-1px)} 60%{transform:translateX(1px)}
+      70%{transform:translateX(0)}
+    }
     .copy{text-decoration:underline; cursor:pointer}
-    .marquee{
-      width:100%; overflow:hidden; border-top:1px dashed #30365f; border-bottom:1px dashed #30365f; margin:18px 0 0;
-    }
+    .marquee{ width:100%; overflow:hidden; border-top:1px dashed #30365f; border-bottom:1px dashed #30365f; margin:18px 0 0; }
     .marquee .row{
       display:flex; gap:28px; padding:10px 0; white-space:nowrap; animation:slide 24s linear infinite;
       font-weight:800; color:#d9def5; opacity:.7
     }
     @keyframes slide{to{transform:translateX(-50%)}}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+      background:rgba(255,255,255,0.05); border:1px solid #2b2f53; font-size:12px; color:#cdd3e5;
+    }
   </style>
 </head>
 <body>
@@ -103,85 +122,108 @@
     <span class="tag"><span class="pulse" aria-hidden="true"></span>&nbsp; 장난 발령 🔔 — 친한 친구 한정 사용</span>
 
     <h1 id="title" class="glitch" data-text="김가빈 바보">김가빈 바보</h1>
-    <div class="sub">누르면 바보력(™)이 상승합니다. <span class="copy" id="copy">문구 복사</span> 가능!</div>
+    <div class="sub">누를수록 <span class="pill">XP</span>가 쌓이고 레벨업합니다. <span class="copy" id="copy">문구 복사</span> 가능!</div>
 
     <div class="card" role="region" aria-label="바보력 대시보드">
       <div class="panel">
         <div>
           <div class="bigline" id="quip">오늘의 공식 선언: <strong>김가빈 바보</strong> (AI 검증 완료)</div>
           <div class="meter" aria-hidden="true"><div id="bar" class="bar"></div></div>
-          <div class="label" id="label"><span>바보력: <b>0%</b></span><span>레벨: 🐣 초보 바보</span></div>
+          <div class="label" id="label">
+            <span>레벨 <b>1</b> — 칭호: 🐣 초보 바보</span>
+            <span><b>0</b>/<b id="need">100</b> XP</span>
+          </div>
         </div>
         <div class="btns">
           <button id="roast" class="accent">더 놀려! 🤪</button>
           <button id="mega">바보 폭격 💥</button>
-          <button id="nice" class="good" aria-pressed="false">칭찬 모드 😇</button>
         </div>
       </div>
 
       <div class="marquee" aria-hidden="true">
-        <div class="row">김가빈 바보 • 천하제일 바보 콘테스트 1위 후보 • 오늘도 당당히 바보 출근 • 바보력 측정 중… •</div>
+        <div class="row" id="mq">김가빈 바보 • 천하제일 바보 콘테스트 1위 후보 • 오늘도 당당히 바보 출근 • 바보력 측정 중… •</div>
       </div>
     </div>
-
-    <div class="footer">※ 재미로만! 분위기 이상하다 싶으면 <em>칭찬 모드</em>로 전환하세요 😌</div>
   </div>
 
   <div class="toastzone" id="toastzone" aria-hidden="true"></div>
 
   <script>
-    const roasts = [
-      "오늘의 바보 지수 99.9% — 확실합니다: 김가빈 바보 ✅",
-      "AI가 세 번 계산했는데 결과가 똑같음: 김・가・빈・바・보.",
-      "과학적으로 증명 완료: 전자=양자, 사과=과일, 그리고 김가빈=바보.",
-      "뉴스 속보🗞️: 집계 마감! ‘올해의 바보’ 유력 — 김가빈 바보.",
-      "버튼을 누를수록 진실은 또렷해진다… 김가빈 바보!",
-      "사전 업데이트: ‘바보’(n.) 예: 김가빈.",
-      "바보력 센서 과열 🔥 — 대상: 김가빈 바보.",
-      "퀴즈: 2+2=4, 지구는 둥글다, 그리고… 김가빈 바보!",
-      "천고마비의 계절, 김고바보의 시절 — 김가빈 바보.",
-      "업데이트 패치 노트: 버그 수정, 성능 개선, ‘김가빈 바보’ 고정."
-    ];
-    const compliments = [
-      "사실은 다 알지요 — 센스만점, 유머만점, 우리들의 히어로 ✨",
-      "오늘의 칭찬 지수 120% — 천재 포스 뿜뿜!",
-      "와… 존재 자체가 컨텐츠. 넘사벽 클래스 😎",
-      "업데이트: ‘최고’의 정의 = 김가빈."
-    ];
-    const levels = [
-      "🐣 초보 바보","🧢 일상 바보","🛼 관성 바보","🚀 익스프레스 바보","🌋 전설의 바보","🏆 명예의 전당 바보"
+    // ===== 데이터 =====
+    const roastTiers = [
+      { min: 1, lines: [
+        "오늘의 바보 지수 99.9% — 확실합니다: 김가빈 바보 ✅",
+        "AI가 세 번 계산했는데 결과가 같음: 김・가・빈・바・보.",
+        "과학적으로 증명: 전자=양자, 사과=과일, 그리고 김가빈=바보.",
+        "뉴스 속보🗞️: ‘올해의 바보’ 유력 — 김가빈 바보.",
+        "사전 업데이트: ‘바보’(n.) 예: 김가빈.",
+        "퀴즈: 2+2=4, 지구는 둥글다, 그리고… 김가빈 바보!"
+      ]},
+      { min: 3, lines: [
+        "바보력 엔진 점화🚀 — 출력 안정화 완료: 김가빈 바보.",
+        "업데이트 패치 노트: 버그 수정, 성능 개선, ‘김가빈 바보’ 고정.",
+        "센서 알림 🔴 과열 주의 — 대상: 김가빈 바보.",
+        "수학적 귀납법 완료: 1이 참 → n이 참 → 김가빈 바보 참."
+      ]},
+      { min: 5, lines: [
+        "레벨 고지 달성! 관리번호 #KGBB — 등급: S(바보).",
+        "위원회 결의안 100% 가결: ‘김가빈 바보’ 항구적 사실.",
+        "지구-달 간 통신: “여기도 들림.” — 메시지: 김가빈 바보.",
+        "우주 배경복사 분석 결과: 미약하지만 반복되는 패턴… ‘김가빈 바보’."
+      ]},
+      { min: 8, lines: [
+        "전설 기록 갱신 🏆 — 학계 표준 명명: 김가빈(바보형).",
+        "시간여행자 증언 확보: 과거·현재·미래에 공통된 진실 — 김가빈 바보.",
+        "양자 중첩 해제 결과 단 하나: |김가빈 바보⟩",
+        "다중우주 공동 성명: ‘김가빈 바보’ (만장일치)."
+      ]}
     ];
 
+    const levelTitles = [
+      "🐣 초보 바보","🧢 일상 바보","🛼 관성 바보","🚀 익스프레스 바보","🌋 전설의 바보",
+      "🏆 명예의 전당 바보","🧬 메타 바보","🌌 코스믹 바보","👑 황제 바보","💫 초월 바보"
+    ];
+
+    const palettes = [
+      ["#7c5cff","#00e5ff"],["#ff7ab6","#ffd166"],["#00d68f","#a7ffeb"],["#ff6b6b","#ffd93d"],
+      ["#80ed99","#56cfe1"],["#6a7cff","#b388ff"],["#ff9f1c","#2ec4b6"],["#ff6ad5","#caffbf"],
+      ["#00f5d4","#00bbf9"],["#f15bb5","#fee440"]
+    ];
+
+    // ===== 엘리먼트 =====
     const title = document.getElementById('title');
-    const bar = document.getElementById('bar');
+    const bar   = document.getElementById('bar');
     const label = document.getElementById('label');
-    const quip = document.getElementById('quip');
+    const needEl= document.getElementById('need');
+    const quip  = document.getElementById('quip');
     const roastBtn = document.getElementById('roast');
-    const megaBtn = document.getElementById('mega');
-    const niceBtn = document.getElementById('nice');
-    const toastzone = document.getElementById('toastzone');
-    const copyBtn = document.getElementById('copy');
+    const megaBtn  = document.getElementById('mega');
+    const toastzone= document.getElementById('toastzone');
+    const copyBtn  = document.getElementById('copy');
+    const marquee  = document.getElementById('mq');
 
-    let meter = 0, nice = false;
+    // ===== 상태 =====
+    let level = 1;
+    let xp = 0;
 
-    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+    function xpNeeded(lvl){
+      // 느리게 차고 점점 더 필요하게 (기하급수 성장)
+      return Math.floor(100 * Math.pow(1.25, Math.max(0, lvl-1)));
+    }
+
     function clamp(n,min,max){ return Math.max(min, Math.min(max,n)) }
+    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)] }
 
-    function updateUI(){
-      bar.style.width = meter + "%";
-      const idx = Math.min(levels.length-1, Math.floor(meter/20));
-      label.innerHTML = `<span>바보력: <b>${meter}%</b></span><span>레벨: ${levels[idx]}</span>`;
-      if(!nice){
-        title.textContent = "김가빈 바보";
-        title.setAttribute('data-text',"김가빈 바보");
-      }else{
-        title.textContent = "김가빈 최고";
-        title.setAttribute('data-text',"김가빈 최고");
+    function currentRoast(){
+      let pool = roastTiers[0].lines;
+      for(const t of roastTiers){
+        if(level >= t.min) pool = t.lines;
       }
+      return rand(pool);
     }
 
     function burst(x,y,qty=16){
-      const emojis = ["🤣","🤡","😜","✨","💥","🎉","🫥","🙃"];
+      const emojis = ["🤣","🤡","😜","✨","💥","🎉","🙃","🤯","🌀","🎊"];
       for(let i=0;i<qty;i++){
         const s = document.createElement('div');
         s.className = 'emoji';
@@ -194,54 +236,90 @@
       }
     }
 
+    function setPaletteByLevel(){
+      const [c1,c2] = palettes[(level-1) % palettes.length];
+      document.body.style.setProperty('--acc', c1);
+      document.body.style.setProperty('--acc2', c2);
+    }
+
+    function updateUI(){
+      const need = xpNeeded(level);
+      const pct = clamp((xp / need) * 100, 0, 100);
+      bar.style.width = pct + "%";
+      needEl.textContent = need;
+      const titleIdx = Math.min(levelTitles.length-1, level-1);
+      label.innerHTML = `<span>레벨 <b>${level}</b> — 칭호: ${levelTitles[titleIdx]}</span>
+                         <span><b>${xp}</b>/<b id="need">${need}</b> XP</span>`;
+      setPaletteByLevel();
+      title.classList.remove('shake'); // 흔들림 클래스 초기화
+    }
+
+    function levelUp(x=window.innerWidth/2, y=window.innerHeight/2){
+      // 레벨업 배너
+      const box = document.createElement('div');
+      const titleIdx = Math.min(levelTitles.length-1, level-1);
+      box.className = 'levelup';
+      box.innerHTML = `LEVEL UP! 🚀<br/>레벨 <b>${level}</b> — ${levelTitles[titleIdx]}`;
+      document.body.appendChild(box);
+      setTimeout(()=> box.remove(), 1400);
+
+      // 비주얼 효과
+      title.classList.add('shake');
+      burst(x,y,28);
+
+      // 마키 메시지 추가
+      marquee.textContent += ` 레벨 ${level} 달성 •`;
+
+      // 한 줄 메시지 업그레이드
+      quip.innerHTML = `바보력 상승 ⬆️ — <strong>레벨 ${level}</strong> 돌파! 결론은 변함없음: <strong>김가빈 바보</strong>`;
+    }
+
+    // XP를 부드럽게 증가 (레벨업 연속 처리)
+    function animateGainXP(amount, x, y){
+      let remaining = amount;
+      function step(){
+        if(remaining <= 0) return;
+        const need = xpNeeded(level);
+        // 프레임당 증가량: 현재 레벨 요구치의 2~4% 범위에서 자동 조절
+        const inc = Math.min(remaining, Math.max(1, Math.floor(need * (0.02 + Math.random()*0.02))));
+        remaining -= inc;
+        xp += inc;
+
+        // 레벨업 체크
+        if(xp >= need){
+          xp -= need;
+          level++;
+          levelUp(x,y);
+        }
+        updateUI();
+        requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
     function sayRoast(){
-      const line = rand(roasts);
-      quip.innerHTML = line.replaceAll("바보", "<strong>바보</strong>");
+      quip.innerHTML = currentRoast().replaceAll("바보", "<strong>바보</strong>");
     }
 
-    function sayCompliment(){
-      quip.textContent = rand(compliments);
-    }
-
+    // ===== 이벤트 =====
     roastBtn.addEventListener('click', (e)=>{
-      if(nice){ // 장난 수위 자동 조절
-        sayCompliment();
-        burst(e.clientX, e.clientY, 12);
-        return;
-      }
-      meter = clamp(meter + (5 + Math.floor(Math.random()*14)), 0, 100);
+      const base = Math.floor(12 + Math.random()*16); // 12~28 XP
+      animateGainXP(base, e.clientX, e.clientY);
       sayRoast();
-      burst(e.clientX, e.clientY, 18);
-      if(meter>=100){
-        quip.innerHTML = "레전드 달성 🏆 — 최종 결론: <strong>김가빈 바보</strong> (변경 불가)";
-        burst(window.innerWidth/2, window.innerHeight/2, 42);
-      }
-      updateUI();
+      burst(e.clientX, e.clientY, 16);
     });
 
     megaBtn.addEventListener('click', (e)=>{
-      if(nice){ sayCompliment(); burst(e.clientX, e.clientY, 20); return; }
-      meter = clamp(meter + 25, 0, 100);
-      quip.innerHTML = "바보력 급상승 경보 🚨 — <strong>김가빈 바보</strong> 확정 각!";
-      for(let i=0;i<3;i++){
+      const base = Math.floor(45 + Math.random()*35); // 45~80 XP
+      animateGainXP(base, e.clientX, e.clientY);
+      quip.innerHTML = "바보력 급상승 경보 🚨 — 데이터 폭주! <strong>김가빈 바보</strong> 확정 각!";
+      for(let i=0;i<2;i++){
         setTimeout(()=> burst(e.clientX, e.clientY, 24), i*120);
       }
-      updateUI();
-    });
-
-    niceBtn.addEventListener('click', ()=>{
-      nice = !nice;
-      niceBtn.classList.toggle('good');
-      niceBtn.setAttribute('aria-pressed', String(nice));
-      niceBtn.textContent = nice ? "장난 모드로 😈" : "칭찬 모드 😇";
-      document.body.style.setProperty('--acc', nice ? '#00d68f' : '#7c5cff');
-      document.body.style.setProperty('--acc2', nice ? '#a7ffeb' : '#00e5ff');
-      if(nice){ sayCompliment(); } else { sayRoast(); }
-      updateUI();
     });
 
     copyBtn.addEventListener('click', async ()=>{
-      const text = nice ? "김가빈 최고" : "김가빈 바보";
+      const text = "김가빈 바보";
       try{
         await navigator.clipboard.writeText(text);
         copyBtn.textContent = "복사 완료!";
@@ -251,8 +329,10 @@
       }
     });
 
-    // 초기 상태
-    sayRoast(); updateUI();
+    // ===== 초기화 =====
+    setPaletteByLevel();
+    sayRoast();
+    updateUI();
   </script>
 </body>
 </html>
