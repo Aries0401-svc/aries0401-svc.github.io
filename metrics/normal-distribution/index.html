@@ -3,63 +3,75 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>계량경제학 · 정규분포 시각화</title>
+  <title>계량경제학 · 표준정규분포(신뢰구간 & p-value)</title>
 
-  <!-- 사이트 공통 스타일 -->
+  <!-- 공통 스타일 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../assets/style.css" />
 
-  <!-- Chart.js (CDN) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
-    /* 이 페이지에서만 쓰는 약간의 레이아웃 보강 */
+    /* 이 페이지 전용 컨트롤 UI */
     .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px}
     .ctrl{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:12px 14px;border-radius:12px;box-shadow: var(--shadow)}
     .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-    .ctrl input{width:140px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;color:var(--text)}
-    .ctrl input[type="number"]{appearance:textfield}
-    .ctrl small{color:var(--muted)}
+    .ctrl select,.ctrl input{width:160px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;color:var(--text)}
+    .hint{color:var(--muted);font-size:14px;margin-top:8px}
     canvas{background:var(--panel);border-radius:18px;box-shadow: var(--shadow);padding:10px}
     .legend{color:var(--muted);font-size:14px;margin-top:8px}
   </style>
 </head>
 <body>
   <header class="site-header">
-    <h1>정규분포 시각화</h1>
-    <p class="subtitle">평균(μ), 표준편차(σ)를 조정하고 구간 확률을 음영으로 확인하세요</p>
+    <h1>표준정규분포 시각화</h1>
+    <p class="subtitle">μ=0, σ=1로 고정 · 신뢰구간(90/95/99%) & p-value 시각화</p>
   </header>
 
   <main class="grid" style="grid-template-columns:1fr;">
     <section class="card">
+      <!-- 컨트롤 -->
       <div class="controls">
         <div class="ctrl">
-          <label for="mu">평균 μ</label>
-          <input id="mu" type="number" step="0.1" value="0">
+          <label for="ciLevel">신뢰구간(중앙구간)</label>
+          <select id="ciLevel">
+            <option value="none">선택 안 함</option>
+            <option value="90">90%</option>
+            <option value="95" selected>95%</option>
+            <option value="99">99%</option>
+          </select>
         </div>
+
         <div class="ctrl">
-          <label for="sigma">표준편차 σ</label>
-          <input id="sigma" type="number" step="0.1" value="1" min="0.1">
+          <label for="zValue">z-통계량 (p-value 계산)</label>
+          <input id="zValue" type="number" step="0.01" value="1.96" />
         </div>
+
         <div class="ctrl">
-          <label for="a">음영 구간 a</label>
-          <input id="a" type="number" step="0.1" value="-1">
-        </div>
-        <div class="ctrl">
-          <label for="b">음영 구간 b</label>
-          <input id="b" type="number" step="0.1" value="1">
-        </div>
-        <div class="ctrl">
-          <label for="points">해상도(점 개수)</label>
-          <input id="points" type="number" step="10" value="241" min="101" max="1001">
-          <small>높을수록 곡선이 부드러워집니다</small>
+          <label for="tailType">검정 방향</label>
+          <select id="tailType">
+            <option value="two" selected>양측검정 (two-tailed)</option>
+            <option value="right">우측검정 (right-tailed)</option>
+            <option value="left">좌측검정 (left-tailed)</option>
+          </select>
         </div>
       </div>
 
+      <!-- 그래프 -->
       <canvas id="chart" height="120"></canvas>
-      <div class="legend" id="probText">P(a ≤ X ≤ b) ≈ …</div>
+
+      <!-- 결과 텍스트 -->
+      <div class="legend" id="ciText">신뢰구간: 선택 안 함</div>
+      <div class="legend" id="pText">p-value: z=1.96, 양측검정 → …</div>
+
+      <div class="hint">
+        ※ 이 페이지의 확률(면적) 계산은 **표준정규 누적분포함수(CDF)** 공식을 사용합니다.
+        <strong>차트의 점(해상도)과 무관하게</strong> 숫자값은 동일합니다. 점 개수는 곡선 모양의
+        <em>부드러움만</em> 바꿀 뿐, 확률 계산에는 영향을 주지 않습니다.
+      </div>
     </section>
   </main>
 
@@ -70,8 +82,8 @@
 
   <script src="../../assets/site.js"></script>
   <script>
-    // ---- 수학 유틸 ----
-    const pdf = (x, mu, s) => (1/(s*Math.sqrt(2*Math.PI))) * Math.exp(-0.5 * ((x-mu)/s)**2);
+    // ====== 표준정규분포 유틸 (μ=0, σ=1 고정) ======
+    const pdf = (x) => Math.exp(-0.5 * x*x) / Math.sqrt(2*Math.PI);
 
     // 표준정규 CDF 근사 (Abramowitz & Stegun 7.1.26)
     function stdNormCdf(z){
@@ -81,71 +93,111 @@
       if(z>0) p = 1-p;
       return p;
     }
-    const normCdf = (x, mu, s) => stdNormCdf((x-mu)/s);
 
-    // ---- DOM ----
-    const el = id => document.getElementById(id);
-    const muEl = el('mu'), sigmaEl = el('sigma'), aEl = el('a'), bEl = el('b'), ptsEl = el('points');
-    const probText = el('probText');
+    // 중앙 신뢰구간의 임계값 z* (고정 상수)
+    const ciZ = {
+      90: 1.6448536269514722,   // Φ^-1(0.95)
+      95: 1.959963984540054,    // Φ^-1(0.975)
+      99: 2.5758293035489004    // Φ^-1(0.995)
+    };
 
-    // ---- 차트 생성 ----
+    // ====== DOM ======
+    const ciSel = document.getElementById('ciLevel');
+    const zInput = document.getElementById('zValue');
+    const tailSel = document.getElementById('tailType');
+    const ciText = document.getElementById('ciText');
+    const pText  = document.getElementById('pText');
+
+    // ====== 차트 ======
     const ctx = document.getElementById('chart');
     const chart = new Chart(ctx, {
       type: 'line',
       data: { datasets: [
-        {label: '정규분포 f(x)', data: [], parsing: false, borderWidth: 2, pointRadius: 0, tension: 0.15},
-        {label: '구간 음영', data: [], parsing: false, borderWidth: 0, pointRadius: 0, fill: 'origin', tension: 0.15}
+        {label: '표준정규 f(x)', data: [], parsing:false, borderWidth:2, pointRadius:0, tension:0.15},
+        {label: '신뢰구간', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:'origin', hidden:false},
+        {label: 'p-value 영역', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:'origin', hidden:false}
       ]},
       options: {
         responsive: true,
         animation: {duration: 200},
         plugins: {
-          legend: {display: true},
-          tooltip: {mode: 'index', intersect: false, callbacks:{
-            label: (ctx) => ` f(x) ≈ ${ctx.parsed.y.toFixed(5)}`
+          legend: {display:true},
+          tooltip: {mode:'index', intersect:false, callbacks:{
+            label: (ctx) => ctx.datasetIndex===0 ? ` f(x) ≈ ${ctx.parsed.y.toFixed(5)}` : null
           }}
         },
         scales: {
-          x: {type:'linear', title:{display:true, text:'x'}},
-          y: {title:{display:true, text:'밀도 f(x)'}}
+          x: {type:'linear', title:{display:true, text:'z'}, suggestedMin:-4.5, suggestedMax:4.5},
+          y: {title:{display:true, text:'밀도 f(z)'}}
         }
       }
     });
 
-    function update(){
-      const mu = parseFloat(muEl.value);
-      const s  = Math.max(0.1, parseFloat(sigmaEl.value));
-      const a  = parseFloat(aEl.value);
-      const b  = parseFloat(bEl.value);
-      const n  = Math.min(1001, Math.max(101, parseInt(ptsEl.value, 10) || 241));
-
-      // x 범위: μ ± 4σ
-      const xmin = mu - 4*s, xmax = mu + 4*s;
+    // 곡선용 데이터(그리드 해상도 고정: 801점 → 매끈하게만 영향)
+    function buildCurve(){
+      const n = 801, xmin = -4.5, xmax = 4.5;
       const step = (xmax - xmin) / (n-1);
-
       const curve = [];
-      const shade = [];
-
       for(let i=0;i<n;i++){
         const x = xmin + i*step;
-        const y = pdf(x, mu, s);
-        curve.push({x,y});
-        // 음영 구간만 y, 그 외는 null → Chart.js가 해당 구간만 채움
-        shade.push({x, y: (x>=Math.min(a,b) && x<=Math.max(a,b)) ? y : null});
+        curve.push({x, y: pdf(x)});
       }
-
-      chart.data.datasets[0].data = curve;
-      chart.data.datasets[1].data = shade;
-      chart.update();
-
-      // 확률 근사: CDF(b)-CDF(a)
-      const p = Math.max(0, Math.min(1, normCdf(Math.max(a,b), mu, s) - normCdf(Math.min(a,b), mu, s)));
-      probText.textContent = `P(${Math.min(a,b)} ≤ X ≤ ${Math.max(a,b)}) ≈ ${p.toFixed(4)}`;
+      return curve;
     }
 
-    [muEl, sigmaEl, aEl, bEl, ptsEl].forEach(i => i.addEventListener('input', update));
+    // 특정 구간만 음영 채우는 dataset 만들기 (구간: predicate(x)=true 인 곳)
+    function makeShade(predicate){
+      const base = chart.data.datasets[0].data;
+      return base.map(p => ({x: p.x, y: predicate(p.x) ? p.y : null}));
+    }
+
+    function formatProb(p){
+      if (p < 1e-4) return p.toExponential(2);
+      return p.toFixed(4);
+    }
+
+    function update(){
+      // 항상 표준정규
+      if(chart.data.datasets[0].data.length === 0){
+        chart.data.datasets[0].data = buildCurve();
+      }
+
+      // --- 신뢰구간 중앙음영 ---
+      const level = ciSel.value;
+      if(level === 'none'){
+        chart.data.datasets[1].data = [];
+        ciText.textContent = '신뢰구간: 선택 안 함';
+      }else{
+        const zstar = ciZ[level];
+        chart.data.datasets[1].data = makeShade(x => Math.abs(x) <= zstar);
+        ciText.textContent = `${level}% 신뢰구간: [−${zstar.toFixed(3)}, +${zstar.toFixed(3)}]  (면적 ≈ ${(level/100).toFixed(2)})`;
+      }
+
+      // --- p-value 계산 & 음영 ---
+      const z = parseFloat(zInput.value);
+      const tail = tailSel.value;
+      let p;
+
+      if(tail === 'two'){
+        const zabs = Math.abs(z);
+        p = 2 * (1 - stdNormCdf(zabs));
+        chart.data.datasets[2].data = makeShade(x => Math.abs(x) >= zabs);
+        pText.textContent = `p-value (양측, |z|=${zabs.toFixed(2)}): ${formatProb(p)}  →  P(|Z| ≥ ${zabs.toFixed(2)})`;
+      }else if(tail === 'right'){
+        p = 1 - stdNormCdf(z);
+        chart.data.datasets[2].data = makeShade(x => x >= z);
+        pText.textContent = `p-value (우측, z=${z.toFixed(2)}): ${formatProb(p)}  →  P(Z ≥ ${z.toFixed(2)})`;
+      }else{ // left
+        p = stdNormCdf(z);
+        chart.data.datasets[2].data = makeShade(x => x <= z);
+        pText.textContent = `p-value (좌측, z=${z.toFixed(2)}): ${formatProb(p)}  →  P(Z ≤ ${z.toFixed(2)})`;
+      }
+
+      chart.update();
+    }
+
+    [ciSel, zInput, tailSel].forEach(el => el.addEventListener('input', update));
     update();
   </script>
 </body>
 </html>
-
