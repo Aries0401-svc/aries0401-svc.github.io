@@ -12,6 +12,21 @@
 
   <!-- 공통 리소스: 상대경로 필수 -->
   <link rel="stylesheet" href="../../assets/style.css" />
+
+  <style>
+    /* 최소한의 페이지 전용 스타일 (색/경계는 CSS 변수만 사용) */
+    #goBack {
+      cursor: pointer;
+      display: inline-block;
+      text-align: center;
+    }
+    #goBack:focus-visible {
+      outline: 0;
+      box-shadow: 0 0 0 4px var(--ring);
+    }
+    .footer-actions { display: flex; gap: .75rem; align-items: center; }
+    .footer-actions .hint { color: var(--muted); font-size: .9rem; }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -49,10 +64,39 @@
   </main>
 
   <footer class="site-footer">
+    <div class="footer-actions">
+      <!-- 히스토리 우선 '이전으로' 버튼 -->
+      <button id="goBack" type="button" class="card" aria-label="이전 페이지로 돌아가기" data-fallback="../">← 이전으로</button>
+      <span class="hint" aria-hidden="true">또는 <a href="../" class="inline">미시경제학으로</a></span>
+      <noscript><a class="card" href="../">← 미시경제학으로</a></noscript>
+    </div>
     <small>© <span id="year"></span> aries0401-svc</small>
   </footer>
 
   <script src="../../assets/site.js" defer></script>
+  <script>
+    // 접근성: 클릭 + Enter/Space로 동작, 히스토리 없으면 상위로 이동
+    (function () {
+      const btn = document.getElementById('goBack');
+      if (!btn) return;
+
+      function goBack() {
+        if (window.history && window.history.length > 1) {
+          window.history.back();
+        } else {
+          const fallback = btn.getAttribute('data-fallback') || '../';
+          window.location.href = fallback;
+        }
+      }
+
+      btn.addEventListener('click', goBack);
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          goBack();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
-
