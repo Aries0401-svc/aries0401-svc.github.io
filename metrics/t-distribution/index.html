@@ -15,17 +15,26 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
-    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px}
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;margin-bottom:16px}
     .ctrl{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:12px 14px;border-radius:12px;box-shadow: var(--shadow)}
     .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
     .ctrl select,.ctrl input{width:180px;background:var(--panel);color:var(--text);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px}
     .ctrl select:focus,.ctrl input:focus{outline:none;box-shadow:0 0 0 4px var(--ring)}
     select option{background:var(--panel);color:var(--text)}
     @media (prefers-color-scheme: light){ select option{background:#fff;color:#0f172a} }
-    .stat{min-width:240px;display:flex;flex-direction:column;gap:4px;background:linear-gradient(180deg, rgba(106,169,255,.12), rgba(106,169,255,.06)), var(--panel);border:1px solid rgba(106,169,255,.35)}
+
+    /* p-value 박스를 항상 오른쪽 첫 줄에 고정 */
+    .stat{
+      min-width:240px; width:280px; flex:0 0 280px;
+      order:99; margin-left:auto;
+      display:flex; flex-direction:column; gap:4px;
+      background:linear-gradient(180deg, rgba(106,169,255,.12), rgba(106,169,255,.06)), var(--panel);
+      border:1px solid rgba(106,169,255,.35);
+    }
     .stat .label{font-size:12px;color:var(--muted)}
     .stat .value{font-variant-numeric:tabular-nums;font-weight:700;font-size:26px;line-height:1.1}
     .stat .meta{font-size:12px;color:var(--muted)}
+
     canvas{background:var(--panel);border-radius:18px;box-shadow:var(--shadow);padding:10px}
     .hint{color:var(--muted);font-size:14px;margin-top:8px}
   </style>
@@ -59,7 +68,7 @@
           </select>
         </div>
 
-        <!-- p-value 박스 -->
+        <!-- p-value 박스 (오른쪽 고정) -->
         <div class="ctrl stat" id="pBox" aria-live="polite">
           <div class="label">p-value</div>
           <div class="value" id="pBoxValue">—</div>
@@ -83,32 +92,25 @@
 
   <script src="../../assets/site.js"></script>
   <script>
-    /* ================= 색상 유틸 ================= */
-    function cssVar(name){ 
-      const v = getComputedStyle(document.documentElement).getPropertyValue(name);
-      return (v && v.trim()) || null;
-    }
-    function withAlpha(color, alpha){ // '#RRGGBB' | rgb() | hsl() -> 알파 적용
-      if (!color) return `rgba(239,68,68,${alpha})`;
-      if (color.startsWith('#')){
-        const hex = color.length===4
-          ? '#'+color[1]+color[1]+color[2]+color[2]+color[3]+color[3]
-          : color;
-        const a = Math.round(alpha*255).toString(16).padStart(2,'0');
-        return hex + a; // #RRGGBBAA
+    /* ===== 색상 (정규 페이지와 동일 규칙) ===== */
+    function cssVar(name){ const v=getComputedStyle(document.documentElement).getPropertyValue(name); return (v&&v.trim())||null; }
+    function withAlpha(color, a){
+      if(!color) return `rgba(239,68,68,${a})`;
+      if(color.startsWith('#')){
+        const hex=color.length===4?('#'+color[1]+color[1]+color[2]+color[2]+color[3]+color[3]):color;
+        const aa=Math.round(a*255).toString(16).padStart(2,'0');
+        return hex+aa;
       }
-      if (color.startsWith('rgb('))  return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
-      if (color.startsWith('hsl('))  return color.replace('hsl(', 'hsla(').replace(')', `, ${alpha})`);
+      if(color.startsWith('rgb(')) return color.replace('rgb(','rgba(').replace(')',`, ${a})`);
+      if(color.startsWith('hsl(')) return color.replace('hsl(','hsla(').replace(')',`, ${a})`);
       return color;
     }
+    const BLUE = cssVar('--primary') || '#60A5FA';        // 곡선
+    const RED  = cssVar('--danger')  || '#EF4444';        // 음영
+    const SHADE = withAlpha(RED, 0.55);
 
-    // 정규 페이지와 일치하도록 지정
-    const BLUE = cssVar('--primary') || '#60A5FA';            // 곡선(파랑)
-    const RED  = cssVar('--danger')  || '#EF4444';            // 음영(빨강, 기본 red-500)
-    const SHADE = withAlpha(RED, 0.55);                       // 반투명 빨강
-
-    /* ================= 수학 함수 ================= */
-    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    /* ===== 수학 ===== */
+    const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
     function formatProb(p){ if(!Number.isFinite(p)) return '—'; p=clamp(p,0,1); return p<1e-6? p.toExponential(2):p.toFixed(6); }
 
     function logGamma(z){
@@ -119,7 +121,7 @@
       const t=z+g+0.5; return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);
     }
     function betacf(a,b,x){
-      const MAXIT=200,EPS=3e-7,FPMIN=1e-300; let qab=a+b,qap=a+1,qam=a-1; let c=1,d=1-qab*x/qap; if(Math.abs(d)<FPMIN) d=FPMIN; d=1/d; let h=d;
+      const MAXIT=200,EPS=3e-7,FPMIN=1e-300; let qab=a+b,qap=a+1,qam=a-1; let c=1,d=1-qab*x/qap; if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; let h=d;
       for(let m=1;m<=MAXIT;m++){ const m2=2*m;
         let aa=m*(b-m)*x/((qam+m2)*(a+m2)); d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; h*=d*c;
         aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2)); d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; const del=d*c; h*=del;
@@ -128,29 +130,29 @@
     }
     function incbetaReg(x,a,b){
       if(x<=0) return 0; if(x>=1) return 1;
-      const lnBt = logGamma(a+b)-logGamma(a)-logGamma(b) + a*Math.log(x)+b*Math.log(1-x);
-      const bt = Math.exp(lnBt);
-      if(x < (a+1)/(a+b+2)) return bt*betacf(a,b,x)/a;
-      return 1 - (bt*betacf(b,a,1-x)/b);
+      const lnBt=logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(x)+b*Math.log(1-x);
+      const bt=Math.exp(lnBt);
+      if(x<(a+1)/(a+b+2)) return bt*betacf(a,b,x)/a;
+      return 1-(bt*betacf(b,a,1-x)/b);
     }
     function pdfT(x,v){
-      const lnC = logGamma((v+1)/2)-logGamma(v/2)-0.5*(Math.log(v)+Math.log(Math.PI));
-      const lnK = -((v+1)/2)*Math.log(1 + (x*x)/v);
+      const lnC=logGamma((v+1)/2)-logGamma(v/2)-0.5*(Math.log(v)+Math.log(Math.PI));
+      const lnK=-((v+1)/2)*Math.log(1+(x*x)/v);
       return Math.exp(lnC+lnK);
     }
     function cdfT(x,v){
-      const a=v/2, b=0.5, t=v/(v+x*x), I=incbetaReg(t,a,b);
-      return (x>=0)? 1-0.5*I : 0.5*I;
+      const a=v/2,b=0.5,t=v/(v+x*x),I=incbetaReg(t,a,b);
+      return (x>=0)?1-0.5*I:0.5*I;
     }
     function invCdfT(p,v){
       if(p<=0) return -Infinity; if(p>=1) return Infinity; if(p===0.5) return 0;
-      const sign = p<0.5? -1: 1, target = p<0.5? 1-p: p;
-      let lo=0, hi=1; while(cdfT(hi,v)<target){ hi*=2; if(hi>1e6) break; }
+      const sign=p<0.5?-1:1, target=p<0.5?1-p:p;
+      let lo=0,hi=1; while(cdfT(hi,v)<target){hi*=2;if(hi>1e6)break;}
       for(let i=0;i<80;i++){ const mid=(lo+hi)/2, F=cdfT(mid,v); if(F<target) lo=mid; else hi=mid; }
       return sign*(lo+hi)/2;
     }
 
-    /* ================= 신뢰구간 플러그인 ================= */
+    /* ===== 신뢰구간 플러그인 ===== */
     const CI_LEVELS=[0.90,0.95,0.99]; let CI_MARKS=[];
     const ciMarkersPlugin={
       id:'ciMarkersT',
@@ -178,25 +180,33 @@
       }
     };
 
-    /* ================= 차트 기본 데이터 ================= */
+    /* ===== 데이터 유틸 ===== */
     function buildCurve(v,xmin,xmax){
       const n=1401, step=(xmax-xmin)/(n-1), arr=[];
       for(let i=0;i<n;i++){ const x=xmin+i*step; arr.push({x,y:pdfT(x,v)}); }
       return arr;
     }
-    function makeShade(base, pred){
-      return base.map(p => ({x:p.x, y: pred(p.x) ? p.y : null}));
+    function makeShade(base,pred){
+      return base.map(p=>({x:p.x,y: pred(p.x)? p.y : null}));
     }
 
-    // 초기 상태 계산
+    /* ===== 초기 세팅: CI_MARKS를 '먼저' 계산해 차트 생성 ===== */
     const dfInput=document.getElementById('dfValue');
     const tInput =document.getElementById('tValue');
     const tailSel=document.getElementById('tailType');
 
     const v0=parseInt(dfInput.value,10);
     const t0=Number(tInput.value);
-    const marks0=[0.90,0.95,0.99].map(L=> invCdfT((1+L)/2, v0));
-    const need0=Math.max(Math.abs(t0), ...marks0);
+
+    // 1) 초기 신뢰구간 임계값을 먼저 계산해 CI_MARKS에 세팅 (← 핵심)
+    CI_MARKS = CI_LEVELS.map(L=>{
+      const c=invCdfT((1+L)/2, v0);
+      return { z:c, label:`${(L*100).toFixed(0)}% 신뢰구간 (±${c.toFixed(3)})` };
+    });
+
+    // 2) 도메인/데이터
+    const maxCrit0=Math.max(...CI_MARKS.map(m=>m.z));
+    const need0=Math.max(Math.abs(t0), maxCrit0);
     const xmax0=Math.min(80, Math.max(4.5, need0*1.2)), xmin0=-xmax0;
     const base0=buildCurve(v0,xmin0,xmax0);
     const shade0=makeShade(base0, x=> Math.abs(x) >= Math.abs(t0));
@@ -225,12 +235,17 @@
       }
     });
 
-    /* ================= UI & 업데이트 ================= */
+    /* ===== p-value 박스 초기값 표시 ===== */
     const pBoxValue=document.getElementById('pBoxValue');
     const pBoxMeta =document.getElementById('pBoxMeta');
+    (function initPbox(){
+      const tabs=Math.abs(t0);
+      const p0=2*(1 - cdfT(tabs, v0));
+      pBoxValue.textContent = formatProb(p0);
+      pBoxMeta.textContent  = `양측, |t|=${tabs.toFixed(3)} (ν=${v0}) → P(|T_ν| ≥ ${tabs.toFixed(3)})`;
+    })();
 
-    const CI_LEVELS2=[0.90,0.95,0.99];
-
+    /* ===== 업데이트 ===== */
     function update(){
       const v=parseInt(dfInput.value,10);
       const t=Number(tInput.value);
@@ -246,13 +261,15 @@
       }
 
       // CI & 도메인
-      CI_MARKS = CI_LEVELS2.map(L=>{ const c=invCdfT((1+L)/2, v); return {z:c, label:`${(L*100).toFixed(0)}% 신뢰구간 (±${c.toFixed(3)})`}; });
+      CI_MARKS = CI_LEVELS.map(L=>{
+        const c=invCdfT((1+L)/2, v);
+        return { z:c, label:`${(L*100).toFixed(0)}% 신뢰구간 (±${c.toFixed(3)})` };
+      });
       const maxCrit=Math.max(...CI_MARKS.map(m=>m.z));
       const need=Math.max(Math.abs(t), maxCrit);
       const xmax=Math.min(80, Math.max(4.5, need*1.2)), xmin=-xmax;
 
-      const domChanged = (chart.options.scales.x.suggestedMax !== xmax);
-      if(domChanged){
+      if(chart.options.scales.x.suggestedMax !== xmax){
         chart.options.scales.x.suggestedMin=xmin;
         chart.options.scales.x.suggestedMax=xmax;
         chart.data.datasets[0].data=buildCurve(v,xmin,xmax);
@@ -261,7 +278,7 @@
         for(let i=0;i<base.length;i++) base[i].y=pdfT(base[i].x,v);
       }
 
-      // p-value & 음영
+      // 음영 & p-value
       const base=chart.data.datasets[0].data;
       let pval, meta;
       if (tail==='two'){
@@ -279,7 +296,7 @@
         meta=`좌측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≤ ${t.toFixed(3)})`;
       }
 
-      // 색은 고정(곡선 파랑, 음영 빨강)
+      // 고정 색상 유지
       chart.data.datasets[0].borderColor = BLUE;
       chart.data.datasets[1].backgroundColor = SHADE;
 
@@ -289,15 +306,7 @@
       chart.update();
     }
 
-    [dfInput, tInput, tailSel].forEach(el => el.addEventListener('input', update));
-    // 초기 p-box
-    (function initPbox(){
-      const v=parseInt(dfInput.value,10);
-      const tabs=Math.abs(Number(tInput.value));
-      const p0=2*(1 - cdfT(tabs,v));
-      pBoxValue.textContent = formatProb(p0);
-      pBoxMeta.textContent  = `양측, |t|=${tabs.toFixed(3)} (ν=${v}) → P(|T_ν| ≥ ${tabs.toFixed(3)})`;
-    })();
+    [dfInput, tInput, tailSel].forEach(el=>el.addEventListener('input', update));
   </script>
 </body>
 </html>
