@@ -1,1 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>계량경제학 · 정규분포 시각화</title>
+
+  <!-- 사이트 공통 스타일 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/style.css" />
+
+  <!-- Chart.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* 이 페이지에서만 쓰는 약간의 레이아웃 보강 */
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px}
+    .ctrl{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:12px 14px;border-radius:12px;box-shadow: var(--shadow)}
+    .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .ctrl input{width:140px;background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;color:var(--text)}
+    .ctrl input[type="number"]{appearance:textfield}
+    .ctrl small{color:var(--muted)}
+    canvas{background:var(--panel);border-radius:18px;box-shadow: var(--shadow);padding:10px}
+    .legend{color:var(--muted);font-size:14px;margin-top:8px}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>정규분포 시각화</h1>
+    <p class="subtitle">평균(μ), 표준편차(σ)를 조정하고 구간 확률을 음영으로 확인하세요</p>
+  </header>
+
+  <main class="grid" style="grid-template-columns:1fr;">
+    <section class="card">
+      <div class="controls">
+        <div class="ctrl">
+          <label for="mu">평균 μ</label>
+          <input id="mu" type="number" step="0.1" value="0">
+        </div>
+        <div class="ctrl">
+          <label for="sigma">표준편차 σ</label>
+          <input id="sigma" type="number" step="0.1" value="1" min="0.1">
+        </div>
+        <div class="ctrl">
+          <label for="a">음영 구간 a</label>
+          <input id="a" type="number" step="0.1" value="-1">
+        </div>
+        <div class="ctrl">
+          <label for="b">음영 구간 b</label>
+          <input id="b" type="number" step="0.1" value="1">
+        </div>
+        <div class="ctrl">
+          <label for="points">해상도(점 개수)</label>
+          <input id="points" type="number" step="10" value="241" min="101" max="1001">
+          <small>높을수록 곡선이 부드러워집니다</small>
+        </div>
+      </div>
+
+      <canvas id="chart" height="120"></canvas>
+      <div class="legend" id="probText">P(a ≤ X ≤ b) ≈ …</div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 계량경제학 홈</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+  </footer>
+
+  <script src="../../assets/site.js"></script>
+  <script>
+    // ---- 수학 유틸 ----
+    const pdf = (x, mu, s) => (1/(s*Math.sqrt(2*Math.PI))) * Math.exp(-0.5 * ((x-mu)/s)**2);
+
+    // 표준정규 CDF 근사 (Abramowitz & Stegun 7.1.26)
+    function stdNormCdf(z){
+      const t = 1/(1+0.2316419*Math.abs(z));
+      const d = Math.exp(-z*z/2)/Math.sqrt(2*Math.PI);
+      let p = d*(0.319381530*t - 0.356563782*t**2 + 1.781477937*t**3 - 1.821255978*t**4 + 1.330274429*t**5);
+      if(z>0) p = 1-p;
+      return p;
+    }
+    const normCdf = (x, mu, s) => stdNormCdf((x-mu)/s);
+
+    // ---- DOM ----
+    const el = id => document.getElementById(id);
+    const muEl = el('mu'), sigmaEl = el('sigma'), aEl = el('a'), bEl = el('b'), ptsEl = el('points');
+    const probText = el('probText');
+
+    // ---- 차트 생성 ----
+    const ctx = document.getElementById('chart');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: { datasets: [
+        {label: '정규분포 f(x)', data: [], parsing: false, borderWidth: 2, pointRadius: 0, tension: 0.15},
+        {label: '구간 음영', data: [], parsing: false, borderWidth: 0, pointRadius: 0, fill: 'origin', tension: 0.15}
+      ]},
+      options: {
+        responsive: true,
+        animation: {duration: 200},
+        plugins: {
+          legend: {display: true},
+          tooltip: {mode: 'index', intersect: false, callbacks:{
+            label: (ctx) => ` f(x) ≈ ${ctx.parsed.y.toFixed(5)}`
+          }}
+        },
+        scales: {
+          x: {type:'linear', title:{display:true, text:'x'}},
+          y: {title:{display:true, text:'밀도 f(x)'}}
+        }
+      }
+    });
+
+    function update(){
+      const mu = parseFloat(muEl.value);
+      const s  = Math.max(0.1, parseFloat(sigmaEl.value));
+      const a  = parseFloat(aEl.value);
+      const b  = parseFloat(bEl.value);
+      const n  = Math.min(1001, Math.max(101, parseInt(ptsEl.value, 10) || 241));
+
+      // x 범위: μ ± 4σ
+      const xmin = mu - 4*s, xmax = mu + 4*s;
+      const step = (xmax - xmin) / (n-1);
+
+      const curve = [];
+      const shade = [];
+
+      for(let i=0;i<n;i++){
+        const x = xmin + i*step;
+        const y = pdf(x, mu, s);
+        curve.push({x,y});
+        // 음영 구간만 y, 그 외는 null → Chart.js가 해당 구간만 채움
+        shade.push({x, y: (x>=Math.min(a,b) && x<=Math.max(a,b)) ? y : null});
+      }
+
+      chart.data.datasets[0].data = curve;
+      chart.data.datasets[1].data = shade;
+      chart.update();
+
+      // 확률 근사: CDF(b)-CDF(a)
+      const p = Math.max(0, Math.min(1, normCdf(Math.max(a,b), mu, s) - normCdf(Math.min(a,b), mu, s)));
+      probText.textContent = `P(${Math.min(a,b)} ≤ X ≤ ${Math.max(a,b)}) ≈ ${p.toFixed(4)}`;
+    }
+
+    [muEl, sigmaEl, aEl, bEl, ptsEl].forEach(i => i.addEventListener('input', update));
+    update();
+  </script>
+</body>
+</html>
 
