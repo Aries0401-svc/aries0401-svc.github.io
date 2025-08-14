@@ -1,1 +1,113 @@
+/* 기본 세팅 */
+:root{
+  --bg: #0b0c0f;
+  --panel: #12141a;
+  --text: #e8ecf1;
+  --muted: #9aa4b2;
+  --primary: #6aa9ff;
+  --ring: rgba(106,169,255,.6);
+  --shadow: 0 10px 24px rgba(0,0,0,.35);
+}
+
+@media (prefers-color-scheme: light) {
+  :root{
+    --bg: #f6f8fb;
+    --panel: #ffffff;
+    --text: #0f172a;
+    --muted: #475569;
+    --primary: #2563eb;
+    --ring: rgba(37, 99, 235, .35);
+    --shadow: 0 12px 24px rgba(2, 6, 23, .08);
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body{
+  margin:0;
+  font-family: "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: radial-gradient(1200px 800px at 10% -10%, rgba(99,102,241,.25), transparent 60%),
+              radial-gradient(1200px 800px at 110% 10%, rgba(59,130,246,.25), transparent 60%),
+              var(--bg);
+  color: var(--text);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* 헤더 */
+.site-header{
+  width:100%;
+  max-width:1000px;
+  padding:48px 20px 16px;
+  text-align:center;
+}
+.site-header h1{
+  margin:0 0 8px;
+  font-size: clamp(28px, 4vw, 40px);
+  letter-spacing:.2px;
+}
+.subtitle{
+  margin:0;
+  color: var(--muted);
+  font-size: clamp(14px, 2vw, 16px);
+}
+
+/* 카드 그리드 */
+.grid{
+  width:100%;
+  max-width:1000px;
+  padding:24px 20px 48px;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:20px;
+}
+@media (max-width: 900px){
+  .grid{ grid-template-columns: 1fr; }
+}
+
+/* 카드 */
+.card{
+  background: var(--panel);
+  border-radius: 18px;
+  padding: 28px 24px;
+  text-decoration:none;
+  color:inherit;
+  box-shadow: var(--shadow);
+  border:1px solid rgba(255,255,255,.06);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  position:relative;
+  overflow:hidden;
+  outline: none;
+}
+.card:focus-visible{
+  box-shadow: 0 0 0 6px var(--ring), var(--shadow);
+}
+.card:hover{
+  transform: translateY(-3px);
+  border-color: rgba(106,169,255,.45);
+}
+.card .emoji{
+  font-size: 38px;
+  line-height:1;
+  margin-bottom: 12px;
+}
+.card h2{
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+.card p{
+  margin:0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* 푸터 */
+.site-footer{
+  width:100%;
+  max-width:1000px;
+  padding: 0 20px 40px;
+  text-align:center;
+  color: var(--muted);
+}
 
