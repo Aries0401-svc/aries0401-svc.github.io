@@ -133,8 +133,6 @@
       const a=v/2, b=0.5, t=v/(v+x*x), I=incbetaReg(t,a,b);
       return (x>=0) ? 1-0.5*I : 0.5*I;
     }
-
-    // ===== 역 CDF (이분 탐색) =====
     function invCdfT(p,v){
       if(p<=0) return -Infinity; if(p>=1) return Infinity; if(p===0.5) return 0;
       const sign = p<0.5 ? -1 : 1; const target = p<0.5 ? 1-p : p;
@@ -173,32 +171,70 @@
       }
     };
 
+    // ===== p-value 음영 플러그인 (커스텀, 중앙 이어짐/깜빡임 방지) =====
+    let shadePredicate = null;               // 현재 음영 판별 함수
+    const shadeColor = primaryFill(0.2);     // 표준정규 페이지와 동일 톤
+    const pvalueShadePlugin = {
+      id: 'pvalueShade',
+      beforeDatasetsDraw(chart){
+        if (typeof shadePredicate !== 'function') return;
+        const {ctx, scales:{x,y}} = chart;
+        const base = chart.data.datasets[0].data;
+        if (!base || !base.length) return;
+
+        const y0 = y.getPixelForValue(0);
+        ctx.save();
+        ctx.fillStyle = shadeColor;
+
+        // 연속 구간별로 폴리곤을 직접 채움
+        let run = false;
+        for (let i=0;i<base.length;i++){
+          const p = base[i];
+          const include = shadePredicate(p.x);
+          const X = x.getPixelForValue(p.x);
+          const Y = y.getPixelForValue(p.y);
+
+          if (include && !run){
+            ctx.beginPath();
+            ctx.moveTo(X, y0);     // 베이스라인에서 시작
+            ctx.lineTo(X, Y);
+            run = true;
+          } else if (include){
+            ctx.lineTo(X, Y);
+            if (i === base.length - 1){
+              ctx.lineTo(X, y0);
+              ctx.closePath(); ctx.fill();
+              run = false;
+            }
+          } else if (run){
+            // 직전 점까지 영역을 닫음
+            const prev = base[i-1];
+            const Xp = x.getPixelForValue(prev.x);
+            ctx.lineTo(Xp, y.getPixelForValue(0));
+            ctx.closePath(); ctx.fill();
+            run = false;
+          }
+        }
+        ctx.restore();
+      }
+    };
+
     // ===== 차트 구성 =====
     const ctxCanvas = document.getElementById('chart');
-    Chart.register(ciMarkersPlugin);
-
-    const fillColor = primaryFill(0.2); // 최초 생성 시점에 바로 지정(플래시 방지)
+    Chart.register(ciMarkersPlugin, pvalueShadePlugin);
 
     const chart = new Chart(ctxCanvas, {
       type: 'line',
       data: { datasets: [
         { label:'t_ν 밀도 f(t)', data: [], parsing:false, borderWidth:2, pointRadius:0, tension:0.15 },
-        // 음영(왼쪽 꼬리)
-        { label:'p-value 영역', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:'origin', spanGaps:false, backgroundColor: fillColor },
-        // 음영(오른쪽 꼬리) — 범례에 안 보이게 숨김 라벨
-        { label:'_hide_p_area', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:'origin', spanGaps:false, backgroundColor: fillColor }
+        // 범례용 placeholder (실제 채우기는 플러그인이 담당)
+        { label:'p-value 영역', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:false, backgroundColor: shadeColor }
       ]},
       options: {
         responsive:true,
         animation:{ duration:200 },
         plugins:{
-          legend:{
-            display:true,
-            labels:{
-              // "_hide_*" 라벨은 범례에서 숨김
-              filter: (item)=> !(item.text && item.text.startsWith('_hide_'))
-            }
-          },
+          legend:{ display:true },
           tooltip:{ mode:'index', intersect:false, callbacks:{
             label:(c)=> c.datasetIndex===0 ? ` f(t) ≈ ${c.parsed.y.toFixed(5)}` : null
           }}
@@ -216,7 +252,6 @@
       for(let i=0;i<n;i++){ const x=xmin+i*step; arr.push({x,y:pdfT(x,v)}); }
       return arr;
     }
-    function shadeFrom(base, pred){ return base.map(p=> ({x:p.x, y: pred(p.x)? p.y : null})); }
 
     // ===== UI & 업데이트 =====
     const dfInput=document.getElementById('dfValue');
@@ -234,15 +269,15 @@
 
       if(!Number.isFinite(v)||v<1){
         pBoxValue.textContent='—'; pBoxMeta.textContent='유효한 자유도(ν≥1)를 입력하세요';
-        chart.data.datasets[0].data=[]; chart.data.datasets[1].data=[]; chart.data.datasets[2].data=[];
-        chart.update(); return;
+        chart.data.datasets[0].data=[]; chart.update(); return;
       }
       if(!Number.isFinite(t)){
         pBoxValue.textContent='—'; pBoxMeta.textContent='유효한 t 값을 입력하세요';
-        chart.data.datasets[1].data=[]; chart.data.datasets[2].data=[]; chart.update(); return;
+        chart.update(); return;
       }
 
       // 신뢰구간 임계값(두측 90/95/99%)
+      const CI_LEVELS=[0.90,0.95,0.99];
       CI_MARKS=CI_LEVELS.map(L=>{ const p=(1+L)/2, c=invCdfT(p,v); return {z:c, label:`${(L*100).toFixed(0)}% 신뢰구간 (±${c.toFixed(3)})`}; });
 
       // x축 범위 자동 확장
@@ -261,26 +296,20 @@
         for(let i=0;i<base.length;i++) base[i].y=pdfT(base[i].x,v);
       }
 
-      const base=chart.data.datasets[0].data;
-
-      // p-value & 음영
+      // p-value & 음영 predicate (플러그인에서 사용)
       let pval, meta;
-      if(tail==='two'){
+      if (tail==='two'){
         const tabs=Math.abs(t);
         pval=2*(1-cdfT(tabs,v));
-        // 왼쪽/오른쪽 꼬리를 각각 채움
-        chart.data.datasets[1].data = shadeFrom(base, x => x <= -tabs);
-        chart.data.datasets[2].data = shadeFrom(base, x => x >=  tabs);
+        shadePredicate = (x)=> Math.abs(x) >= tabs;
         meta=`양측, |t|=${tabs.toFixed(3)} (ν=${v}) → P(|T_ν| ≥ ${tabs.toFixed(3)})`;
-      }else if(tail==='right'){
+      } else if (tail==='right'){
         pval=1-cdfT(t,v);
-        chart.data.datasets[1].data = []; // 왼쪽 꼬리 비움
-        chart.data.datasets[2].data = shadeFrom(base, x => x >= t);
+        shadePredicate = (x)=> x >= t;
         meta=`우측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≥ ${t.toFixed(3)})`;
-      }else{ // left
+      } else {
         pval=cdfT(t,v);
-        chart.data.datasets[1].data = shadeFrom(base, x => x <= t);
-        chart.data.datasets[2].data = []; // 오른쪽 꼬리 비움
+        shadePredicate = (x)=> x <= t;
         meta=`좌측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≤ ${t.toFixed(3)})`;
       }
 
