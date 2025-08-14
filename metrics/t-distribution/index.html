@@ -83,23 +83,27 @@
 
   <script src="../../assets/site.js"></script>
   <script>
-    // ===== 유틸 =====
+    // ========== 기본 설정: 자동 팔레트 비활성화(초기 빨간색 플래시 방지) ==========
+    Chart.defaults.plugins.colors = Chart.defaults.plugins.colors || {};
+    Chart.defaults.plugins.colors.enabled = false;
+
+    // ====================== 유틸/색상 ======================
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-    function formatProb(p){ if(!Number.isFinite(p)) return '—'; p=clamp(p,0,1); return p<1e-6? p.toExponential(2) : p.toFixed(6); }
-    function primaryFill(alpha = 0.2){
-      const css = getComputedStyle(document.documentElement);
-      const prim = (css.getPropertyValue('--primary') || '#6aa9ff').trim();
-      if (prim.startsWith('#')){
-        const hex = prim.length===4 ? '#' + prim[1]+prim[1] + prim[2]+prim[2] + prim[3]+prim[3] : prim;
-        const aa = Math.round(alpha*255).toString(16).padStart(2,'0');
-        return hex + aa; // #RRGGBBAA
+    function formatProb(p){ if(!Number.isFinite(p)) return '—'; p=clamp(p,0,1); return p<1e-6? p.toExponential(2):p.toFixed(6); }
+    function primaryFill(alpha=0.2){
+      const css=getComputedStyle(document.documentElement);
+      const prim=(css.getPropertyValue('--primary')||'#6aa9ff').trim();
+      if(prim.startsWith('#')){
+        const hex=prim.length===4?('#'+prim[1]+prim[1]+prim[2]+prim[2]+prim[3]+prim[3]):prim;
+        const aa=Math.round(alpha*255).toString(16).padStart(2,'0');
+        return hex+aa; // #RRGGBBAA
       }
-      if (prim.startsWith('rgb(')) return prim.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
-      if (prim.startsWith('hsl(')) return prim.replace('hsl(', 'hsla(').replace(')', `, ${alpha})`);
+      if (prim.startsWith('rgb(')) return prim.replace('rgb(','rgba(').replace(')',`, ${alpha})`);
+      if (prim.startsWith('hsl(')) return prim.replace('hsl(','hsla(').replace(')',`, ${alpha})`);
       return prim;
     }
 
-    // ===== Γ, Beta, 정규화 불완전 베타 =====
+    // ====================== Γ, Beta, 정규화 불완전 베타 ======================
     function logGamma(z){
       const p=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
       const g=7;
@@ -108,7 +112,7 @@
       const t=z+g+0.5; return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);
     }
     function betacf(a,b,x){
-      const MAXIT=200,EPS=3e-7,FPMIN=1e-300; let qab=a+b,qap=a+1,qam=a-1; let c=1,d=1-qab*x/qap; if(Math.abs(d)<FPMIN) d=FPMIN; d=1/d; let h=d;
+      const MAXIT=200,EPS=3e-7,FPMIN=1e-300; let qab=a+b,qap=a+1,qam=a-1; let c=1,d=1-qab*x/qap; if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; let h=d;
       for(let m=1;m<=MAXIT;m++){ const m2=2*m;
         let aa=m*(b-m)*x/((qam+m2)*(a+m2)); d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; h*=d*c;
         aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2)); d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN; d=1/d; c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN; const del=d*c; h*=del;
@@ -117,31 +121,31 @@
     }
     function incbetaReg(x,a,b){
       if(x<=0) return 0; if(x>=1) return 1;
-      const lnBt = logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(x)+b*Math.log(1-x);
+      const lnBt = logGamma(a+b)-logGamma(a)-logGamma(b) + a*Math.log(x)+b*Math.log(1-x);
       const bt = Math.exp(lnBt);
       if(x < (a+1)/(a+b+2)) return bt*betacf(a,b,x)/a;
       return 1 - (bt*betacf(b,a,1-x)/b);
     }
 
-    // ===== t-분포 PDF/CDF =====
+    // ====================== t-분포 PDF/CDF/역CDF ======================
     function pdfT(x,v){
-      const lnC = logGamma((v+1)/2) - logGamma(v/2) - 0.5*(Math.log(v)+Math.log(Math.PI));
+      const lnC = logGamma((v+1)/2)-logGamma(v/2)-0.5*(Math.log(v)+Math.log(Math.PI));
       const lnK = -((v+1)/2)*Math.log(1 + (x*x)/v);
-      return Math.exp(lnC + lnK);
+      return Math.exp(lnC+lnK);
     }
     function cdfT(x,v){
       const a=v/2, b=0.5, t=v/(v+x*x), I=incbetaReg(t,a,b);
-      return (x>=0) ? 1-0.5*I : 0.5*I;
+      return (x>=0)? 1-0.5*I : 0.5*I;
     }
     function invCdfT(p,v){
       if(p<=0) return -Infinity; if(p>=1) return Infinity; if(p===0.5) return 0;
-      const sign = p<0.5 ? -1 : 1; const target = p<0.5 ? 1-p : p;
+      const sign = p<0.5? -1: 1, target = p<0.5? 1-p: p;
       let lo=0, hi=1; while(cdfT(hi,v)<target){ hi*=2; if(hi>1e6) break; }
       for(let i=0;i<80;i++){ const mid=(lo+hi)/2, F=cdfT(mid,v); if(F<target) lo=mid; else hi=mid; }
       return sign*(lo+hi)/2;
     }
 
-    // ===== 신뢰구간 표식 플러그인 =====
+    // ====================== 신뢰구간 표식 플러그인 ======================
     const CI_LEVELS=[0.90,0.95,0.99]; let CI_MARKS=[];
     const ciMarkersPlugin={
       id:'ciMarkersT',
@@ -171,64 +175,44 @@
       }
     };
 
-    // ===== p-value 음영 플러그인 (커스텀, 중앙 이어짐/깜빡임 방지) =====
-    let shadePredicate = null;               // 현재 음영 판별 함수
-    const shadeColor = primaryFill(0.2);     // 표준정규 페이지와 동일 톤
-    const pvalueShadePlugin = {
-      id: 'pvalueShade',
-      beforeDatasetsDraw(chart){
-        if (typeof shadePredicate !== 'function') return;
-        const {ctx, scales:{x,y}} = chart;
-        const base = chart.data.datasets[0].data;
-        if (!base || !base.length) return;
+    // ====================== 도메인/데이터 생성 ======================
+    function buildCurve(v, xmin, xmax){
+      const n=1401, step=(xmax-xmin)/(n-1), curve=[];
+      for(let i=0;i<n;i++){ const x=xmin+i*step; curve.push({x, y: pdfT(x,v)}); }
+      return curve;
+    }
+    function makeShadeFrom(base, pred){
+      return base.map(p => ({x:p.x, y: pred(p.x) ? p.y : null}));
+    }
 
-        const y0 = y.getPixelForValue(0);
-        ctx.save();
-        ctx.fillStyle = shadeColor;
+    // ====================== 초기 상태(곡선/음영 먼저 계산) ======================
+    const dfInput=document.getElementById('dfValue');
+    const tInput =document.getElementById('tValue');
+    const tailSel=document.getElementById('tailType');
 
-        // 연속 구간별로 폴리곤을 직접 채움
-        let run = false;
-        for (let i=0;i<base.length;i++){
-          const p = base[i];
-          const include = shadePredicate(p.x);
-          const X = x.getPixelForValue(p.x);
-          const Y = y.getPixelForValue(p.y);
+    const v0 = parseInt(dfInput.value,10);
+    const t0 = Number(tInput.value);
+    const Ls = [0.90,0.95,0.99];
+    const marks0 = Ls.map(L=> invCdfT((1+L)/2, v0));
+    const need0 = Math.max(Math.abs(t0), ...marks0);
+    const xmax0 = Math.min(80, Math.max(4.5, need0*1.2));
+    const xmin0 = -xmax0;
 
-          if (include && !run){
-            ctx.beginPath();
-            ctx.moveTo(X, y0);     // 베이스라인에서 시작
-            ctx.lineTo(X, Y);
-            run = true;
-          } else if (include){
-            ctx.lineTo(X, Y);
-            if (i === base.length - 1){
-              ctx.lineTo(X, y0);
-              ctx.closePath(); ctx.fill();
-              run = false;
-            }
-          } else if (run){
-            // 직전 점까지 영역을 닫음
-            const prev = base[i-1];
-            const Xp = x.getPixelForValue(prev.x);
-            ctx.lineTo(Xp, y.getPixelForValue(0));
-            ctx.closePath(); ctx.fill();
-            run = false;
-          }
-        }
-        ctx.restore();
-      }
-    };
+    const base0 = buildCurve(v0, xmin0, xmax0);
+    const shadeColor = primaryFill(0.2);
 
-    // ===== 차트 구성 =====
-    const ctxCanvas = document.getElementById('chart');
-    Chart.register(ciMarkersPlugin, pvalueShadePlugin);
+    // 두 꼬리(양측) 기준으로 음영 초기화 (정규 페이지와 동일 로직)
+    const shade0 = makeShadeFrom(base0, x => Math.abs(x) >= Math.abs(t0));
 
-    const chart = new Chart(ctxCanvas, {
+    // ====================== 차트 생성 (데이터/색상 모두 채워서 생성) ======================
+    Chart.register(ciMarkersPlugin);
+
+    const chart = new Chart(document.getElementById('chart'), {
       type: 'line',
       data: { datasets: [
-        { label:'t_ν 밀도 f(t)', data: [], parsing:false, borderWidth:2, pointRadius:0, tension:0.15 },
-        // 범례용 placeholder (실제 채우기는 플러그인이 담당)
-        { label:'p-value 영역', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:false, backgroundColor: shadeColor }
+        { label:'t_ν 밀도 f(t)', data: base0, parsing:false, borderWidth:2, pointRadius:0, tension:0.15 },
+        { label:'p-value 영역', data: shade0, parsing:false, borderWidth:0, pointRadius:0, fill:'origin', hidden:false,
+          backgroundColor: shadeColor } // 초기부터 고정 색상
       ]},
       options: {
         responsive:true,
@@ -240,27 +224,15 @@
           }}
         },
         scales:{
-          x:{ type:'linear', title:{display:true,text:'t'}, suggestedMin:-6, suggestedMax:6 },
+          x:{ type:'linear', title:{display:true,text:'t'}, suggestedMin:xmin0, suggestedMax:xmax0 },
           y:{ title:{display:true,text:'밀도 f(t)'} }
         }
       }
     });
 
-    // ===== 데이터 생성 =====
-    function buildCurve(v,xmin,xmax){
-      const n=1401, step=(xmax-xmin)/(n-1), arr=[];
-      for(let i=0;i<n;i++){ const x=xmin+i*step; arr.push({x,y:pdfT(x,v)}); }
-      return arr;
-    }
-
-    // ===== UI & 업데이트 =====
-    const dfInput=document.getElementById('dfValue');
-    const tInput=document.getElementById('tValue');
-    const tailSel=document.getElementById('tailType');
+    // ====================== UI & 업데이트 ======================
     const pBoxValue=document.getElementById('pBoxValue');
-    const pBoxMeta=document.getElementById('pBoxMeta');
-
-    let lastXmax=null;
+    const pBoxMeta =document.getElementById('pBoxMeta');
 
     function update(){
       const v=parseInt(dfInput.value,10);
@@ -269,58 +241,74 @@
 
       if(!Number.isFinite(v)||v<1){
         pBoxValue.textContent='—'; pBoxMeta.textContent='유효한 자유도(ν≥1)를 입력하세요';
-        chart.data.datasets[0].data=[]; chart.update(); return;
+        chart.data.datasets[0].data=[]; chart.data.datasets[1].data=[]; chart.update(); return;
       }
       if(!Number.isFinite(t)){
         pBoxValue.textContent='—'; pBoxMeta.textContent='유효한 t 값을 입력하세요';
-        chart.update(); return;
+        chart.data.datasets[1].data=[]; chart.update(); return;
       }
 
-      // 신뢰구간 임계값(두측 90/95/99%)
-      const CI_LEVELS=[0.90,0.95,0.99];
-      CI_MARKS=CI_LEVELS.map(L=>{ const p=(1+L)/2, c=invCdfT(p,v); return {z:c, label:`${(L*100).toFixed(0)}% 신뢰구간 (±${c.toFixed(3)})`}; });
+      // 신뢰구간 임계값/도메인
+      CI_MARKS = CI_LEVELS.map(L => {
+        const c = invCdfT((1+L)/2, v);
+        return { z:c, label:`${(L*100).toFixed(0)}% 신뢰구간 (±${c.toFixed(3)})` };
+      });
+      const maxCrit = Math.max(...CI_MARKS.map(m=>m.z));
+      const need = Math.max(Math.abs(t), maxCrit);
+      const xmax = Math.min(80, Math.max(4.5, need*1.2));
+      const xmin = -xmax;
 
-      // x축 범위 자동 확장
-      const maxCrit=Math.max(...CI_MARKS.map(m=>m.z));
-      const need=Math.max(Math.abs(t), maxCrit);
-      const xmax=Math.min(80, Math.max(4.5, need*1.2)), xmin=-xmax;
-
-      if(lastXmax===null || Math.abs(xmax-lastXmax)>1e-9){
-        chart.options.scales.x.suggestedMin=xmin;
-        chart.options.scales.x.suggestedMax=xmax;
-        chart.data.datasets[0].data=buildCurve(v,xmin,xmax);
-        lastXmax=xmax;
+      // 곡선 갱신(도메인 바뀌면 재생성)
+      const domChanged = (chart.options.scales.x.suggestedMax !== xmax);
+      if(domChanged){
+        chart.options.scales.x.suggestedMin = xmin;
+        chart.options.scales.x.suggestedMax = xmax;
+        chart.data.datasets[0].data = buildCurve(v, xmin, xmax);
       }else{
-        // 자유도만 변경시 y만 갱신
+        // y만 갱신
         const base=chart.data.datasets[0].data;
-        for(let i=0;i<base.length;i++) base[i].y=pdfT(base[i].x,v);
+        for(let i=0;i<base.length;i++) base[i].y = pdfT(base[i].x, v);
       }
 
-      // p-value & 음영 predicate (플러그인에서 사용)
+      // 음영 & p-value (정규 페이지와 동일 로직)
+      const base = chart.data.datasets[0].data;
       let pval, meta;
+
       if (tail==='two'){
-        const tabs=Math.abs(t);
-        pval=2*(1-cdfT(tabs,v));
-        shadePredicate = (x)=> Math.abs(x) >= tabs;
-        meta=`양측, |t|=${tabs.toFixed(3)} (ν=${v}) → P(|T_ν| ≥ ${tabs.toFixed(3)})`;
+        const tabs = Math.abs(t);
+        pval = 2*(1 - cdfT(tabs, v));
+        chart.data.datasets[1].data = makeShadeFrom(base, x => Math.abs(x) >= tabs);
+        meta = `양측, |t|=${tabs.toFixed(3)} (ν=${v}) → P(|T_ν| ≥ ${tabs.toFixed(3)})`;
       } else if (tail==='right'){
-        pval=1-cdfT(t,v);
-        shadePredicate = (x)=> x >= t;
-        meta=`우측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≥ ${t.toFixed(3)})`;
+        pval = 1 - cdfT(t, v);
+        chart.data.datasets[1].data = makeShadeFrom(base, x => x >= t);
+        meta = `우측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≥ ${t.toFixed(3)})`;
       } else {
-        pval=cdfT(t,v);
-        shadePredicate = (x)=> x <= t;
-        meta=`좌측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≤ ${t.toFixed(3)})`;
+        pval = cdfT(t, v);
+        chart.data.datasets[1].data = makeShadeFrom(base, x => x <= t);
+        meta = `좌측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≤ ${t.toFixed(3)})`;
       }
 
-      pBoxValue.textContent=formatProb(pval);
-      pBoxMeta.textContent=meta;
+      pBoxValue.textContent = formatProb(pval);
+      pBoxMeta.textContent  = meta;
 
       chart.update();
     }
 
-    [dfInput, tInput, tailSel].forEach(el=>el.addEventListener('input', update));
-    update();
+    [dfInput, tInput, tailSel].forEach(el => el.addEventListener('input', update));
+    // 초기 p-value도 세팅
+    (function initPbox(){
+      const v=parseInt(dfInput.value,10);
+      const tabs=Math.abs(Number(tInput.value));
+      const p0 = 2*(1 - cdfT(tabs, v));
+      pBoxValue.textContent = formatProb(p0);
+      pBoxMeta.textContent  = `양측, |t|=${tabs.toFixed(3)} (ν=${v}) → P(|T_ν| ≥ ${tabs.toFixed(3)})`;
+      // CI_MARKS도 초기화
+      CI_MARKS = CI_LEVELS.map(L => {
+        const c = invCdfT((1+L)/2, v);
+        return { z:c, label:`${(L*100).toFixed(0)}% 신뢰구간 (±${c.toFixed(3)})` };
+      });
+    })();
   </script>
 </body>
 </html>
