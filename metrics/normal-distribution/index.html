@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>계량경제학 · 표준정규분포(신뢰구간 표식 & p-value)</title>
+  <title>계량경제학 · 표준정규분포(표식 & p-value)</title>
 
   <!-- 공통 스타일 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,25 +15,36 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
-    /* 이 페이지 전용 컨트롤 UI */
+    /* 컨트롤 영역 */
     .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px}
     .ctrl{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:12px 14px;border-radius:12px;box-shadow: var(--shadow)}
     .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
 
-    /* ▼ 드롭다운 가시성 개선: 배경/텍스트를 강제로 지정 */
+    /* 드롭다운/인풋 가시성 개선 */
     .ctrl select,.ctrl input{
       width:180px;background:var(--panel);color:var(--text);
       border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;
     }
     .ctrl select:focus,.ctrl input:focus{outline:none;box-shadow:0 0 0 4px var(--ring)}
-    /* 옵션 목록(브라우저가 허용하는 범위 내에서) */
     select option{background:var(--panel);color:var(--text);}
     @media (prefers-color-scheme: light){
       select option{background:#ffffff;color:#0f172a;}
     }
 
+    /* p-value 박스(컨트롤 오른쪽) */
+    .stat{
+      min-width:240px; display:flex; flex-direction:column; gap:4px;
+      background:linear-gradient(180deg, rgba(106,169,255,.12), rgba(106,169,255,.06)) , var(--panel);
+      border:1px solid rgba(106,169,255,.35);
+    }
+    .stat .label{font-size:12px;color:var(--muted)}
+    .stat .value{
+      font-variant-numeric: tabular-nums;
+      font-weight:700; font-size:26px; line-height:1.1;
+    }
+    .stat .meta{font-size:12px;color:var(--muted)}
+
     canvas{background:var(--panel);border-radius:18px;box-shadow: var(--shadow);padding:10px}
-    .legend{color:var(--muted);font-size:14px;margin-top:8px}
     .hint{color:var(--muted);font-size:14px;margin-top:8px}
   </style>
 </head>
@@ -45,7 +56,7 @@
 
   <main class="grid" style="grid-template-columns:1fr;">
     <section class="card">
-      <!-- 컨트롤 (신뢰구간 선택 탭 제거됨) -->
+      <!-- 컨트롤 -->
       <div class="controls">
         <div class="ctrl">
           <label for="zValue">z-통계량 (p-value 계산)</label>
@@ -60,18 +71,20 @@
             <option value="left">좌측검정 (left-tailed)</option>
           </select>
         </div>
+
+        <!-- p-value 박스(오른쪽) -->
+        <div class="ctrl stat" id="pBox">
+          <div class="label">p-value</div>
+          <div class="value" id="pBoxValue">—</div>
+          <div class="meta" id="pBoxMeta">—</div>
+        </div>
       </div>
 
       <!-- 그래프 -->
       <canvas id="chart" height="120"></canvas>
 
-      <!-- 결과 텍스트 -->
-      <div class="legend" id="pText">p-value: z=1.96, 양측검정 → …</div>
-
       <div class="hint">
-        ※ 표시되는 확률(p-value)은 **표준정규 CDF 공식**으로 계산하므로,
-        <strong>그래프의 점 개수(해상도)와 무관하게 값이 동일</strong>합니다.
-        점 개수는 곡선의 부드러움만 바꿉니다.
+        ※ p-value는 **표준정규 CDF 공식**으로 계산하므로, 차트 해상도(점 개수)와 무관하게 값이 동일합니다.
       </div>
     </section>
   </main>
@@ -83,10 +96,10 @@
 
   <script src="../../assets/site.js"></script>
   <script>
-    // ====== 표준정규분포 유틸 (μ=0, σ=1 고정) ======
+    // ====== 표준정규 함수 (μ=0, σ=1) ======
     const pdf = (x) => Math.exp(-0.5 * x*x) / Math.sqrt(2*Math.PI);
 
-    // 표준정규 CDF 근사 (Abramowitz & Stegun 7.1.26)
+    // 표준정규 CDF 근사
     function stdNormCdf(z){
       const t = 1/(1+0.2316419*Math.abs(z));
       const d = Math.exp(-z*z/2)/Math.sqrt(2*Math.PI);
@@ -95,40 +108,39 @@
       return p;
     }
 
-    // ====== 차트 ======
-    // 신뢰구간 표식용 상수
+    // ====== 신뢰구간 표식(수직선 + 화살표 + 라벨) ======
     const CI_MARKS = [
       {z:1.645, label:"90% 신뢰구간"},
       {z:1.96,  label:"95% 신뢰구간"},
       {z:2.576, label:"99% 신뢰구간"},
     ];
 
-    // 수직선/화살표를 그리는 커스텀 플러그인
     const ciMarkersPlugin = {
       id: 'ciMarkers',
-      afterDatasetsDraw(chart, args, pluginOptions){
-        const {ctx, chartArea:{top, bottom, left, right}, scales:{x, y}} = chart;
+      afterDatasetsDraw(chart){
+        const {ctx, chartArea:{top, bottom}, scales:{x, y}} = chart;
 
-        // CSS 변수에서 색상 읽기(없으면 기본 파랑)
         const css = getComputedStyle(document.documentElement);
         const color = (css.getPropertyValue('--primary') || '#6aa9ff').trim();
 
-        // 선/화살표 스타일
         ctx.save();
         ctx.strokeStyle = color;
         ctx.fillStyle = color;
         ctx.lineWidth = 2;
 
-        // 아래 값들은 픽셀 좌표(겹치지 않게 y 위치를 나눠서 배치)
+        // 수직선 위·아래 위치
         const bottomPix = y.getPixelForValue(0);
-        const topPix = top + (bottom - top) * 0.12;   // 상단 여백 약간
+        const topPix = top + (bottom - top) * 0.14;   // 수직선 상단
+        const labelY = topPix - 6;                    // 숫자 표기 위치(수직선 '위')
+
+        // 화살표가 겹치지 않게 Y 좌표를 다르게
         const arrowYs = [
-          top + (bottom - top) * 0.22, // 90%
-          top + (bottom - top) * 0.30, // 95%
-          top + (bottom - top) * 0.38, // 99%
+          top + (bottom - top) * 0.24, // 90%
+          top + (bottom - top) * 0.32, // 95%
+          top + (bottom - top) * 0.40, // 99%
         ];
 
-        // 화살표 함수
+        // 화살표 그리기
         function drawArrow(x1, y0, x2){
           ctx.beginPath(); ctx.moveTo(x1,y0); ctx.lineTo(x2,y0); ctx.stroke();
           const head=6;
@@ -154,11 +166,15 @@
           const xl = x.getPixelForValue(-m.z);
           const xr = x.getPixelForValue(+m.z);
 
-          // 수직선 두 개
+          // 1) 수직선
           ctx.beginPath(); ctx.moveTo(xl, bottomPix); ctx.lineTo(xl, topPix); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(xr, bottomPix); ctx.lineTo(xr, topPix); ctx.stroke();
 
-          // 화살표 + 라벨
+          // 2) 수직선 '위' 숫자 표기 (왼쪽/오른쪽에 각각)
+          ctx.fillText(`−${m.z}`, xl, labelY);
+          ctx.fillText(`+${m.z}`, xr, labelY);
+
+          // 3) 양끝 화살표 + 구간 라벨
           const yArrow = arrowYs[i];
           drawArrow(xl+2, yArrow, xr-2);
           ctx.fillText(m.label, (xl+xr)/2, yArrow-4);
@@ -168,7 +184,7 @@
       }
     };
 
-    // 곡선 데이터 생성(화면용; 확률 계산과는 무관)
+    // ====== 차트 세팅 ======
     function buildCurve(){
       const n = 801, xmin = -4.5, xmax = 4.5;
       const step = (xmax - xmin) / (n-1);
@@ -180,14 +196,13 @@
       return curve;
     }
 
-    // 특정 영역만 음영 채우기(여기서는 p-value 영역에만 사용)
     function makeShade(predicate){
       const base = chart.data.datasets[0].data;
       return base.map(p => ({x: p.x, y: predicate(p.x) ? p.y : null}));
     }
 
     const ctx = document.getElementById('chart');
-    Chart.register(ciMarkersPlugin); // 플러그인 등록
+    Chart.register(ciMarkersPlugin);
 
     const chart = new Chart(ctx, {
       type: 'line',
@@ -214,7 +229,8 @@
     // ====== p-value 계산/표시 ======
     const zInput = document.getElementById('zValue');
     const tailSel = document.getElementById('tailType');
-    const pText  = document.getElementById('pText');
+    const pBoxValue = document.getElementById('pBoxValue');
+    const pBoxMeta  = document.getElementById('pBoxMeta');
 
     function formatProb(p){
       if (p < 1e-4) return p.toExponential(2);
@@ -222,30 +238,33 @@
     }
 
     function update(){
-      // 곡선(한번만 생성)
+      // 곡선(한 번만 구성)
       if(chart.data.datasets[0].data.length === 0){
         chart.data.datasets[0].data = buildCurve();
       }
 
-      // p-value 계산 및 음영
+      // p-value 계산 + 음영 표시
       const z = parseFloat(zInput.value);
       const tail = tailSel.value;
-      let p;
+      let p, meta;
 
       if(tail === 'two'){
         const zabs = Math.abs(z);
         p = 2 * (1 - stdNormCdf(zabs));
         chart.data.datasets[1].data = makeShade(x => Math.abs(x) >= zabs);
-        pText.textContent = `p-value (양측, |z|=${zabs.toFixed(2)}): ${formatProb(p)}  →  P(|Z| ≥ ${zabs.toFixed(2)})`;
+        meta = `양측, |z|=${zabs.toFixed(2)} → P(|Z| ≥ ${zabs.toFixed(2)})`;
       }else if(tail === 'right'){
         p = 1 - stdNormCdf(z);
         chart.data.datasets[1].data = makeShade(x => x >= z);
-        pText.textContent = `p-value (우측, z=${z.toFixed(2)}): ${formatProb(p)}  →  P(Z ≥ ${z.toFixed(2)})`;
+        meta = `우측, z=${z.toFixed(2)} → P(Z ≥ ${z.toFixed(2)})`;
       }else{ // left
         p = stdNormCdf(z);
         chart.data.datasets[1].data = makeShade(x => x <= z);
-        pText.textContent = `p-value (좌측, z=${z.toFixed(2)}): ${formatProb(p)}  →  P(Z ≤ ${z.toFixed(2)})`;
+        meta = `좌측, z=${z.toFixed(2)} → P(Z ≤ ${z.toFixed(2)})`;
       }
+
+      pBoxValue.textContent = formatProb(p);
+      pBoxMeta.textContent  = meta;
 
       chart.update();
     }
