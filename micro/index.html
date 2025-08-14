@@ -4,9 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>미시경제학 | 경제학 노트</title>
+
+  <!-- 폰트 (규칙 준수) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- 공통 리소스: 상대경로 -->
   <link rel="stylesheet" href="../assets/style.css" />
 </head>
 <body>
@@ -15,18 +19,20 @@
     <p class="subtitle">개인·기업의 최적화, 수요·공급, 시장구조</p>
   </header>
 
-  <main class="grid" style="grid-template-columns:1fr;">
-    <section class="card" style="min-height:160px;">
-      <h2>시작 가이드</h2>
-      <p>여기에 강의 노트, 목차, 링크 등을 자유롭게 추가하세요.</p>
-    </section>
+  <main class="grid">
+    <!-- Cobb–Douglas로 이동하는 카드 -->
+    <a class="card" href="cobb–douglas/" aria-label="Cobb–Douglas로 이동">
+      <div class="emoji" aria-hidden="true">🧮</div>
+      <h2>Cobb–Douglas</h2>
+      <p>효용함수 U(x, y) = x^a · y^(1−a)을 바탕으로 한 소비자 선택</p>
+    </a>
   </main>
 
   <footer class="site-footer">
     <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
   </footer>
 
-  <script src="../assets/site.js"></script>
+  <!-- 공통 스크립트: 상대경로 -->
+  <script src="../assets/site.js" defer></script>
 </body>
 </html>
-
