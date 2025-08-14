@@ -20,7 +20,7 @@
     .ctrl{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:12px 14px;border-radius:12px;box-shadow: var(--shadow)}
     .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
 
-    /* 드롭다운/인풋 가시성 개선 */
+    /* 드롭다운/인풋 */
     .ctrl select,.ctrl input{
       width:180px;background:var(--panel);color:var(--text);
       border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;
@@ -109,14 +109,24 @@
       if (p < 1e-6) return p.toExponential(2);
       return p.toFixed(6);
     }
-    function primaryColor(alphaHex='33'){ // 0x33 ≈ 20% 불투명
+    // CSS 변수 --primary 기반으로 영역색(투명도 포함) 반환
+    function primaryFill(alpha = 0.2){
       const css = getComputedStyle(document.documentElement);
       const prim = (css.getPropertyValue('--primary') || '#6aa9ff').trim();
-      if (prim.startsWith('#') && (prim.length===7 || prim.length===4)) return prim + alphaHex;
-      return prim;
+      if (prim.startsWith('#')) {
+        // #RRGGBB or #RGB -> #RRGGBBAA (AA=alpha)
+        const hex = prim.length === 4
+          ? '#' + prim[1]+prim[1] + prim[2]+prim[2] + prim[3]+prim[3]
+          : prim;
+        const aa = Math.round(alpha * 255).toString(16).padStart(2,'0');
+        return hex + aa;
+      }
+      if (prim.startsWith('rgb(')) return prim.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+      if (prim.startsWith('hsl(')) return prim.replace('hsl(', 'hsla(').replace(')', `, ${alpha})`);
+      return prim; // 마지막 수단
     }
 
-    // ====== Γ, Beta, 정규화 불완전 베타 ======
+    // ====== Γ, Beta, 정규화 불완전 베타 (수치안정) ======
     // Lanczos (g=7, 9-term)
     function logGamma(z){
       const p = [
@@ -132,6 +142,7 @@
       ];
       const g = 7;
       if (z < 0.5) {
+        // Reflection formula
         return Math.log(Math.PI) - Math.log(Math.sin(Math.PI*z)) - logGamma(1 - z);
       }
       z -= 1;
@@ -141,6 +152,7 @@
       return 0.5*Math.log(2*Math.PI) + (z+0.5)*Math.log(t) - t + Math.log(x);
     }
     function betacf(a,b,x){
+      // Lentz's method for continued fraction
       const MAXIT=200, EPS=3e-7, FPMIN=1e-300;
       let qab=a+b, qap=a+1, qam=a-1;
       let c=1, d=1 - qab*x/qap; if (Math.abs(d)<FPMIN) d=FPMIN; d=1/d;
@@ -195,9 +207,9 @@
       if (p <= 0) return -Infinity;
       if (p >= 1) return Infinity;
       if (p === 0.5) return 0;
-      // 대칭성 활용
+      // 대칭성
       const sign = p < 0.5 ? -1 : 1;
-      let target = p < 0.5 ? (1 - p) : p;
+      const target = p < 0.5 ? (1 - p) : p;
 
       // 상한 탐색
       let lo = 0, hi = 1;
@@ -214,9 +226,9 @@
       return sign * (lo+hi)/2;
     }
 
-    // ====== 신뢰구간 표식 ======
+    // ====== 신뢰구간 표식 (수직선 + 화살표 + 라벨) ======
     const CI_LEVELS = [0.90, 0.95, 0.99];
-    let CI_MARKS = []; // {z:crit, label:string}
+    let CI_MARKS = []; // {z:number, label:string}
 
     const ciMarkersPlugin = {
       id: 'ciMarkersT',
@@ -289,7 +301,8 @@
       type: 'line',
       data: { datasets: [
         {label: 't_ν 밀도 f(t)', data: [], parsing:false, borderWidth:2, pointRadius:0, tension:0.15},
-        {label: 'p-value 영역', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:'origin', spanGaps:true, hidden:false}
+        // spanGaps=false로 양측검정에서 꼬리 두 개만 분리 채움
+        {label: 'p-value 영역', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:'origin', hidden:false, spanGaps:false}
       ]},
       options: {
         responsive: true,
@@ -307,6 +320,9 @@
       }
     });
 
+    // 영역 색을 표준정규 페이지와 일관되게 설정
+    chart.data.datasets[1].backgroundColor = primaryFill(0.2);
+
     // ====== 도메인/곡선 ======
     function buildCurve(v, xmin, xmax){
       const n = 1401;
@@ -320,10 +336,11 @@
     }
     function makeShade(predicate){
       const base = chart.data.datasets[0].data;
+      // predicate가 false면 y=null로 끊어서(=gap) 채우기 방지
       return base.map(p => ({x: p.x, y: predicate(p.x) ? p.y : null}));
     }
 
-    // ====== UI 엘리먼트 ======
+    // ====== UI ======
     const dfInput = document.getElementById('dfValue');
     const tInput  = document.getElementById('tValue');
     const tailSel = document.getElementById('tailType');
@@ -353,9 +370,9 @@
         return;
       }
 
-      // 신뢰구간 임계값 계산 (두측 90/95/99%)
+      // 신뢰구간 임계값(두측 90/95/99%)
       CI_MARKS = CI_LEVELS.map((lvl)=>{
-        const p = (1 + lvl)/2; // 0.95 -> 0.975
+        const p = (1 + lvl)/2; // 예: 0.95 -> 0.975
         const crit = invCdfT(p, v);
         return { z: crit, label: `${(lvl*100).toFixed(0)}% 신뢰구간 (±${crit.toFixed(3)})` };
       });
@@ -393,7 +410,6 @@
         meta = `좌측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≤ ${t.toFixed(3)})`;
       }
 
-      chart.data.datasets[1].backgroundColor = primaryColor('33');
       pBoxValue.textContent = formatProb(pval);
       pBoxMeta.textContent  = meta;
 
@@ -405,4 +421,3 @@
   </script>
 </body>
 </html>
-
