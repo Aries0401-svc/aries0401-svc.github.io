@@ -5,38 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OLS 최소제곱 회귀 | 경제학 노트</title>
 
-  <!-- 사이트 공통: 폰트/스타일 통일 -->
+  <!-- 공통: 폰트/스타일 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../assets/style.css" />
 
-  <!-- 차트: CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <!-- 차트(CDN, 버전 고정) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 
   <style>
-    /* 공통 스타일을 해치지 않는 선에서 최소 보완 */
-    .controls { display:flex; flex-wrap:wrap; gap:8px; }
-    .muted { color: var(--text-muted, #666); }
-    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-    .lead  { font-weight: 600; font-size: 1.05rem; }
-    .error { color: #b00020; }
-    .chart-wrap { position: relative; height: 420px; }
-    .kpi { display:flex; gap:16px; flex-wrap:wrap; margin: 6px 0 10px; }
-    .kpi .item { padding:6px 10px; border-radius: 8px; background: rgba(0,0,0,0.04); }
-    table.matrix { width:100%; border-collapse: collapse; }
-    table.matrix th, table.matrix td { padding:6px 4px; border-bottom: 1px solid rgba(0,0,0,0.06); }
-    table.matrix th { text-align:left; font-weight:700; }
-    table.matrix td.rowno { width:36px; text-align:right; color: var(--text-muted, #666); }
-    table.matrix input[type="number"] {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid rgba(0,0,0,0.15);
-      border-radius: 8px;
-      font: inherit; /* 폰트 통일 */
-      background: #fff;
+    /* ===== 페이지 전용 최소 스타일 (공통 톤 준수) ===== */
+
+    /* 레이아웃 */
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px}
+    .chart-wrap{position:relative;height:420px}
+
+    /* 텍스트 유틸 */
+    .muted{color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+    .lead{font-weight:600;font-size:1.05rem}
+    .error{color:#ef4444;min-height:1.3em}
+
+    /* KPI 배지: 카드 톤과 통일 */
+    .kpi{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 10px}
+    .kpi .item{
+      padding:6px 10px;border-radius:10px;
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:var(--shadow);
+      color:var(--text);
     }
-    .sr-only { position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden; }
+
+    /* 데이터 표 */
+    table.matrix{width:100%;border-collapse:collapse}
+    table.matrix th,table.matrix td{
+      padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.08)
+    }
+    table.matrix th{text-align:left;font-weight:700}
+    table.matrix td.rowno{width:36px;text-align:right;color:var(--muted)}
+
+    /* 입력창(표, n 입력) */
+    table.matrix input[type="number"], #nInput{
+      width:100%;
+      padding:8px 10px;
+      border:1px solid rgba(255,255,255,.15);
+      border-radius:8px;
+      background:var(--panel);
+      color:var(--text);
+      font:inherit;
+    }
+    #nInput{max-width:120px}
+    table.matrix input[type="number"]:focus,
+    #nInput:focus{outline:none;box-shadow:0 0 0 4px var(--ring)}
+
+    /* 버튼: 사이트 톤 */
+    .controls button{
+      background:var(--panel);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.15);
+      border-radius:12px;
+      padding:10px 14px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      transition:transform .15s ease,border-color .15s ease;
+    }
+    .controls button:hover{transform:translateY(-1px);border-color:rgba(106,169,255,.45)}
+    .controls button:focus{outline:none;box-shadow:0 0 0 4px var(--ring)}
+
+    /* 표 컨테이너를 카드 톤으로 */
+    #matrixWrap{padding:0;background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:18px;box-shadow:var(--shadow)}
+
+    /* 라이트 모드 미세 보정 */
+    @media (prefers-color-scheme: light){
+      table.matrix th,table.matrix td{border-bottom:1px solid rgba(2,6,23,.08)}
+      table.matrix input[type="number"], #nInput{
+        background:#fff;border:1px solid rgba(2,6,23,.12);color:#0f172a
+      }
+      .controls button{border:1px solid rgba(2,6,23,.12)}
+    }
+
+    .sr-only{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
   </style>
 </head>
 <body>
@@ -50,19 +99,19 @@
     <section class="card">
       <h2>데이터 입력</h2>
 
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
         <label for="nInput" style="font-weight:600;">표본 수 n</label>
-        <input id="nInput" type="number" inputmode="numeric" min="2" step="1" value="10" style="width:110px;padding:8px 10px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;font:inherit;">
+        <input id="nInput" type="number" inputmode="numeric" min="2" step="1" value="10">
         <span class="muted">X, Y 2열 표 입력</span>
       </div>
 
-      <div class="controls" style="margin-bottom:10px;">
-        <button id="exampleBtn">예시 데이터</button>
-        <button id="runBtn"><strong>회귀 계산</strong></button>
-        <button id="clearBtn">지우기</button>
+      <div class="controls">
+        <button id="exampleBtn" type="button">예시 데이터</button>
+        <button id="runBtn" type="button"><strong>회귀 계산</strong></button>
+        <button id="clearBtn" type="button">지우기</button>
       </div>
 
-      <div id="matrixWrap" class="card" style="padding:0;">
+      <div id="matrixWrap" class="card">
         <table class="matrix" aria-label="X-Y 데이터 입력 표">
           <thead>
             <tr>
@@ -76,13 +125,14 @@
       </div>
 
       <p class="muted" style="margin-top:8px;">Tip: Tab 키로 셀 이동, Enter도 다음 셀로 이동합니다.</p>
-      <p id="errorBox" class="error" role="alert" aria-live="polite" style="min-height:1.3em;"></p>
+      <p id="errorBox" class="error" role="alert" aria-live="polite"></p>
     </section>
 
     <!-- 결과 카드 -->
     <section class="card">
       <h2>결과</h2>
-      <p id="equation" class="lead mono" aria-live="polite">n과 데이터를 입력한 뒤 [회귀 계산]을 눌러주세요.</p>
+      <p id="equation" class="lead mono" aria-live="polite">n과 데이터를 입력한 뒤 <strong>회귀 계산</strong>을 눌러주세요.</p>
+
       <div class="kpi mono">
         <span class="item">n = <span id="nOut">–</span></span>
         <span class="item">R² = <span id="r2Out">–</span></span>
@@ -101,123 +151,102 @@
     <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 계량경제학 목록</a>
   </footer>
 
-  <!-- 사이트 공통 스크립트 -->
+  <!-- 공통 스크립트 -->
   <script src="../../assets/site.js" defer></script>
 
   <!-- 페이지 전용 스크립트 -->
   <script>
     // ---------- 유틸 ----------
-    function fmt(x) {
-      if (!Number.isFinite(x)) return String(x);
-      const ax = Math.abs(x);
-      if (ax === 0) return "0";
-      if (ax >= 0.001 && ax < 1e6) return x.toFixed(6).replace(/\.?0+$/, "");
-      return x.toExponential(4).replace(/\.?0+e/, "e");
+    function fmt(x){
+      if(!Number.isFinite(x)) return String(x);
+      const ax=Math.abs(x);
+      if(ax===0) return "0";
+      if(ax>=0.001 && ax<1e6) return x.toFixed(6).replace(/\.?0+$/,"");
+      return x.toExponential(4).replace(/\.?0+e/,"e");
     }
-
-    function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
-    function sumsq(arr){ const m=mean(arr); return arr.reduce((s,v)=>s+(v-m)*(v-m),0); }
-    function cov(x,y){
-      const mx=mean(x), my=mean(y);
-      let s=0; for(let i=0;i<x.length;i++) s += (x[i]-mx)*(y[i]-my);
-      return s;
-    }
+    function mean(arr){return arr.reduce((a,b)=>a+b,0)/arr.length;}
+    function sumsq(arr){const m=mean(arr);return arr.reduce((s,v)=>s+(v-m)*(v-m),0);}
+    function cov(x,y){const mx=mean(x), my=mean(y); let s=0; for(let i=0;i<x.length;i++) s+=(x[i]-mx)*(y[i]-my); return s;}
 
     function ols(x,y){
-      const n = x.length;
-      if (n !== y.length) throw new Error("X와 Y의 길이가 다릅니다. (X="+x.length+", Y="+y.length+")");
-      if (n < 2) throw new Error("두 점 이상이 필요합니다.");
-      const Sxx = sumsq(x);
-      if (Sxx === 0) throw new Error("X 분산이 0입니다. 서로 다른 X 값이 필요합니다.");
-      const Sxy = cov(x,y);
-      const b = Sxy / Sxx;                // 기울기
-      const a = mean(y) - b * mean(x);    // 절편
-      const yhat = x.map(xi => a + b*xi);
-      const ybar = mean(y);
-      const SSE = y.reduce((s, yi, i)=> s + (yi - yhat[i])**2, 0);
-      const SST = y.reduce((s, yi)=> s + (yi - ybar)**2, 0);
-      const R2 = (SST === 0) ? 1 : 1 - (SSE / SST);
-      const xmin = Math.min(...x), xmax = Math.max(...x);
-      return { a, b, R2, n, xbar: mean(x), ybar, xmin, xmax };
+      const n=x.length;
+      if(n!==y.length) throw new Error("X와 Y의 길이가 다릅니다. (X="+x.length+", Y="+y.length+")");
+      if(n<2) throw new Error("두 점 이상이 필요합니다.");
+      const Sxx=sumsq(x);
+      if(Sxx===0) throw new Error("X 분산이 0입니다. 서로 다른 X 값이 필요합니다.");
+      const Sxy=cov(x,y);
+      const b=Sxy/Sxx;                         // 기울기
+      const a=mean(y)-b*mean(x);               // 절편
+      const yhat=x.map(xi=>a+b*xi);
+      const ybar=mean(y);
+      const SSE=y.reduce((s,yi,i)=>s+(yi-yhat[i])**2,0);
+      const SST=y.reduce((s,yi)=>s+(yi-ybar)**2,0);
+      const R2=(SST===0)?1:1-(SSE/SST);
+      const xmin=Math.min(...x), xmax=Math.max(...x);
+      return {a,b,R2,n,xbar:mean(x),ybar,xmin,xmax};
     }
-
     function buildEquation(a,b){
-      const aStr = fmt(a);
-      const bStr = fmt(Math.abs(b));
-      const sign = (b >= 0) ? "+" : "−";
+      const aStr=fmt(a); const bStr=fmt(Math.abs(b)); const sign=(b>=0)?"+":"−";
       return `ŷ = ${aStr} ${sign} ${bStr}·x`;
     }
 
-    // ---------- 입력 행렬 ----------
-    const matrixBody = document.getElementById("matrixBody");
-    function createRow(idx, xv="", yv="") {
-      const tr = document.createElement("tr");
+    // ---------- 입력 표 ----------
+    const matrixBody=document.getElementById("matrixBody");
+    function createRow(idx,xv="",yv=""){
+      const tr=document.createElement("tr");
 
-      const tdIdx = document.createElement("td");
-      tdIdx.className = "rowno";
-      tdIdx.textContent = idx+1;
-      tr.appendChild(tdIdx);
+      const tdIdx=document.createElement("td");
+      tdIdx.className="rowno"; tdIdx.textContent=idx+1; tr.appendChild(tdIdx);
 
-      const tdX = document.createElement("td");
-      const inX = document.createElement("input");
-      inX.type = "number"; inX.step = "any"; inX.placeholder = "x";
-      inX.value = (xv !== "" && xv !== null && xv !== undefined) ? xv : "";
-      tdX.appendChild(inX);
-      tr.appendChild(tdX);
+      const tdX=document.createElement("td");
+      const inX=document.createElement("input");
+      inX.type="number"; inX.step="any"; inX.placeholder="x";
+      inX.value=(xv!=="" && xv!=null)?xv:"";
+      tdX.appendChild(inX); tr.appendChild(tdX);
 
-      const tdY = document.createElement("td");
-      const inY = document.createElement("input");
-      inY.type = "number"; inY.step = "any"; inY.placeholder = "y";
-      inY.value = (yv !== "" && yv !== null && yv !== undefined) ? yv : "";
-      tdY.appendChild(inY);
-      tr.appendChild(tdY);
+      const tdY=document.createElement("td");
+      const inY=document.createElement("input");
+      inY.type="number"; inY.step="any"; inY.placeholder="y";
+      inY.value=(yv!=="" && yv!=null)?yv:"";
+      tdY.appendChild(inY); tr.appendChild(tdY);
 
-      // Enter → 다음 셀로
-      [inX, inY].forEach(inp => {
-        inp.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            focusNextInput(inp);
-          }
+      [inX,inY].forEach(inp=>{
+        inp.addEventListener("keydown",(e)=>{
+          if(e.key==="Enter"){ e.preventDefault(); focusNextInput(inp); }
         });
       });
-
       return tr;
     }
-
-    function focusNextInput(current) {
-      const inputs = Array.from(matrixBody.querySelectorAll("input"));
-      const i = inputs.indexOf(current);
-      const next = inputs[i+1] || inputs[0];
+    function focusNextInput(current){
+      const inputs=Array.from(matrixBody.querySelectorAll("input"));
+      const i=inputs.indexOf(current);
+      const next=inputs[i+1]||inputs[0];
       next.focus(); next.select?.();
     }
-
-    function snapshotValues() {
-      const rows = Array.from(matrixBody.querySelectorAll("tr"));
-      return rows.map(r => {
-        const xs = r.children[1].querySelector("input").value;
-        const ys = r.children[2].querySelector("input").value;
-        return [xs, ys];
+    function snapshotValues(){
+      const rows=Array.from(matrixBody.querySelectorAll("tr"));
+      return rows.map(r=>{
+        const xs=r.children[1].querySelector("input").value;
+        const ys=r.children[2].querySelector("input").value;
+        return [xs,ys];
       });
     }
-
-    function buildTable(n, preserve=true) {
-      const prev = preserve ? snapshotValues() : [];
-      matrixBody.innerHTML = "";
-      for (let i=0;i<n;i++){
-        const [xv, yv] = (prev[i] || ["",""]);
-        matrixBody.appendChild(createRow(i, xv, yv));
+    function buildTable(n,preserve=true){
+      const prev=preserve?snapshotValues():[];
+      matrixBody.innerHTML="";
+      for(let i=0;i<n;i++){
+        const [xv,yv]=prev[i]||["",""];
+        matrixBody.appendChild(createRow(i,xv,yv));
       }
     }
-
-    function collectXY() {
-      const rows = Array.from(matrixBody.querySelectorAll("tr"));
-      const x=[], y=[];
-      for (const r of rows){
-        const xv = r.children[1].querySelector("input").value;
-        const yv = r.children[2].querySelector("input").value;
-        const xn = Number(xv), yn = Number(yv);
-        if (!Number.isFinite(xn) || !Number.isFinite(yn)) {
+    function collectXY(){
+      const rows=Array.from(matrixBody.querySelectorAll("tr"));
+      const x=[],y=[];
+      for(const r of rows){
+        const xv=r.children[1].querySelector("input").value;
+        const yv=r.children[2].querySelector("input").value;
+        const xn=Number(xv), yn=Number(yv);
+        if(!Number.isFinite(xn)||!Number.isFinite(yn)){
           throw new Error("모든 셀에 숫자를 입력하세요. 빈칸/비숫자는 허용되지 않습니다.");
         }
         x.push(xn); y.push(yn);
@@ -227,98 +256,87 @@
 
     // ---------- 차트 ----------
     let chart;
-    function drawChart(points, linePts){
-      const ctx = document.getElementById("olsChart").getContext("2d");
-      const dataScatter = points.map(p => ({ x: p[0], y: p[1] }));
-      const dataLine = linePts.map(p => ({ x: p[0], y: p[1] }));
+    function drawChart(points,linePts){
+      const ctx=document.getElementById("olsChart").getContext("2d");
+      const dataScatter=points.map(p=>({x:p[0],y:p[1]}));
+      const dataLine=linePts.map(p=>({x:p[0],y:p[1]}));
 
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: "scatter",
-        data: {
-          datasets: [
-            { label: "관측치", data: dataScatter, pointRadius: 4, pointHoverRadius: 5 },
-            { label: "회귀선", type: "line", data: dataLine, fill: false, borderWidth: 2, tension: 0 }
-          ]
-        },
-        options: {
-          maintainAspectRatio: false,
-          scales: {
-            x: { type: "linear", title: { display: true, text: "x" }, grid: { drawOnChartArea: true } },
-            y: { type: "linear", title: { display: true, text: "y" }, grid: { drawOnChartArea: true } }
+      if(chart) chart.destroy();
+      chart=new Chart(ctx,{
+        type:"scatter",
+        data:{datasets:[
+          {label:"관측치",data:dataScatter,pointRadius:4,pointHoverRadius:5},
+          {label:"회귀선",type:"line",data:dataLine,fill:false,borderWidth:2,tension:0}
+        ]},
+        options:{
+          maintainAspectRatio:false,
+          scales:{
+            x:{type:"linear",title:{display:true,text:"x"},grid:{drawOnChartArea:true}},
+            y:{type:"linear",title:{display:true,text:"y"},grid:{drawOnChartArea:true}}
           },
-          plugins: { legend: { display: true }, tooltip: { mode: "nearest", intersect: false } }
+          plugins:{legend:{display:true},tooltip:{mode:"nearest",intersect:false}}
         }
       });
     }
 
     // ---------- 동작 ----------
-    const nInput = document.getElementById("nInput");
-    const err = document.getElementById("errorBox");
+    const nInput=document.getElementById("nInput");
+    const err=document.getElementById("errorBox");
 
-    function run() {
-      err.textContent = "";
-      try {
-        const {x,y} = collectXY();
-        const { a, b, R2, n, xbar, ybar, xmin, xmax } = ols(x,y);
+    function run(){
+      err.textContent="";
+      try{
+        const {x,y}=collectXY();
+        const {a,b,R2,n,xbar,ybar,xmin,xmax}=ols(x,y);
 
-        document.getElementById("equation").textContent =
+        document.getElementById("equation").textContent=
           `${buildEquation(a,b)}   (R² = ${fmt(R2)})`;
-        document.getElementById("nOut").textContent = n;
-        document.getElementById("r2Out").textContent = fmt(R2);
-        document.getElementById("xbarOut").textContent = fmt(xbar);
-        document.getElementById("ybarOut").textContent = fmt(ybar);
+        document.getElementById("nOut").textContent=n;
+        document.getElementById("r2Out").textContent=fmt(R2);
+        document.getElementById("xbarOut").textContent=fmt(xbar);
+        document.getElementById("ybarOut").textContent=fmt(ybar);
 
-        const y1 = a + b * xmin;
-        const y2 = a + b * xmax;
-        const pts = x.map((xi,i)=>[xi, y[i]]);
-        drawChart(pts, [[xmin,y1], [xmax,y2]]);
-      } catch (e) {
-        err.textContent = e.message || String(e);
+        const y1=a+b*xmin, y2=a+b*xmax;
+        const pts=x.map((xi,i)=>[xi,y[i]]);
+        drawChart(pts,[[xmin,y1],[xmax,y2]]);
+      }catch(e){
+        err.textContent=e.message||String(e);
       }
     }
-
-    function fillExample() {
-      const xs = [1,2,3,4,5,6,7,8,9,10];
-      const ys = [1.8,3.1,3.7,5.2,5.9,6.8,7.5,8.2,9.1,9.9];
-      nInput.value = xs.length;
-      buildTable(xs.length, false);
-      const rows = Array.from(matrixBody.querySelectorAll("tr"));
-      for (let i=0;i<xs.length;i++){
-        rows[i].children[1].querySelector("input").value = xs[i];
-        rows[i].children[2].querySelector("input").value = ys[i];
+    function fillExample(){
+      const xs=[1,2,3,4,5,6,7,8,9,10];
+      const ys=[1.8,3.1,3.7,5.2,5.9,6.8,7.5,8.2,9.1,9.9];
+      nInput.value=xs.length;
+      buildTable(xs.length,false);
+      const rows=Array.from(matrixBody.querySelectorAll("tr"));
+      for(let i=0;i<xs.length;i++){
+        rows[i].children[1].querySelector("input").value=xs[i];
+        rows[i].children[2].querySelector("input").value=ys[i];
       }
-      err.textContent = "";
+      err.textContent="";
     }
-
-    function clearAll() {
-      const n = Math.max(2, Number(nInput.value)|0 || 10);
-      document.getElementById("equation").textContent = "n과 데이터를 입력한 뒤 [회귀 계산]을 눌러주세요.";
-      document.getElementById("nOut").textContent = "–";
-      document.getElementById("r2Out").textContent = "–";
-      document.getElementById("xbarOut").textContent = "–";
-      document.getElementById("ybarOut").textContent = "–";
-      err.textContent = "";
-      if (chart) { chart.destroy(); chart = null; }
-      buildTable(n, false);
-      // 첫 셀 포커스
+    function clearAll(){
+      const n=Math.max(2, Number(nInput.value)|0 || 10);
+      document.getElementById("equation").textContent="n과 데이터를 입력한 뒤 [회귀 계산]을 눌러주세요.";
+      document.getElementById("nOut").textContent="–";
+      document.getElementById("r2Out").textContent="–";
+      document.getElementById("xbarOut").textContent="–";
+      document.getElementById("ybarOut").textContent="–";
+      err.textContent="";
+      if(chart){chart.destroy();chart=null;}
+      buildTable(n,false);
       matrixBody.querySelector("input")?.focus();
     }
 
-    window.addEventListener("DOMContentLoaded", () => {
-      // 초기 테이블
-      buildTable(Number(nInput.value) || 10, false);
-
-      // n 변경 시 행 재생성(값 보존)
-      nInput.addEventListener("change", () => {
-        const n = Math.max(2, Number(nInput.value)|0 || 10);
-        nInput.value = n;
-        buildTable(n, true);
+    window.addEventListener("DOMContentLoaded",()=>{
+      buildTable(Number(nInput.value)||10,false);
+      nInput.addEventListener("change",()=>{
+        const n=Math.max(2, Number(nInput.value)|0 || 10);
+        nInput.value=n; buildTable(n,true);
       });
-
-      document.getElementById("runBtn").addEventListener("click", run);
-      document.getElementById("exampleBtn").addEventListener("click", fillExample);
-      document.getElementById("clearBtn").addEventListener("click", clearAll);
+      document.getElementById("runBtn").addEventListener("click",run);
+      document.getElementById("exampleBtn").addEventListener("click",fillExample);
+      document.getElementById("clearBtn").addEventListener("click",clearAll);
     });
   </script>
 </body>
