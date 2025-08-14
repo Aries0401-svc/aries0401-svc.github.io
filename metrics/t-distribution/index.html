@@ -1,1 +1,408 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>계량경제학 · t-분포(표식 & p-value)</title>
+
+  <!-- 공통 스타일 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/style.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* 컨트롤 영역 */
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px}
+    .ctrl{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:12px 14px;border-radius:12px;box-shadow: var(--shadow)}
+    .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+
+    /* 드롭다운/인풋 가시성 개선 */
+    .ctrl select,.ctrl input{
+      width:180px;background:var(--panel);color:var(--text);
+      border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;
+    }
+    .ctrl select:focus,.ctrl input:focus{outline:none;box-shadow:0 0 0 4px var(--ring)}
+    select option{background:var(--panel);color:var(--text);}
+    @media (prefers-color-scheme: light){
+      select option{background:#ffffff;color:#0f172a;}
+    }
+
+    /* p-value 박스 */
+    .stat{
+      min-width:240px; display:flex; flex-direction:column; gap:4px;
+      background:linear-gradient(180deg, rgba(106,169,255,.12), rgba(106,169,255,.06)) , var(--panel);
+      border:1px solid rgba(106,169,255,.35);
+    }
+    .stat .label{font-size:12px;color:var(--muted)}
+    .stat .value{
+      font-variant-numeric: tabular-nums;
+      font-weight:700; font-size:26px; line-height:1.1;
+    }
+    .stat .meta{font-size:12px;color:var(--muted)}
+
+    canvas{background:var(--panel);border-radius:18px;box-shadow: var(--shadow);padding:10px}
+    .hint{color:var(--muted);font-size:14px;margin-top:8px}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>t-분포 시각화</h1>
+    <p class="subtitle">스튜던트 t (자유도 ν) · 신뢰구간 표식(선/화살표) · p-value 계산</p>
+  </header>
+
+  <main class="grid" style="grid-template-columns:1fr;">
+    <section class="card">
+      <!-- 컨트롤 -->
+      <div class="controls">
+        <div class="ctrl">
+          <label for="dfValue">자유도 ν</label>
+          <input id="dfValue" type="number" step="1" min="1" value="10" />
+        </div>
+
+        <div class="ctrl">
+          <label for="tValue">t-통계량 (p-value 계산)</label>
+          <input id="tValue" type="number" step="0.01" value="2.228" inputmode="decimal" />
+        </div>
+
+        <div class="ctrl">
+          <label for="tailType">검정 방향</label>
+          <select id="tailType">
+            <option value="two" selected>양측검정 (two-tailed)</option>
+            <option value="right">우측검정 (right-tailed)</option>
+            <option value="left">좌측검정 (left-tailed)</option>
+          </select>
+        </div>
+
+        <!-- p-value 박스 -->
+        <div class="ctrl stat" id="pBox" aria-live="polite">
+          <div class="label">p-value</div>
+          <div class="value" id="pBoxValue">—</div>
+          <div class="meta" id="pBoxMeta">—</div>
+        </div>
+      </div>
+
+      <!-- 그래프 -->
+      <canvas id="chart" height="120"></canvas>
+
+      <div class="hint">
+        ※ CDF는 정규화 불완전 베타함수(연분수; Lentz) 기반, PDF는 Γ함수(Lanczos) 기반으로 계산합니다.
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+  </footer>
+
+  <script src="../../assets/site.js"></script>
+  <script>
+    // ====== 유틸 ======
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    function formatProb(p){
+      if (!Number.isFinite(p)) return '—';
+      p = clamp(p, 0, 1);
+      if (p < 1e-6) return p.toExponential(2);
+      return p.toFixed(6);
+    }
+    function primaryColor(alphaHex='33'){ // 0x33 ≈ 20% 불투명
+      const css = getComputedStyle(document.documentElement);
+      const prim = (css.getPropertyValue('--primary') || '#6aa9ff').trim();
+      if (prim.startsWith('#') && (prim.length===7 || prim.length===4)) return prim + alphaHex;
+      return prim;
+    }
+
+    // ====== Γ, Beta, 정규화 불완전 베타 ======
+    // Lanczos (g=7, 9-term)
+    function logGamma(z){
+      const p = [
+        0.99999999999980993,
+        676.5203681218851,
+       -1259.1392167224028,
+        771.32342877765313,
+       -176.61502916214059,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.9843695780195716e-6,
+        1.5056327351493116e-7
+      ];
+      const g = 7;
+      if (z < 0.5) {
+        return Math.log(Math.PI) - Math.log(Math.sin(Math.PI*z)) - logGamma(1 - z);
+      }
+      z -= 1;
+      let x = p[0];
+      for (let i=1;i<p.length;i++) x += p[i]/(z+i);
+      const t = z + g + 0.5;
+      return 0.5*Math.log(2*Math.PI) + (z+0.5)*Math.log(t) - t + Math.log(x);
+    }
+    function betacf(a,b,x){
+      const MAXIT=200, EPS=3e-7, FPMIN=1e-300;
+      let qab=a+b, qap=a+1, qam=a-1;
+      let c=1, d=1 - qab*x/qap; if (Math.abs(d)<FPMIN) d=FPMIN; d=1/d;
+      let h=d;
+      for(let m=1;m<=MAXIT;m++){
+        const m2 = 2*m;
+        // even step
+        let aa = m*(b-m)*x/((qam+m2)*(a+m2));
+        d = 1 + aa*d; if (Math.abs(d)<FPMIN) d=FPMIN; d=1/d;
+        c = 1 + aa/c; if (Math.abs(c)<FPMIN) c=FPMIN;
+        h *= d*c;
+        // odd step
+        aa = -(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+        d = 1 + aa*d; if (Math.abs(d)<FPMIN) d=FPMIN; d=1/d;
+        c = 1 + aa/c; if (Math.abs(c)<FPMIN) c=FPMIN;
+        const del = d*c;
+        h *= del;
+        if (Math.abs(del-1) < EPS) break;
+      }
+      return h;
+    }
+    function incbetaReg(x,a,b){
+      if (x<=0) return 0;
+      if (x>=1) return 1;
+      const lnBt = logGamma(a+b) - logGamma(a) - logGamma(b) + a*Math.log(x) + b*Math.log(1-x);
+      const bt = Math.exp(lnBt);
+      if (x < (a+1)/(a+b+2)){
+        return bt * betacf(a,b,x) / a;
+      }else{
+        return 1 - (bt * betacf(b,a,1-x) / b);
+      }
+    }
+
+    // ====== t-분포 PDF/CDF ======
+    function pdfT(x, v){
+      // f(x) = Γ((v+1)/2) / (sqrt(vπ) Γ(v/2)) * (1 + x^2/v)^(-(v+1)/2)
+      const lnC = logGamma((v+1)/2) - logGamma(v/2) - 0.5*(Math.log(v) + Math.log(Math.PI));
+      const lnK = -((v+1)/2) * Math.log(1 + (x*x)/v);
+      return Math.exp(lnC + lnK);
+    }
+    function cdfT(x, v){
+      // F(x) = 0.5 * I_{v/(x^2+v)}(v/2, 1/2) for x<0
+      //      = 1 - 0.5 * I_{v/(x^2+v)}(v/2, 1/2) for x>=0
+      const a = v/2, b = 0.5;
+      const t = v/(v + x*x);
+      const I = incbetaReg(t, a, b);
+      return (x >= 0) ? (1 - 0.5*I) : (0.5*I);
+    }
+
+    // ====== 역 CDF (이분 탐색) ======
+    function invCdfT(p, v){
+      if (p <= 0) return -Infinity;
+      if (p >= 1) return Infinity;
+      if (p === 0.5) return 0;
+      // 대칭성 활용
+      const sign = p < 0.5 ? -1 : 1;
+      let target = p < 0.5 ? (1 - p) : p;
+
+      // 상한 탐색
+      let lo = 0, hi = 1;
+      while (cdfT(hi, v) < target) {
+        hi *= 2;
+        if (hi > 1e6) break;
+      }
+      // 이분법
+      for (let i=0;i<80;i++){
+        const mid = (lo+hi)/2;
+        const F = cdfT(mid, v);
+        if (F < target) lo = mid; else hi = mid;
+      }
+      return sign * (lo+hi)/2;
+    }
+
+    // ====== 신뢰구간 표식 ======
+    const CI_LEVELS = [0.90, 0.95, 0.99];
+    let CI_MARKS = []; // {z:crit, label:string}
+
+    const ciMarkersPlugin = {
+      id: 'ciMarkersT',
+      afterDatasetsDraw(chart){
+        if (!CI_MARKS.length) return;
+        const {ctx, chartArea:{top, bottom}, scales:{x, y}} = chart;
+
+        const css = getComputedStyle(document.documentElement);
+        const color = (css.getPropertyValue('--primary') || '#6aa9ff').trim();
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2;
+
+        const bottomPix = y.getPixelForValue(0);
+        const topPix = top + (bottom - top) * 0.14;   // 수직선 상단
+
+        // 라벨/화살표 Y 좌표(겹침 방지)
+        const arrowYs = [
+          top + (bottom - top) * 0.24, // 90%
+          top + (bottom - top) * 0.32, // 95%
+          top + (bottom - top) * 0.40, // 99%
+        ];
+
+        function drawArrow(x1, y0, x2){
+          ctx.beginPath(); ctx.moveTo(x1,y0); ctx.lineTo(x2,y0); ctx.stroke();
+          const head=6;
+          // 왼쪽 화살촉
+          ctx.beginPath();
+          ctx.moveTo(x1,y0);
+          ctx.lineTo(x1+head,y0-head);
+          ctx.lineTo(x1+head,y0+head);
+          ctx.closePath(); ctx.fill();
+          // 오른쪽 화살촉
+          ctx.beginPath();
+          ctx.moveTo(x2,y0);
+          ctx.lineTo(x2-head,y0-head);
+          ctx.lineTo(x2-head,y0+head);
+          ctx.closePath(); ctx.fill();
+        }
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.font = '12px "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+
+        CI_MARKS.forEach((m, i)=>{
+          const xl = x.getPixelForValue(-m.z);
+          const xr = x.getPixelForValue(+m.z);
+
+          // 수직선
+          ctx.beginPath(); ctx.moveTo(xl, bottomPix); ctx.lineTo(xl, topPix); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(xr, bottomPix); ctx.lineTo(xr, topPix); ctx.stroke();
+
+          // 화살표 + 라벨
+          const yArrow = arrowYs[i];
+          drawArrow(xl+2, yArrow, xr-2);
+          ctx.fillText(m.label, (xl+xr)/2, yArrow-4);
+        });
+
+        ctx.restore();
+      }
+    };
+
+    // ====== 차트 구성 ======
+    const ctx = document.getElementById('chart');
+    Chart.register(ciMarkersPlugin);
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: { datasets: [
+        {label: 't_ν 밀도 f(t)', data: [], parsing:false, borderWidth:2, pointRadius:0, tension:0.15},
+        {label: 'p-value 영역', data: [], parsing:false, borderWidth:0, pointRadius:0, fill:'origin', spanGaps:true, hidden:false}
+      ]},
+      options: {
+        responsive: true,
+        animation: {duration: 200},
+        plugins: {
+          legend: {display:true},
+          tooltip: {mode:'index', intersect:false, callbacks:{
+            label: (c) => c.datasetIndex===0 ? ` f(t) ≈ ${c.parsed.y.toFixed(5)}` : null
+          }}
+        },
+        scales: {
+          x: {type:'linear', title:{display:true, text:'t'}, suggestedMin:-6, suggestedMax:6},
+          y: {title:{display:true, text:'밀도 f(t)'}}
+        }
+      }
+    });
+
+    // ====== 도메인/곡선 ======
+    function buildCurve(v, xmin, xmax){
+      const n = 1401;
+      const step = (xmax - xmin) / (n-1);
+      const curve = [];
+      for(let i=0;i<n;i++){
+        const x = xmin + i*step;
+        curve.push({x, y: pdfT(x, v)});
+      }
+      return curve;
+    }
+    function makeShade(predicate){
+      const base = chart.data.datasets[0].data;
+      return base.map(p => ({x: p.x, y: predicate(p.x) ? p.y : null}));
+    }
+
+    // ====== UI 엘리먼트 ======
+    const dfInput = document.getElementById('dfValue');
+    const tInput  = document.getElementById('tValue');
+    const tailSel = document.getElementById('tailType');
+    const pBoxValue = document.getElementById('pBoxValue');
+    const pBoxMeta  = document.getElementById('pBoxMeta');
+
+    let lastXmax = null;
+
+    function update(){
+      const v = parseInt(dfInput.value, 10);
+      const t = Number(tInput.value);
+      const tail = tailSel.value;
+
+      if (!Number.isFinite(v) || v < 1){
+        pBoxValue.textContent = '—';
+        pBoxMeta.textContent  = '유효한 자유도(ν≥1)를 입력하세요';
+        chart.data.datasets[0].data = [];
+        chart.data.datasets[1].data = [];
+        chart.update();
+        return;
+      }
+      if (!Number.isFinite(t)){
+        pBoxValue.textContent = '—';
+        pBoxMeta.textContent  = '유효한 t 값을 입력하세요';
+        chart.data.datasets[1].data = [];
+        chart.update();
+        return;
+      }
+
+      // 신뢰구간 임계값 계산 (두측 90/95/99%)
+      CI_MARKS = CI_LEVELS.map((lvl)=>{
+        const p = (1 + lvl)/2; // 0.95 -> 0.975
+        const crit = invCdfT(p, v);
+        return { z: crit, label: `${(lvl*100).toFixed(0)}% 신뢰구간 (±${crit.toFixed(3)})` };
+      });
+
+      // x축 범위: 임계값/관측치에 맞춰 자동 확장 (상한 80)
+      const maxCrit = Math.max(...CI_MARKS.map(m => m.z));
+      const need = Math.max(Math.abs(t), maxCrit);
+      const xmax = Math.min(80, Math.max(4.5, need*1.2));
+      const xmin = -xmax;
+
+      if (lastXmax === null || Math.abs(xmax - lastXmax) > 1e-9) {
+        chart.options.scales.x.suggestedMin = xmin;
+        chart.options.scales.x.suggestedMax = xmax;
+        chart.data.datasets[0].data = buildCurve(v, xmin, xmax);
+        lastXmax = xmax;
+      } else {
+        // 자유도만 바뀐 경우 곡선 재계산
+        chart.data.datasets[0].data = chart.data.datasets[0].data.map(p => ({x:p.x, y: pdfT(p.x, v)}));
+      }
+
+      // p-value + 음영
+      let pval, meta;
+      if (tail === 'two'){
+        const tabs = Math.abs(t);
+        pval = 2*(1 - cdfT(tabs, v));
+        chart.data.datasets[1].data = makeShade(x => Math.abs(x) >= tabs);
+        meta = `양측, |t|=${tabs.toFixed(3)} (ν=${v}) → P(|T_ν| ≥ ${tabs.toFixed(3)})`;
+      } else if (tail === 'right'){
+        pval = 1 - cdfT(t, v);
+        chart.data.datasets[1].data = makeShade(x => x >= t);
+        meta = `우측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≥ ${t.toFixed(3)})`;
+      } else {
+        pval = cdfT(t, v);
+        chart.data.datasets[1].data = makeShade(x => x <= t);
+        meta = `좌측, t=${t.toFixed(3)} (ν=${v}) → P(T_ν ≤ ${t.toFixed(3)})`;
+      }
+
+      chart.data.datasets[1].backgroundColor = primaryColor('33');
+      pBoxValue.textContent = formatProb(pval);
+      pBoxMeta.textContent  = meta;
+
+      chart.update();
+    }
+
+    [dfInput, tInput, tailSel].forEach(el => el.addEventListener('input', update));
+    update();
+  </script>
+</body>
+</html>
 
