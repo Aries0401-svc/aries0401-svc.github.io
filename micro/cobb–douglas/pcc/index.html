@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../../assets/style.css" />
 
-  <!-- 차트(CDN, 버전 고정) -->
+  <!-- 차트(CDN, 버전 고정) - defer 유지 -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 
   <style>
@@ -237,382 +237,382 @@
   <!-- 공통 스크립트 -->
   <script src="../../../assets/site.js"></script>
 
-  <!-- 페이지 전용 스크립트 -->
+  <!-- 페이지 전용 스크립트 (DOMContentLoaded로 전체 래핑) -->
   <script>
-    // ===== PCC (가격–소비 곡선) — 가격 하한 0.2 적용, α/β 초기값 0.50 =====
-    const $ = (s)=>document.querySelector(s);
+    window.addEventListener('DOMContentLoaded', () => {
+      // ===== PCC (가격–소비 곡선) — 가격 하한 0.2 적용, α/β 초기값 0.50 =====
+      const $ = (s)=>document.querySelector(s);
 
-    // 가격 하한
-    const PRICE_FLOOR = 0.2;
+      // 가격 하한
+      const PRICE_FLOOR = 0.2;
 
-    // 초기 입력
-    const iA=$('#i-alpha'), iB=$('#i-beta'), iPx=$('#i-px'), iPy=$('#i-py'), iM=$('#i-M');
-    const iVary=$('#i-vary'), iPmin=$('#i-Pmin'), iPmax=$('#i-Pmax');
-    const drawBtn=$('#drawBtn');
+      // 초기 입력
+      const iA=$('#i-alpha'), iB=$('#i-beta'), iPx=$('#i-px'), iPy=$('#i-py'), iM=$('#i-M');
+      const iVary=$('#i-vary'), iPmin=$('#i-Pmin'), iPmax=$('#i-Pmax');
+      const drawBtn=$('#drawBtn');
 
-    // 컨트롤/표시
-    const ctlCard=$('#ctl-card'), chartCard=$('#chart-card');
-    const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
-    const betaR =$('#beta'),  betaN =$('[id="betaNum"]'),  betaVal=$('#betaVal');
-    const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
-    const pyR=$('#py'), pyN=$('#pyNum'), pyVal=$('#pyVal');
-    const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal');
+      // 컨트롤/표시
+      const ctlCard=$('#ctl-card'), chartCard=$('#chart-card');
+      const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
+      const betaR =$('#beta'),  betaN =$('[id="betaNum"]'),  betaVal=$('#betaVal');
+      const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
+      const pyR=$('#py'), pyN=$('#pyNum'), pyVal=$('#pyVal');
+      const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal');
 
-    const varySel=$('#varySel');
-    const pVarR=$('#P'), pVarN=$('#PNum'), pVarVal=$('#PVal'), pMinView=$('#PminView'), pMaxView=$('#PmaxView');
+      const varySel=$('#varySel');
+      const pVarR=$('#P'), pVarN=$('#PNum'), pVarVal=$('#PVal'), pMinView=$('#PminView'), pMaxView=$('#PmaxView');
 
-    const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
-    const statusMsg=$('#statusMsg');
-    const playBtn=$('#playBtn'), pauseBtn=$('#pauseBtn'), refitBtn=$('#refitBtn');
+      const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
+      const statusMsg=$('#statusMsg');
+      const playBtn=$('#playBtn'), pauseBtn=$('#pauseBtn'), refitBtn=$('#refitBtn');
 
-    // 재입력
-    const reinitBox=$('#reinitBox');
-    const riA=$('#ri-alpha'), riB=$('#ri-beta'), riPx=$('#ri-px'), riPy=$('#ri-py'), riM=$('#ri-M');
-    const riVary=$('#ri-vary'), riPmin=$('#ri-Pmin'), riPmax=$('#ri-Pmax']);
-    const applyReinit=$('#applyReinit'), cancelReinit=$('#cancelReinit');
+      // 재입력
+      const reinitBox=$('#reinitBox');
+      const riA=$('#ri-alpha'), riB=$('#ri-beta'), riPx=$('#ri-px'), riPy=$('#ri-py'), riM=$('#ri-M');
+      const riVary=$('#ri-vary'), riPmin=$('#ri-Pmin'), riPmax=$('#ri-Pmax']);
+      const applyReinit=$('#applyReinit'), cancelReinit=$('#cancelReinit');
 
-    // 색
-    function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-    let C_TEXT, C_PRIMARY, C_MUTED;
-    function loadColors(){ C_TEXT=cssVar('--text'); C_PRIMARY=cssVar('--primary'); C_MUTED=cssVar('--muted'); }
+      // 색
+      function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+      let C_TEXT, C_PRIMARY, C_MUTED;
+      function loadColors(){ C_TEXT=cssVar('--text'); C_PRIMARY=cssVar('--primary'); C_MUTED=cssVar('--muted'); }
 
-    // 축 (고정 범위)
-    let BASE_XMAX=1, BASE_YMAX=1;
+      // 축 (고정 범위)
+      let BASE_XMAX=1, BASE_YMAX=1;
 
-    // 애니메이션
-    let timer=null, dir=1; // 1: up, -1: down
+      // 애니메이션
+      let timer=null, dir=1; // 1: up, -1: down
 
-    // 유틸
-    function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
-    function pos(v,eps=PRICE_FLOOR){ return Math.max(eps, v); } // 가격은 최소 0.2
-    function fmt(v,d=2){ if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–'; return (+v).toFixed(d); }
-    function setRange(rangeEl, numberEl, {min, max, step, value, decimals=2}){
-      if(min===max){ max=min+(Math.abs(min)||1); }
-      if(min>max){ const t=min; min=max; max=t; }
-      rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+(+value).toFixed(decimals);
-      numberEl.min=min; numberEl.max=max; numberEl.step=step; numberEl.value=+(+value).toFixed(decimals);
-    }
-    function setAroundAlphaBeta(rangeEl, numberEl, base){
-      const span=Math.max(0.2, Math.abs(base)*0.2); // ±20%, 최소폭 0.2
-      setRange(rangeEl, numberEl, {min: base-span, max: base+span, step:0.01, value:base, decimals:2});
-    }
-    // 가격 범위는 하한 0.2 보장
-    function setAroundPrice(rangeEl, numberEl, base){
-      const span=Math.max((Math.abs(base)||1)*0.5, 1); // ±50%, 최소폭 1
-      const min = Math.max(base - span, PRICE_FLOOR);
-      const max = Math.max(base + span, min + 0.5);
-      setRange(rangeEl, numberEl, {min, max, step:0.05, value: clamp(+base, min, max), decimals:2});
-    }
-    function setPriceSpan(rangeEl, numberEl, base, pmin, pmax){
-      const lo = Number.isFinite(+pmin) ? Math.max(+pmin, PRICE_FLOOR)
-                                        : Math.max(PRICE_FLOOR, +(base*0.2).toFixed(2));
-      const hi = Number.isFinite(+pmax) ? Math.max(+pmax, lo + 0.5)
-                                        : Math.max(lo + 0.5, +(base*2).toFixed(2));
-      setRange(rangeEl, numberEl, {min: lo, max: hi, step:0.05, value: clamp(+base, lo, hi), decimals:2});
-    }
-
-    // 현재 파라미터
-    function params(){
-      const a=+(+alphaR.value), b=+(+betaR.value);
-      const px=+(+pxR.value),  py=+(+pyR.value);
-      const M =+(mR.value|0);
-      const vary = varySel.value; // 'px' | 'py'
-      const P = +(pVarR.value), Pmin=+(pVarR.min), Pmax=+(pVarR.max);
-      return {a,b,px,py,M,vary,P,Pmin,Pmax};
-    }
-    function syncUI(){
-      const {a,b,px,py,M,P,Pmin,Pmax,vary}=params();
-      alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2); alphaN.value=isNaN(a)?'':(+a).toFixed(2);
-      betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);  betaN.value =isNaN(b)?'':(+b).toFixed(2);
-      pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2); pxN.value  =isNaN(px)?'':(+px).toFixed(2);
-      pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2); pyN.value  =isNaN(py)?'':(+py).toFixed(2);
-      mVal    .textContent=isNaN(M)?'–':M;                  mN.value   =isNaN(M)?'':M;
-
-      pVarVal.textContent=isNaN(P)?'–':(+P).toFixed(2);
-      pMinView.textContent=isNaN(Pmin)?'–':(+Pmin).toFixed(2);
-      pMaxView.textContent=isNaN(Pmax)?'–':(+Pmax).toFixed(2);
-
-      // 진행 슬라이더 ↔ 선택 가격 동기화
-      if(vary==='px' && Math.abs(P - px) > 1e-9){
-        pVarR.value=px; pVarN.value=px; pVarVal.textContent=(+px).toFixed(2);
+      // 유틸
+      function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
+      function pos(v,eps=PRICE_FLOOR){ return Math.max(eps, v); } // 가격은 최소 0.2
+      function fmt(v,d=2){ if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–'; return (+v).toFixed(d); }
+      function setRange(rangeEl, numberEl, {min, max, step, value, decimals=2}){
+        if(min===max){ max=min+(Math.abs(min)||1); }
+        if(min>max){ const t=min; min=max; max=t; }
+        rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+(+value).toFixed(decimals);
+        numberEl.min=min; numberEl.max=max; numberEl.step=step; numberEl.value=+(+value).toFixed(decimals);
       }
-      if(vary==='py' && Math.abs(P - py) > 1e-9){
-        pVarR.value=py; pVarN.value=py; pVarVal.textContent=(+py).toFixed(2);
+      function setAroundAlphaBeta(rangeEl, numberEl, base){
+        const span=Math.max(0.2, Math.abs(base)*0.2); // ±20%, 최소폭 0.2
+        setRange(rangeEl, numberEl, {min: base-span, max: base+span, step:0.01, value:base, decimals:2});
       }
-    }
+      // 가격 범위는 하한 0.2 보장
+      function setAroundPrice(rangeEl, numberEl, base){
+        const span=Math.max((Math.abs(base)||1)*0.5, 1); // ±50%, 최소폭 1
+        const min = Math.max(base - span, PRICE_FLOOR);
+        const max = Math.max(base + span, min + 0.5);
+        setRange(rangeEl, numberEl, {min, max, step:0.05, value: clamp(+base, min, max), decimals:2});
+      }
+      function setPriceSpan(rangeEl, numberEl, base, pmin, pmax){
+        const lo = Number.isFinite(+pmin) ? Math.max(+pmin, PRICE_FLOOR)
+                                          : Math.max(PRICE_FLOOR, +(base*0.2).toFixed(2));
+        const hi = Number.isFinite(+pmax) ? Math.max(+pmax, lo + 0.5)
+                                          : Math.max(lo + 0.5, +(base*2).toFixed(2));
+        setRange(rangeEl, numberEl, {min: lo, max: hi, step:0.05, value: clamp(+base, lo, hi), decimals:2});
+      }
 
-    // 차트
-    let pccChart;
-    function createChart(){
-      const ctx=document.getElementById('pccChart').getContext('2d');
-      pccChart=new Chart(ctx,{
-        type:'line',
-        data:{ datasets:[
-          // 0: 예산선(현재 가격)
-          {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-          // 1: 무차별곡선(U*)
-          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-          // 2: 최적점(단일 점)
-          {label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
-           pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter'},
-          // 3~4: 투영선
-          {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-          {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-          // 5: PCC(자취)
-          {label:'PCC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0}
-        ]},
-        options:{
-          maintainAspectRatio:false,
-          elements:{ point:{ radius:0, hoverRadius:0 } }, /* 전역 마커 제거 */
-          scales:{
-            x:{type:'linear', title:{display:true,text:'x'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_XMAX},
-            y:{type:'linear', title:{display:true,text:'y'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_YMAX}
-          },
-          plugins:{legend:{display:true}, tooltip:{mode:'nearest', intersect:false}},
-          animation:{duration:120}
+      // 현재 파라미터
+      function params(){
+        const a=+(+alphaR.value), b=+(+betaR.value);
+        const px=+(+pxR.value),  py=+(+pyR.value);
+        const M =+(mR.value||0);
+        const vary = varySel.value; // 'px' | 'py'
+        const P = +(pVarR.value), Pmin=+(pVarR.min), Pmax=+(pVarR.max);
+        return {a,b,px,py,M,vary,P,Pmin,Pmax};
+      }
+      function syncUI(){
+        const {a,b,px,py,M,P,Pmin,Pmax,vary}=params();
+        alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2); alphaN.value=isNaN(a)?'':(+a).toFixed(2);
+        betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);  betaN.value =isNaN(b)?'':(+b).toFixed(2);
+        pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2); pxN.value  =isNaN(px)?'':(+px).toFixed(2);
+        pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2); pyN.value  =isNaN(py)?'':(+py).toFixed(2);
+        mVal    .textContent=isNaN(M)?'–':M;                  mN.value   =isNaN(M)?'':M;
+
+        pVarVal.textContent=isNaN(P)?'–':(+P).toFixed(2);
+        pMinView.textContent=isNaN(Pmin)?'–':(+Pmin).toFixed(2);
+        pMaxView.textContent=isNaN(Pmax)?'–':(+Pmax).toFixed(2);
+
+        // 진행 슬라이더 ↔ 선택 가격 동기화
+        if(vary==='px' && Math.abs(P - px) > 1e-9){
+          pVarR.value=px; pVarN.value=px; pVarVal.textContent=(+px).toFixed(2);
         }
-      });
-    }
-
-    function recomputeAndDraw({fitAxes=false, rebuildPCC=false}={}){
-      syncUI();
-      const {a,b,px,py,M,vary,Pmin,Pmax}=params();
-      const sum=a+b;
-
-      // 절편
-      const xInt = (px===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/px;
-      const yInt = (py===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/py;
-
-      const validInterior = (a>0 && b>0 && sum>0 && Number.isFinite(M) && M>=0 && px!==0 && py!==0);
-
-      // 최적/효용
-      let xStar=NaN,yStar=NaN,Ustar=NaN;
-      if(validInterior){
-        xStar=(a/sum)*(M/px);
-        yStar=(b/sum)*(M/py);
-        Ustar=Math.pow(xStar,a)*Math.pow(yStar,b);
-      }
-
-      // 축 재설정(요청 시에만)
-      if(fitAxes){
-        let xMaxCand=BASE_XMAX, yMaxCand=BASE_YMAX;
-        if(vary==='px'){
-          xMaxCand = Math.max(0, M/pos(Pmin)) * 1.2;
-          yMaxCand = (py===0)? BASE_YMAX : Math.max(0, M/Math.abs(py)) * 1.2;
-        }else{ // vary==='py'
-          xMaxCand = (px===0)? BASE_XMAX : Math.max(0, M/Math.abs(px)) * 1.2;
-          yMaxCand = Math.max(0, M/pos(Pmin)) * 1.2;
+        if(vary==='py' && Math.abs(P - py) > 1e-9){
+          pVarR.value=py; pVarN.value=py; pVarVal.textContent=(+py).toFixed(2);
         }
-        BASE_XMAX = (xMaxCand>0?xMaxCand:1);
-        BASE_YMAX = (yMaxCand>0?yMaxCand:1);
-        pccChart.options.scales.x.max=BASE_XMAX;
-        pccChart.options.scales.y.max=BASE_YMAX;
       }
 
-      // 예산선 (축은 고정)
-      let budgetData=[];
-      if(px===0 && py===0){
-        budgetData=[];
-      }else if(px===0){ // 수평
-        const y0=(py===0)?0:(M/py);
-        budgetData=[{x:0,y:y0},{x:BASE_XMAX,y:y0}];
-      }else if(py===0){ // 수직
-        const x0=M/px;
-        budgetData=[{x:x0,y:0},{x:x0,y:BASE_YMAX}];
-      }else{
-        budgetData=[{x:0,y:yInt},{x:xInt,y:0}];
-      }
-
-      // 무차별곡선(현재 U*)
-      let curve=[],optPt=[],projY=[],projX=[];
-      if(validInterior){
-        const steps=200;
-        for(let i=1;i<=steps;i++){
-          const x=(BASE_XMAX/steps)*i;
-          const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
-          if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x,y});
-        }
-        optPt=[{x:xStar,y:yStar}];
-        projY=[{x:0,y:yStar},{x:xStar,y:yStar}];
-        projX=[{x:xStar,y:0},{x:xStar,y:yStar}];
-      }
-
-      // PCC 자취(Pmin~Pmax)
-      if(rebuildPCC){
-        let pcc=[],steps=160;
-        if(a>0 && b>0 && sum>0 && M>=0){
-          for(let i=0;i<=steps;i++){
-            const P = pos(Pmin) + ( (pos(Pmax)-pos(Pmin)) * (i/steps) );
-            let xi, yi;
-            if(vary==='px'){
-              xi=(a/sum)*(M/P);
-              yi=(b/sum)*(M/py);
-            }else{ // vary py
-              xi=(a/sum)*(M/px);
-              yi=(b/sum)*(M/P);
-            }
-            if(Number.isFinite(xi)&&Number.isFinite(yi)&&xi>=0&&yi>=0) pcc.push({x:xi,y:yi});
+      // 차트
+      let pccChart;
+      function createChart(){
+        const ctx=document.getElementById('pccChart').getContext('2d');
+        pccChart=new Chart(ctx,{
+          type:'line',
+          data:{ datasets:[
+            // 0: 예산선(현재 가격)
+            {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+            // 1: 무차별곡선(U*)
+            {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+            // 2: 최적점(단일 점)
+            {label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
+             pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter'},
+            // 3~4: 투영선
+            {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+            {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+            // 5: PCC(자취)
+            {label:'PCC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0}
+          ]},
+          options:{
+            maintainAspectRatio:false,
+            elements:{ point:{ radius:0, hoverRadius:0 } }, /* 전역 마커 제거 */
+            scales:{
+              x:{type:'linear', title:{display:true,text:'x'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_XMAX},
+              y:{type:'linear', title:{display:true,text:'y'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_YMAX}
+            },
+            plugins:{legend:{display:true}, tooltip:{mode:'nearest', intersect:false}},
+            animation:{duration:120}
           }
-        }
-        pccChart.data.datasets[5].data=pcc;
-      }
-
-      // 적용
-      pccChart.data.datasets[0].data=budgetData;
-      pccChart.data.datasets[1].data=curve;
-      pccChart.data.datasets[2].data=optPt;
-      pccChart.data.datasets[3].data=projY;
-      pccChart.data.datasets[4].data=projX;
-      pccChart.update('active');
-
-      // 숫자/상태
-      xStarEl.textContent=fmt(xStar);
-      yStarEl.textContent=fmt(yStar);
-      xIntEl.textContent =fmt(xInt);
-      yIntEl.textContent =fmt(yInt);
-
-      if(px===0 && py===0){
-        statusMsg.textContent='pₓ=0, pᵧ=0이면 예산선이 정의되지 않습니다.';
-      }else if(!validInterior){
-        statusMsg.textContent='참고: 내부해는 α>0, β>0, α+β>0, pₓ≠0, pᵧ≠0, M≥0에서 명확합니다. 현재는 PCC/무차별곡선이 제한될 수 있어요.';
-      }else{
-        statusMsg.textContent='';
-      }
-    }
-
-    function bindPair(rangeEl, numberEl, decimals, onChange){
-      rangeEl.addEventListener('input', ()=>{ numberEl.value=(+rangeEl.value).toFixed(decimals); onChange(); });
-      numberEl.addEventListener('change', ()=>{
-        let v=+numberEl.value;
-        // 가격 입력값엔 하한 적용
-        if(rangeEl===pxR || rangeEl===pyR || rangeEl===pVarR){ v = Math.max(PRICE_FLOOR, v); }
-        numberEl.value=v.toFixed(decimals);
-        rangeEl.value=numberEl.value;
-        onChange();
-      });
-    }
-
-    function stopAnim(){ if(timer){ clearInterval(timer); timer=null; } playBtn.disabled=false; pauseBtn.disabled=true; }
-    function startAnim(){
-      if(timer) return;
-      playBtn.disabled=true; pauseBtn.disabled=false;
-      dir=1;
-      const step=Math.max(+pVarR.step||0.05, (pos(+pVarR.max)-pos(+pVarR.min))/120);
-      timer=setInterval(()=>{
-        let v=+pVarR.value + dir*step;
-        if(v>=+pVarR.max){ v=+pVarR.max; dir=-1; }
-        if(v<=+pVarR.min){ v=+pVarR.min; dir=1; }
-        pVarR.value=v; pVarN.value=v.toFixed(2);
-        if(varySel.value==='px'){ pxR.value=v; pxN.value=v.toFixed(2); }
-        else{ pyR.value=v; pyN.value=v.toFixed(2); }
-        recomputeAndDraw();
-      }, 30);
-    }
-
-    // 초기값 적용
-    function applyInitial(a0,b0,px0,py0,M0, vary0, Pmin0, Pmax0){
-      // 1) 슬라이더 범위
-      setAroundAlphaBeta(alphaR, alphaN, a0);
-      setAroundAlphaBeta(betaR,  betaN,  b0);
-      setAroundPrice(pxR, pxN, Math.max(px0, PRICE_FLOOR));
-      setAroundPrice(pyR, pyN, Math.max(py0, PRICE_FLOOR));
-      setRange(mR, mN, {min:0, max: Math.max(10, Math.ceil((+M0||0)*2)), step:1, value:+M0||0, decimals:0});
-
-      varySel.value = (vary0==='py') ? 'py' : 'px';
-      if(varySel.value==='px'){ setPriceSpan(pVarR, pVarN, Math.max(px0, PRICE_FLOOR), +Pmin0, +Pmax0); pxR.value=pVarR.value; pxN.value=pVarR.value; }
-      else{ setPriceSpan(pVarR, pVarN, Math.max(py0, PRICE_FLOOR), +Pmin0, +Pmax0); pyR.value=pVarR.value; pyN.value=pVarR.value; }
-
-      // 2) 축: P 범위와 고정 가격 기준으로 고정
-      let xMaxCand=1, yMaxCand=1;
-      if(varySel.value==='px'){
-        xMaxCand = Math.max(0, (+M0||0)/pos(+pVarR.min)) * 1.2;
-        yMaxCand = Math.max(0, (+M0||0)/Math.max(Math.abs(py0), PRICE_FLOOR)) * 1.2;
-      }else{
-        xMaxCand = Math.max(0, (+M0||0)/Math.max(Math.abs(px0), PRICE_FLOOR)) * 1.2;
-        yMaxCand = Math.max(0, (+M0||0)/pos(+pVarR.min)) * 1.2;
-      }
-      BASE_XMAX = xMaxCand>0?xMaxCand:1;
-      BASE_YMAX = yMaxCand>0?yMaxCand:1;
-
-      if(!pccChart){ loadColors(); createChart(); }
-
-      // 3) 바인딩(1회)
-      if(!alphaR.dataset.bound){
-        bindPair(alphaR, alphaN, 2, ()=>{ stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
-        bindPair(betaR,  betaN,  2, ()=>{ stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
-        bindPair(pxR,    pxN,    2, ()=>{ if(varySel.value==='px'){ pVarR.value=pxR.value; pVarN.value=pxR.value; } stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
-        bindPair(pyR,    pyN,    2, ()=>{ if(varySel.value==='py'){ pVarR.value=pyR.value; pVarN.value=pyR.value; } stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
-        bindPair(mR,     mN,     0, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildPCC:true}); });
-
-        bindPair(pVarR,  pVarN,  2, ()=>{ // 진행용 슬라이더 → 선택 가격 반영
-          if(varySel.value==='px'){ pxR.value=pVarR.value; pxN.value=pVarR.value; }
-          else{ pyR.value=pVarR.value; pyN.value=pVarR.value; }
-          recomputeAndDraw();
         });
-
-        // 변경 대상 토글
-        varySel.addEventListener('change', ()=>{
-          stopAnim();
-          const {px,py} = params();
-          if(varySel.value==='px'){ setPriceSpan(pVarR, pVarN, Math.max(px, PRICE_FLOOR), +pVarR.min, +pVarR.max); pVarR.value=px; pVarN.value=(+px).toFixed(2); }
-          else{ setPriceSpan(pVarR, pVarN, Math.max(py, PRICE_FLOOR), +pVarR.min, +pVarR.max); pVarR.value=py; pVarN.value=(+py).toFixed(2); }
-          recomputeAndDraw({fitAxes:true, rebuildPCC:true});
-        });
-
-        alphaR.dataset.bound=betaR.dataset.bound=pxR.dataset.bound=pyR.dataset.bound=mR.dataset.bound=pVarR.dataset.bound='1';
       }
 
-      // 4) 화면 전환 & 첫 렌더
-      $('#init-card').hidden=true;
-      ctlCard.hidden=false;
-      chartCard.hidden=false;
-      recomputeAndDraw({fitAxes:true, rebuildPCC:true});
-    }
-
-    drawBtn.addEventListener('click', ()=>{
-      const a0=+iA.value, b0=+iB.value, px0=+iPx.value, py0=+iPy.value, M0=+iM.value;
-      const vary0=iVary.value;
-      const baseP = (vary0==='py')? py0 : px0;
-      // 기본 Pmin/Pmax (하한 0.2 보장)
-      const Pmin0 = Number.isFinite(+iPmin.value) && +iPmin.value>0 ? Math.max(+iPmin.value, PRICE_FLOOR)
-                     : Math.max(PRICE_FLOOR, +(baseP*0.2).toFixed(2));
-      const Pmax0 = Number.isFinite(+iPmax.value) && +iPmax.value>0 ? Math.max(+iPmax.value, Pmin0+0.5)
-                     : Math.max(Pmin0+0.5, +(baseP*2).toFixed(2));
-      applyInitial(a0,b0,px0,py0,M0,vary0,Pmin0,Pmax0);
-    });
-
-    // 재생/정지/축 재설정
-    playBtn.addEventListener('click', ()=>startAnim());
-    pauseBtn.addEventListener('click', ()=>stopAnim());
-    refitBtn.addEventListener('click', ()=>{ stopAnim(); recomputeAndDraw({fitAxes:true}); });
-
-    // 파라미터 재입력
-    reinitBox.addEventListener('toggle',(e)=>{
-      if(e.target.open){
+      function recomputeAndDraw({fitAxes=false, rebuildPCC=false}={}){
+        syncUI();
         const {a,b,px,py,M,vary,Pmin,Pmax}=params();
-        riA.value=isNaN(a)?'':(+a).toFixed(2);
-        riB.value=isNaN(b)?'':(+b).toFixed(2);
-        riPx.value=isNaN(px)?'':(+px).toFixed(2);
-        riPy.value=isNaN(py)?'':(+py).toFixed(2);
-        riM.value =isNaN(M)?'':(+M).toFixed(0);
-        riVary.value = vary;
-        riPmin.value =isNaN(Pmin)?'':(+Pmin).toFixed(2);
-        riPmax.value =isNaN(Pmax)?'':(+Pmax).toFixed(2);
-      }
-    });
-    applyReinit.addEventListener('click', ()=>{
-      stopAnim();
-      const a0=+riA.value, b0=+riB.value, px0=+riPx.value, py0=+riPy.value, M0=+riM.value;
-      const vary0 = riVary.value;
-      const Pmin0 = Math.max(+riPmin.value||PRICE_FLOOR, PRICE_FLOOR);
-      const Pmax0 = Math.max(+riPmax.value||Pmin0+0.5, Pmin0+0.5);
-      applyInitial(a0,b0,px0,py0,M0,vary0,Pmin0,Pmax0);
-      reinitBox.open=false;
-    });
-    cancelReinit.addEventListener('click', ()=>{ reinitBox.open=false; });
+        const sum=a+b;
 
-    // 연도
-    document.addEventListener('DOMContentLoaded', ()=>{
+        // 절편
+        const xInt = (px===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/px;
+        const yInt = (py===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/py;
+
+        const validInterior = (a>0 && b>0 && sum>0 && Number.isFinite(M) && M>=0 && px!==0 && py!==0);
+
+        // 최적/효용
+        let xStar=NaN,yStar=NaN,Ustar=NaN;
+        if(validInterior){
+          xStar=(a/sum)*(M/px);
+          yStar=(b/sum)*(M/py);
+          Ustar=Math.pow(xStar,a)*Math.pow(yStar,b);
+        }
+
+        // 축 재설정(요청 시에만)
+        if(fitAxes){
+          let xMaxCand=BASE_XMAX, yMaxCand=BASE_YMAX;
+          if(vary==='px'){
+            xMaxCand = Math.max(0, M/pos(Pmin)) * 1.2;
+            yMaxCand = (py===0)? BASE_YMAX : Math.max(0, M/Math.abs(py)) * 1.2;
+          }else{ // vary==='py'
+            xMaxCand = (px===0)? BASE_XMAX : Math.max(0, M/Math.abs(px)) * 1.2;
+            yMaxCand = Math.max(0, M/pos(Pmin)) * 1.2;
+          }
+          BASE_XMAX = (xMaxCand>0?xMaxCand:1);
+          BASE_YMAX = (yMaxCand>0?yMaxCand:1);
+          pccChart.options.scales.x.max=BASE_XMAX;
+          pccChart.options.scales.y.max=BASE_YMAX;
+        }
+
+        // 예산선 (축은 고정)
+        let budgetData=[];
+        if(px===0 && py===0){
+          budgetData=[];
+        }else if(px===0){ // 수평
+          const y0=(py===0)?0:(M/py);
+          budgetData=[{x:0,y:y0},{x:BASE_XMAX,y:y0}];
+        }else if(py===0){ // 수직
+          const x0=M/px;
+          budgetData=[{x:x0,y:0},{x:x0,y:BASE_YMAX}];
+        }else{
+          budgetData=[{x:0,y:yInt},{x:xInt,y:0}];
+        }
+
+        // 무차별곡선(현재 U*)
+        let curve=[],optPt=[],projY=[],projX=[];
+        if(validInterior){
+          const steps=200;
+          for(let i=1;i<=steps;i++){
+            const x=(BASE_XMAX/steps)*i;
+            const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
+            if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x,y});
+          }
+          optPt=[{x:xStar,y:yStar}];
+          projY=[{x:0,y:yStar},{x:xStar,y:yStar}];
+          projX=[{x:xStar,y:0},{x:xStar,y:yStar}];
+        }
+
+        // PCC 자취(Pmin~Pmax)
+        if(rebuildPCC){
+          let pcc=[],steps=160;
+          if(a>0 && b>0 && sum>0 && M>=0){
+            for(let i=0;i<=steps;i++){
+              const P = pos(Pmin) + ( (pos(Pmax)-pos(Pmin)) * (i/steps) );
+              let xi, yi;
+              if(vary==='px'){
+                xi=(a/sum)*(M/P);
+                yi=(b/sum)*(M/py);
+              }else{ // vary py
+                xi=(a/sum)*(M/px);
+                yi=(b/sum)*(M/P);
+              }
+              if(Number.isFinite(xi)&&Number.isFinite(yi)&&xi>=0&&yi>=0) pcc.push({x:xi,y:yi});
+            }
+          }
+          pccChart.data.datasets[5].data=pcc;
+        }
+
+        // 적용
+        pccChart.data.datasets[0].data=budgetData;
+        pccChart.data.datasets[1].data=curve;
+        pccChart.data.datasets[2].data=optPt;
+        pccChart.data.datasets[3].data=projY;
+        pccChart.data.datasets[4].data=projX;
+        pccChart.update('active');
+
+        // 숫자/상태
+        xStarEl.textContent=fmt(xStar);
+        yStarEl.textContent=fmt(yStar);
+        xIntEl.textContent =fmt(xInt);
+        yIntEl.textContent =fmt(yInt);
+
+        if(px===0 && py===0){
+          statusMsg.textContent='pₓ=0, pᵧ=0이면 예산선이 정의되지 않습니다.';
+        }else if(!validInterior){
+          statusMsg.textContent='참고: 내부해는 α>0, β>0, α+β>0, pₓ≠0, pᵧ≠0, M≥0에서 명확합니다. 현재는 PCC/무차별곡선이 제한될 수 있어요.';
+        }else{
+          statusMsg.textContent='';
+        }
+      }
+
+      function bindPair(rangeEl, numberEl, decimals, onChange){
+        rangeEl.addEventListener('input', ()=>{ numberEl.value=(+rangeEl.value).toFixed(decimals); onChange(); });
+        numberEl.addEventListener('change', ()=>{
+          let v=+numberEl.value;
+          // 가격 입력값엔 하한 적용
+          if(rangeEl===pxR || rangeEl===pyR || rangeEl===pVarR){ v = Math.max(PRICE_FLOOR, v); }
+          numberEl.value=v.toFixed(decimals);
+          rangeEl.value=numberEl.value;
+          onChange();
+        });
+      }
+
+      function stopAnim(){ if(timer){ clearInterval(timer); timer=null; } playBtn.disabled=false; pauseBtn.disabled=true; }
+      function startAnim(){
+        if(timer) return;
+        playBtn.disabled=true; pauseBtn.disabled=false;
+        dir=1;
+        const step=Math.max(+pVarR.step||0.05, (pos(+pVarR.max)-pos(+pVarR.min))/120);
+        timer=setInterval(()=>{
+          let v=+pVarR.value + dir*step;
+          if(v>=+pVarR.max){ v=+pVarR.max; dir=-1; }
+          if(v<=+pVarR.min){ v=+pVarR.min; dir=1; }
+          pVarR.value=v; pVarN.value=v.toFixed(2);
+          if(varySel.value==='px'){ pxR.value=v; pxN.value=v.toFixed(2); }
+          else{ pyR.value=v; pyN.value=v.toFixed(2); }
+          recomputeAndDraw();
+        }, 30);
+      }
+
+      // 초기값 적용
+      function applyInitial(a0,b0,px0,py0,M0, vary0, Pmin0, Pmax0){
+        // 1) 슬라이더 범위
+        setAroundAlphaBeta(alphaR, alphaN, a0);
+        setAroundAlphaBeta(betaR,  betaN,  b0);
+        setAroundPrice(pxR, pxN, Math.max(px0, PRICE_FLOOR));
+        setAroundPrice(pyR, pyN, Math.max(py0, PRICE_FLOOR));
+        setRange(mR, mN, {min:0, max: Math.max(10, Math.ceil((+M0||0)*2)), step:1, value:+M0||0, decimals:0});
+
+        varySel.value = (vary0==='py') ? 'py' : 'px';
+        if(varySel.value==='px'){ setPriceSpan(pVarR, pVarN, Math.max(px0, PRICE_FLOOR), +Pmin0, +Pmax0); pxR.value=pVarR.value; pxN.value=pVarR.value; }
+        else{ setPriceSpan(pVarR, pVarN, Math.max(py0, PRICE_FLOOR), +Pmin0, +Pmax0); pyR.value=pVarR.value; pyN.value=pVarR.value; }
+
+        // 2) 축: P 범위와 고정 가격 기준으로 고정
+        let xMaxCand=1, yMaxCand=1;
+        if(varySel.value==='px'){
+          xMaxCand = Math.max(0, (+M0||0)/pos(+pVarR.min)) * 1.2;
+          yMaxCand = Math.max(0, (+M0||0)/Math.max(Math.abs(py0), PRICE_FLOOR)) * 1.2;
+        }else{
+          xMaxCand = Math.max(0, (+M0||0)/Math.max(Math.abs(px0), PRICE_FLOOR)) * 1.2;
+          yMaxCand = Math.max(0, (+M0||0)/pos(+pVarR.min)) * 1.2;
+        }
+        BASE_XMAX = xMaxCand>0?xMaxCand:1;
+        BASE_YMAX = yMaxCand>0?yMaxCand:1;
+
+        if(!pccChart){ loadColors(); createChart(); }
+
+        // 3) 바인딩(1회)
+        if(!alphaR.dataset.bound){
+          bindPair(alphaR, alphaN, 2, ()=>{ stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
+          bindPair(betaR,  betaN,  2, ()=>{ stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
+          bindPair(pxR,    pxN,    2, ()=>{ if(varySel.value==='px'){ pVarR.value=pxR.value; pVarN.value=pxR.value; } stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
+          bindPair(pyR,    pyN,    2, ()=>{ if(varySel.value==='py'){ pVarR.value=pyR.value; pVarN.value=pyR.value; } stopAnim(); recomputeAndDraw({rebuildPCC:true}); });
+          bindPair(mR,     mN,     0, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildPCC:true}); });
+
+          bindPair(pVarR,  pVarN,  2, ()=>{ // 진행용 슬라이더 → 선택 가격 반영
+            if(varySel.value==='px'){ pxR.value=pVarR.value; pxN.value=pVarR.value; }
+            else{ pyR.value=pVarR.value; pyN.value=pVarR.value; }
+            recomputeAndDraw();
+          });
+
+          // 변경 대상 토글
+          varySel.addEventListener('change', ()=>{
+            stopAnim();
+            const {px,py} = params();
+            if(varySel.value==='px'){ setPriceSpan(pVarR, pVarN, Math.max(px, PRICE_FLOOR), +pVarR.min, +pVarR.max); pVarR.value=px; pVarN.value=(+px).toFixed(2); }
+            else{ setPriceSpan(pVarR, pVarN, Math.max(py, PRICE_FLOOR), +pVarR.min, +pVarR.max); pVarR.value=py; pVarN.value=(+py).toFixed(2); }
+            recomputeAndDraw({fitAxes:true, rebuildPCC:true});
+          });
+
+          alphaR.dataset.bound=betaR.dataset.bound=pxR.dataset.bound=pyR.dataset.bound=mR.dataset.bound=pVarR.dataset.bound='1';
+        }
+
+        // 4) 화면 전환 & 첫 렌더
+        $('#init-card').hidden=true;
+        ctlCard.hidden=false;
+        chartCard.hidden=false;
+        recomputeAndDraw({fitAxes:true, rebuildPCC:true});
+      }
+
+      drawBtn.addEventListener('click', ()=>{
+        const a0=+iA.value, b0=+iB.value, px0=+iPx.value, py0=+iPy.value, M0=+iM.value;
+        const vary0=iVary.value;
+        const baseP = (vary0==='py')? py0 : px0;
+        // 기본 Pmin/Pmax (하한 0.2 보장)
+        const Pmin0 = Number.isFinite(+iPmin.value) && +iPmin.value>0 ? Math.max(+iPmin.value, PRICE_FLOOR)
+                       : Math.max(PRICE_FLOOR, +(baseP*0.2).toFixed(2));
+        const Pmax0 = Number.isFinite(+iPmax.value) && +iPmax.value>0 ? Math.max(+iPmax.value, Pmin0+0.5)
+                       : Math.max(Pmin0+0.5, +(baseP*2).toFixed(2));
+        applyInitial(a0,b0,px0,py0,M0,vary0,Pmin0,Pmax0);
+      });
+
+      // 재생/정지/축 재설정
+      playBtn.addEventListener('click', ()=>startAnim());
+      pauseBtn.addEventListener('click', ()=>stopAnim());
+      refitBtn.addEventListener('click', ()=>{ stopAnim(); recomputeAndDraw({fitAxes:true}); });
+
+      // 파라미터 재입력
+      reinitBox.addEventListener('toggle',(e)=>{
+        if(e.target.open){
+          const {a,b,px,py,M,vary,Pmin,Pmax}=params();
+          riA.value=isNaN(a)?'':(+a).toFixed(2);
+          riB.value=isNaN(b)?'':(+b).toFixed(2);
+          riPx.value=isNaN(px)?'':(+px).toFixed(2);
+          riPy.value=isNaN(py)?'':(+py).toFixed(2);
+          riM.value =isNaN(M)?'':(+M).toFixed(0);
+          riVary.value = vary;
+          riPmin.value =isNaN(Pmin)?'':(+Pmin).toFixed(2);
+          riPmax.value =isNaN(Pmax)?'':(+Pmax).toFixed(2);
+        }
+      });
+      applyReinit.addEventListener('click', ()=>{
+        stopAnim();
+        const a0=+riA.value, b0=+riB.value, px0=+riPx.value, py0=+riPy.value, M0=+riM.value;
+        const vary0 = riVary.value;
+        const Pmin0 = Math.max(+riPmin.value||PRICE_FLOOR, PRICE_FLOOR);
+        const Pmax0 = Math.max(+riPmax.value||Pmin0+0.5, Pmin0+0.5);
+        applyInitial(a0,b0,px0,py0,M0,vary0,Pmin0,Pmax0);
+        reinitBox.open=false;
+      });
+      cancelReinit.addEventListener('click', ()=>{ reinitBox.open=false; });
+
+      // 푸터 연도 표기 (이제 즉시 실행)
       const y=document.querySelector('#year'); if(y) y.textContent=new Date().getFullYear();
     });
   </script>
