@@ -89,11 +89,10 @@
       <p class="muted" style="margin-top:6px;">※ 그리기 후, 파라미터 주변으로 슬라이더가 생성되고 M(소득)을 0↔M<sub>max</sub>로 왕복시켜 ICC를 확인할 수 있어요.</p>
     </section>
 
-    <!-- (2) 컨트롤: 초기 그리기 이후 표시 -->
+    <!-- (2) 컨트롤 -->
     <section class="card controls" id="ctl-card" aria-labelledby="ctl-title" hidden>
       <h2 id="ctl-title">파라미터·소득 조정</h2>
 
-      <!-- 파라미터 (주변 미세조정) -->
       <div class="row">
         <label for="alpha">α (x의 지수)</label>
         <input id="alpha" type="range">
@@ -130,7 +129,6 @@
         <input id="pyNum" type="number" step="0.05" inputmode="decimal">
       </div>
 
-      <!-- 소득 슬라이더: 0 ~ Mmax -->
       <div class="row">
         <label for="M">소득 M (ICC 진행)</label>
         <input id="M" type="range">
@@ -144,36 +142,18 @@
         <button id="playBtn" title="0↔Mmax 자동 왕복">재생</button>
         <button id="pauseBtn" title="자동 왕복 정지" disabled>정지</button>
         <button id="refitBtn" title="현재 Mmax와 파라미터 기준으로 축을 재설정">축 재설정</button>
-        <span class="muted">예산선은 축 고정 상태에서 원점→그래프 끝까지 이동합니다.</span>
+        <span class="muted">px·py를 바꿔도 축은 고정되고, 예산선의 기울기만 바뀝니다.</span>
       </div>
 
       <!-- 파라미터 재입력 -->
       <details class="reinit" id="reinitBox">
         <summary>파라미터 재입력</summary>
-        <div class="subgrid">
-          <label for="ri-alpha">α (새 기준)</label>
-          <input id="ri-alpha" type="number" step="0.01" inputmode="decimal">
-        </div>
-        <div class="subgrid">
-          <label for="ri-beta">β (새 기준)</label>
-          <input id="ri-beta" type="number" step="0.01" inputmode="decimal">
-        </div>
-        <div class="subgrid">
-          <label for="ri-px">p<sub>x</sub> (새 기준)</label>
-          <input id="ri-px" type="number" step="0.05" inputmode="decimal">
-        </div>
-        <div class="subgrid">
-          <label for="ri-py">p<sub>y</sub> (새 기준)</label>
-          <input id="ri-py" type="number" step="0.05" inputmode="decimal">
-        </div>
-        <div class="subgrid">
-          <label for="ri-M">초기 M (새 기준)</label>
-          <input id="ri-M" type="number" step="1" inputmode="numeric">
-        </div>
-        <div class="subgrid">
-          <label for="ri-Mmax">M<sub>max</sub> (새 범위)</label>
-          <input id="ri-Mmax" type="number" step="1" inputmode="numeric">
-        </div>
+        <div class="subgrid"><label for="ri-alpha">α (새 기준)</label><input id="ri-alpha" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="subgrid"><label for="ri-beta">β (새 기준)</label><input id="ri-beta" type="number" step="0.01" inputmode="decimal"></div>
+        <div class="subgrid"><label for="ri-px">p<sub>x</sub> (새 기준)</label><input id="ri-px" type="number" step="0.05" inputmode="decimal"></div>
+        <div class="subgrid"><label for="ri-py">p<sub>y</sub> (새 기준)</label><input id="ri-py" type="number" step="0.05" inputmode="decimal"></div>
+        <div class="subgrid"><label for="ri-M">초기 M (새 기준)</label><input id="ri-M" type="number" step="1" inputmode="numeric"></div>
+        <div class="subgrid"><label for="ri-Mmax">M<sub>max</sub> (새 범위)</label><input id="ri-Mmax" type="number" step="1" inputmode="numeric"></div>
         <div style="margin-top:.5rem; display:flex; gap:.5rem;">
           <button id="applyReinit">적용</button>
           <button type="button" id="cancelReinit">취소</button>
@@ -188,7 +168,6 @@
         <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">–</dd>
       </dl>
       <p id="statusMsg" class="muted" aria-live="polite"></p>
-      <p class="muted">내부해(α,β&gt;0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp;y*=(β/(α+β))·M/p<sub>y</sub></em></p>
     </section>
 
     <!-- (3) 차트 -->
@@ -203,7 +182,9 @@
       <div class="chart-wrap">
         <canvas id="iccChart" aria-label="ICC, 예산선, 무차별곡선, 최적점"></canvas>
       </div>
-      <p class="muted" style="margin-top:8px;">무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
+      <!-- 예산선 식 표기 -->
+      <p id="budgetEq" class="muted" style="margin-top:8px;"></p>
+      <p class="muted">무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
     </section>
   </main>
 
@@ -215,7 +196,7 @@
 
   <script src="../../../assets/site.js"></script>
   <script>
-    // ===== ICC (소득–소비 곡선) — 파라미터 입력 후, 소득 0↔Mmax 왕복 =====
+    // ===== ICC (소득–소비 곡선) — 파라미터 먼저 입력, M 0↔Mmax 왕복 =====
     const $ = (s)=>document.querySelector(s);
 
     // 초기 입력
@@ -231,7 +212,7 @@
     const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal'); const mMaxView=$('#MmaxView');
 
     const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
-    const statusMsg=$('#statusMsg');
+    const statusMsg=$('#statusMsg'), budgetEqEl=$('#budgetEq');
     const playBtn=$('#playBtn'), pauseBtn=$('#pauseBtn'), refitBtn=$('#refitBtn');
 
     // 재입력
@@ -252,10 +233,7 @@
 
     // 유틸
     function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
-    function fmt(v,d=2){
-      if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–';
-      return (+v).toFixed(d);
-    }
+    function fmt(v,d=2){ if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–'; return (+v).toFixed(d); }
     function setRange(rangeEl, numberEl, {min, max, step, value, decimals=2}){
       if(min===max){ max=min+(Math.abs(min)||1); }
       if(min>max){ const t=min; min=max; max=t; }
@@ -296,20 +274,21 @@
         type:'line',
         data:{ datasets:[
           // 0: 예산선(현재 M)
-          {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0},
+          {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
           // 1: 무차별곡선(U*)
-          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0},
-          // 2: 최적점
+          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+          // 2: 최적점(단일 점)
           {label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
            pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter'},
           // 3: x*, y* 투영
-          {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0},
-          {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0},
-          // 5: ICC(자취)
-          {label:'ICC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0}
+          {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+          {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+          // 5: ICC(자취) — 선만 (마커 없음)
+          {label:'ICC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0}
         ]},
         options:{
           maintainAspectRatio:false,
+          elements:{ point:{ radius:0, hoverRadius:0 } }, /* 전역 마커 제거 */
           scales:{
             x:{type:'linear', title:{display:true,text:'x'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_XMAX},
             y:{type:'linear', title:{display:true,text:'y'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_YMAX}
@@ -318,6 +297,25 @@
           animation:{duration:120}
         }
       });
+    }
+
+    function updateBudgetEq(px,py,M){
+      if(px===0 && py===0){
+        budgetEqEl.innerHTML = '예산선: <em>정의되지 않음</em> (p<sub>x</sub>=0, p<sub>y</sub>=0)';
+        return;
+      }
+      let html = `예산선: <em>p<sub>x</sub>x + p<sub>y</sub>y = M</em> (현재: p<sub>x</sub>=${fmt(px)}, p<sub>y</sub>=${fmt(py)}, M=${fmt(M,0)})`;
+      if(py===0 && px!==0){
+        html += ` → <em>x = ${fmt(M/px)}</em> (수직선)`;
+      }else if(px===0 && py!==0){
+        html += ` → <em>y = ${fmt(M/py)}</em> (수평선)`;
+      }else{
+        const slope = -(px/py);
+        const intercept = (M/py);
+        const sAbs = Math.abs(slope);
+        html += ` → <em>y = ${fmt(intercept)} ${slope>=0?'+':'−'} ${fmt(sAbs)}·x</em> (기울기=${fmt(slope)}, y절편=${fmt(intercept)})`;
+      }
+      budgetEqEl.innerHTML = html;
     }
 
     function recomputeAndDraw({fitAxes=false, rebuildICC=false}={}){
@@ -339,7 +337,7 @@
         Ustar=Math.pow(xStar,a)*Math.pow(yStar,b);
       }
 
-      // 축 재설정(요청 시)
+      // 축 재설정(요청 시에만)
       if(fitAxes){
         const xMaxCand = (px===0)? BASE_XMAX : Math.max(0, Mmax/Math.abs(px)) * 1.2;
         const yMaxCand = (py===0)? BASE_YMAX : Math.max(0, Mmax/Math.abs(py)) * 1.2;
@@ -349,7 +347,7 @@
         iccChart.options.scales.y.max=BASE_YMAX;
       }
 
-      // 예산선
+      // 예산선 (축은 고정, 기울기만 변화)
       let budgetData=[];
       if(px===0 && py===0){
         budgetData=[];
@@ -399,16 +397,17 @@
       iccChart.data.datasets[4].data=projX;
       iccChart.update('active');
 
-      // 숫자/상태
+      // 숫자/상태/식
       xStarEl.textContent=fmt(xStar);
       yStarEl.textContent=fmt(yStar);
       xIntEl.textContent =fmt(xInt);
       yIntEl.textContent =fmt(yInt);
+      updateBudgetEq(px,py,M);
 
       if(px===0 && py===0){
         statusMsg.textContent='pₓ=0, pᵧ=0이면 예산선이 정의되지 않습니다.';
       }else if(!validInterior){
-        statusMsg.textContent='참고: 내부해는 α>0, β>0, α+β>0, pₓ≠0, pᵧ≠0, M≥0에서만 명확합니다. 현재는 ICC/무차별곡선이 제한될 수 있어요.';
+        statusMsg.textContent='참고: 내부해는 α>0, β>0, α+β>0, pₓ≠0, pᵧ≠0, M≥0에서 명확합니다. 현재는 ICC/무차별곡선이 제한될 수 있어요.';
       }else{
         statusMsg.textContent='';
       }
@@ -424,15 +423,12 @@
       });
     }
 
-    function stopAnim(){
-      if(timer){ clearInterval(timer); timer=null; }
-      playBtn.disabled=false; pauseBtn.disabled=true;
-    }
+    function stopAnim(){ if(timer){ clearInterval(timer); timer=null; } playBtn.disabled=false; pauseBtn.disabled=true; }
     function startAnim(){
       if(timer) return;
       playBtn.disabled=true; pauseBtn.disabled=false;
       dir=1;
-      const step=Math.max(1, Math.round(+mR.max/120)); // 대략 2초~5초 느낌
+      const step=Math.max(1, Math.round(+mR.max/120));
       timer=setInterval(()=>{
         let v=+mR.value + dir*step;
         if(v>=+mR.max){ v=+mR.max; dir=-1; }
@@ -443,17 +439,14 @@
 
     // 초기값 적용
     function applyInitial(a0,b0,px0,py0,M0,Mmax0){
-      // 기본 Mmax
       const Mmax = Number.isFinite(+Mmax0) && +Mmax0>0 ? +Mmax0 : Math.max(10, Math.ceil((+M0||0)*2));
-      // 파라미터 슬라이더
       setAroundAlphaBeta(alphaR, alphaN, a0);
       setAroundAlphaBeta(betaR,  betaN,  b0);
       setAroundPrice(pxR, pxN, px0);
       setAroundPrice(pyR, pyN, py0);
-      // M 슬라이더: 0~Mmax, 초기 M은 범위 내로
       setRange(mR, mN, {min:0, max:Mmax, step:1, value: clamp(+M0||0,0,Mmax), decimals:0});
 
-      // 축: Mmax 기준 절편으로 고정
+      // 축: Mmax 기준 절편으로 고정 (초기 한 번만)
       const xMaxCand = (px0===0)? 1 : Math.max(0, Mmax/Math.abs(px0))*1.2;
       const yMaxCand = (py0===0)? 1 : Math.max(0, Mmax/Math.abs(py0))*1.2;
       BASE_XMAX = xMaxCand>0?xMaxCand:1;
@@ -465,18 +458,17 @@
       if(!alphaR.dataset.bound){
         bindPair(alphaR, alphaN, 2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
         bindPair(betaR,  betaN,  2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
-        bindPair(pxR,    pxN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:true,  rebuildICC:true}); });
-        bindPair(pyR,    pyN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:true,  rebuildICC:true}); });
+        /* px/py 변경 시에도 축은 고정(fitAxes:false) → 기울기만 변함 */
+        bindPair(pxR,    pxN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
+        bindPair(pyR,    pyN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
         bindPair(mR,     mN,     0, ()=>{ stopAnim(); recomputeAndDraw(); });
         alphaR.dataset.bound=betaR.dataset.bound=pxR.dataset.bound=pyR.dataset.bound=mR.dataset.bound='1';
       }
 
-      // 화면 전환
+      // 화면 전환 & 첫 렌더
       $('#init-card').hidden=true;
       ctlCard.hidden=false;
       chartCard.hidden=false;
-
-      // 첫 렌더: ICC 자취 생성 + 축 반영
       recomputeAndDraw({fitAxes:true, rebuildICC:true});
     }
 
@@ -517,4 +509,3 @@
   </script>
 </body>
 </html>
-
