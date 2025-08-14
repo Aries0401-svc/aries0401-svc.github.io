@@ -109,10 +109,11 @@
     }
 
     // ====== 신뢰구간 표식(수직선 + 화살표 + 라벨) ======
+    // 라벨에 ±z 값을 포함 (숫자 위쪽 표기는 제거)
     const CI_MARKS = [
-      {z:1.645, label:"90% 신뢰구간"},
-      {z:1.96,  label:"95% 신뢰구간"},
-      {z:2.576, label:"99% 신뢰구간"},
+      {z:1.645, label:"90% 신뢰구간 (±1.645)"},
+      {z:1.96,  label:"95% 신뢰구간 (±1.96)"},
+      {z:2.576, label:"99% 신뢰구간 (±2.576)"},
     ];
 
     const ciMarkersPlugin = {
@@ -128,12 +129,10 @@
         ctx.fillStyle = color;
         ctx.lineWidth = 2;
 
-        // 수직선 위·아래 위치
         const bottomPix = y.getPixelForValue(0);
         const topPix = top + (bottom - top) * 0.14;   // 수직선 상단
-        const labelY = topPix - 6;                    // 숫자 표기 위치(수직선 '위')
 
-        // 화살표가 겹치지 않게 Y 좌표를 다르게
+        // 화살표가 겹치지 않도록 Y 좌표 분리
         const arrowYs = [
           top + (bottom - top) * 0.24, // 90%
           top + (bottom - top) * 0.32, // 95%
@@ -166,15 +165,11 @@
           const xl = x.getPixelForValue(-m.z);
           const xr = x.getPixelForValue(+m.z);
 
-          // 1) 수직선
+          // 1) 수직선 두 개(숫자 표기는 더 이상 그리지 않음)
           ctx.beginPath(); ctx.moveTo(xl, bottomPix); ctx.lineTo(xl, topPix); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(xr, bottomPix); ctx.lineTo(xr, topPix); ctx.stroke();
 
-          // 2) 수직선 '위' 숫자 표기 (왼쪽/오른쪽에 각각)
-          ctx.fillText(`−${m.z}`, xl, labelY);
-          ctx.fillText(`+${m.z}`, xr, labelY);
-
-          // 3) 양끝 화살표 + 구간 라벨
+          // 2) 양끝 화살표 + 라벨(라벨에 ±z 포함)
           const yArrow = arrowYs[i];
           drawArrow(xl+2, yArrow, xr-2);
           ctx.fillText(m.label, (xl+xr)/2, yArrow-4);
