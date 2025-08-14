@@ -1,1 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OLS 최소제곱 회귀 | 경제학 노트</title>
+
+  <!-- 사이트 공통 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/style.css" />
+
+  <!-- 차트: CDN만 사용 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+
+  <style>
+    /* 공통 스타일을 해치지 않는 최소 커스터마이즈 */
+    .form-grid { display: grid; gap: 12px; }
+    .controls { display:flex; flex-wrap: wrap; gap:8px; }
+    .muted { color: var(--text-muted, #666); }
+    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .lead  { font-weight: 600; font-size: 1.05rem; }
+    .error { color: #b00020; }
+    .chart-wrap { position: relative; height: 420px; }
+    textarea { width: 100%; min-height: 120px; }
+    label { font-weight: 600; }
+    .kpi { display:flex; gap:16px; flex-wrap:wrap; margin: 6px 0 10px; }
+    .kpi .item { padding:6px 10px; border-radius: 8px; background: rgba(0,0,0,0.04); }
+    .sr-only { position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>OLS 최소제곱 회귀</h1>
+    <p class="subtitle">x, y 데이터로 회귀직선 · 식 · 결정계수(R²) 계산</p>
+  </header>
+
+  <main class="grid" style="grid-template-columns:minmax(260px,380px) 1fr;">
+    <!-- 입력 카드 -->
+    <section class="card">
+      <h2>데이터 입력</h2>
+      <div class="form-grid">
+        <div>
+          <label for="xInput">X 데이터</label>
+          <textarea id="xInput" placeholder="예: 1, 2, 3, 4, 5&#10;쉼표/공백/개행 구분 가능"></textarea>
+        </div>
+        <div>
+          <label for="yInput">Y 데이터</label>
+          <textarea id="yInput" placeholder="예: 2, 3.1, 3.9, 5.2, 6.1&#10;쉼표/공백/개행 구분 가능"></textarea>
+        </div>
+        <div class="controls">
+          <button id="exampleBtn">예시 데이터</button>
+          <button id="runBtn"><strong>회귀 계산</strong></button>
+          <button id="clearBtn">지우기</button>
+        </div>
+        <p id="errorBox" class="error" role="alert" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- 결과 카드 -->
+    <section class="card">
+      <h2>결과</h2>
+      <p id="equation" class="lead mono" aria-live="polite">데이터를 입력한 뒤 [회귀 계산]을 눌러주세요.</p>
+      <div class="kpi mono">
+        <span class="item">표본 수 n = <span id="nOut">–</span></span>
+        <span class="item">R² = <span id="r2Out">–</span></span>
+        <span class="item">x̄ = <span id="xbarOut">–</span></span>
+        <span class="item">ȳ = <span id="ybarOut">–</span></span>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="olsChart" aria-label="산점도와 회귀선"></canvas>
+      </div>
+      <p class="muted">회귀선은 최소제곱해 <span class="mono">ŷ = a + b·x</span> 를 x의 최소~최대 구간에서 그립니다.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 계량경제학 목록</a>
+  </footer>
+
+  <!-- 사이트 공통 스크립트 -->
+  <script src="../../assets/site.js" defer></script>
+
+  <!-- 이 페이지 전용 스크립트 -->
+  <script>
+    // 숫자 포맷: 보기 좋은 유효숫자
+    function fmt(x) {
+      if (!Number.isFinite(x)) return String(x);
+      const ax = Math.abs(x);
+      if (ax === 0) return "0";
+      if (ax >= 0.001 && ax < 1e6) return x.toFixed(6).replace(/\.?0+$/, "");
+      return x.toExponential(4).replace(/\.?0+e/, "e");
+    }
+
+    function tokenize(text) {
+      return text.trim()
+        .split(/[\s,;]+/)             // 공백/쉼표/세미콜론 구분
+        .filter(Boolean);
+    }
+
+    function parseSeries(text) {
+      const tokens = tokenize(text);
+      if (tokens.length === 0) return [];
+      const nums = tokens.map(t => Number(t));
+      const anyBad = nums.some(n => !Number.isFinite(n));
+      if (anyBad) {
+        const bad = tokens.filter((t,i)=>!Number.isFinite(nums[i]));
+        throw new Error("다음 항목이 숫자가 아닙니다: " + bad.join(", "));
+      }
+      return nums;
+    }
+
+    function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+    function sumsq(arr){ const m=mean(arr); return arr.reduce((s,v)=>s+(v-m)*(v-m),0); }
+    function cov(x,y){
+      const mx=mean(x), my=mean(y);
+      let s=0; for(let i=0;i<x.length;i++) s += (x[i]-mx)*(y[i]-my);
+      return s;
+    }
+
+    function ols(x,y){
+      const n = x.length;
+      if (n !== y.length) throw new Error("X와 Y의 길이가 다릅니다. (X="+x.length+", Y="+y.length+")");
+      if (n < 2) throw new Error("두 점 이상이 필요합니다.");
+      const Sxx = sumsq(x);
+      if (Sxx === 0) throw new Error("X 분산이 0입니다. 서로 다른 X 값이 필요합니다.");
+      const Sxy = cov(x,y);
+      const b = Sxy / Sxx;                // 기울기
+      const a = mean(y) - b * mean(x);    // 절편
+
+      // 적합값/잔차/결정계수
+      const yhat = x.map(xi => a + b*xi);
+      const ybar = mean(y);
+      const SSE = y.reduce((s, yi, i)=> s + (yi - yhat[i])**2, 0);
+      const SST = y.reduce((s, yi)=> s + (yi - ybar)**2, 0);
+      const R2 = (SST === 0) ? 1 : 1 - (SSE / SST);
+
+      // 선 그릴 구간
+      const xmin = Math.min(...x), xmax = Math.max(...x);
+      return { a, b, R2, n, xbar: mean(x), ybar, xmin, xmax };
+    }
+
+    function buildEquation(a,b){
+      const aStr = fmt(a);
+      const bStr = fmt(Math.abs(b));
+      const sign = (b >= 0) ? "+" : "−";
+      return `ŷ = ${aStr} ${sign} ${bStr}·x`;
+    }
+
+    let chart;
+
+    function drawChart(points, linePts){
+      const ctx = document.getElementById("olsChart").getContext("2d");
+      const dataScatter = points.map(p => ({ x: p[0], y: p[1] }));
+      const dataLine = linePts.map(p => ({ x: p[0], y: p[1] }));
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              label: "관측치",
+              data: dataScatter,
+              pointRadius: 4,
+              pointHoverRadius: 5
+            },
+            {
+              label: "회귀선",
+              type: "line",
+              data: dataLine,
+              fill: false,
+              borderWidth: 2,
+              tension: 0
+            }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            x: { type: "linear", title: { display: true, text: "x" }, grid: { drawOnChartArea: true } },
+            y: { type: "linear", title: { display: true, text: "y" }, grid: { drawOnChartArea: true } }
+          },
+          plugins: {
+            legend: { display: true },
+            tooltip: { mode: "nearest", intersect: false }
+          }
+        }
+      });
+    }
+
+    function run() {
+      const err = document.getElementById("errorBox");
+      err.textContent = "";
+
+      let x, y;
+      try {
+        x = parseSeries(document.getElementById("xInput").value);
+        y = parseSeries(document.getElementById("yInput").value);
+      } catch (e) {
+        err.textContent = e.message || String(e);
+        return;
+      }
+
+      try {
+        const { a, b, R2, n, xbar, ybar, xmin, xmax } = ols(x,y);
+
+        // 결과 텍스트
+        document.getElementById("equation").textContent =
+          `${buildEquation(a,b)}   (R² = ${fmt(R2)})`;
+        document.getElementById("nOut").textContent = n;
+        document.getElementById("r2Out").textContent = fmt(R2);
+        document.getElementById("xbarOut").textContent = fmt(xbar);
+        document.getElementById("ybarOut").textContent = fmt(ybar);
+
+        // 차트
+        const y1 = a + b * xmin;
+        const y2 = a + b * xmax;
+        const pts = x.map((xi,i)=>[xi, y[i]]);
+        drawChart(pts, [[xmin,y1], [xmax,y2]]);
+      } catch (e) {
+        err.textContent = e.message || String(e);
+      }
+    }
+
+    function fillExample() {
+      const xs = [1,2,3,4,5,6,7,8,9,10];
+      const ys = [1.8,3.1,3.7,5.2,5.9,6.8,7.5,8.2,9.1,9.9];
+      document.getElementById("xInput").value = xs.join(", ");
+      document.getElementById("yInput").value = ys.join(", ");
+      document.getElementById("errorBox").textContent = "";
+    }
+
+    function clearAll() {
+      document.getElementById("xInput").value = "";
+      document.getElementById("yInput").value = "";
+      document.getElementById("equation").textContent = "데이터를 입력한 뒤 [회귀 계산]을 눌러주세요.";
+      document.getElementById("nOut").textContent = "–";
+      document.getElementById("r2Out").textContent = "–";
+      document.getElementById("xbarOut").textContent = "–";
+      document.getElementById("ybarOut").textContent = "–";
+      document.getElementById("errorBox").textContent = "";
+      if (chart) { chart.destroy(); chart = null; }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("runBtn").addEventListener("click", run);
+      document.getElementById("exampleBtn").addEventListener("click", fillExample);
+      document.getElementById("clearBtn").addEventListener("click", clearAll);
+    });
+  </script>
+</body>
+</html>
 
