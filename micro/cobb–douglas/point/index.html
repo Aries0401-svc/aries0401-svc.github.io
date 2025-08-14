@@ -16,17 +16,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 
   <style>
-    /* ===== 페이지 전용 최소 스타일 (공통 톤 준수) ===== */
-
-    /* 레이아웃: OLS와 유사 — 좌측 컨트롤, 우측 큰 그래프 */
     main.grid { grid-template-columns: minmax(280px,420px) 1fr; }
-
     .controls { display:flex; flex-direction:column; gap:10px; }
     .row { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; }
-
-    /* 입력/버튼 톤: 사이트 변수 사용 */
     .controls input[type="range"],
     .controls input[type="number"],
+    .controls button,
     .controls a {
       border:1px solid var(--muted);
       background:var(--panel);
@@ -38,13 +33,11 @@
     }
     .controls input[type="range"]{ padding:0; }
     .controls input:focus-visible,
+    .controls button:focus-visible,
     .controls a:focus-visible,
-    canvas:focus-visible {
-      outline:0; box-shadow:0 0 0 4px var(--ring);
-    }
+    canvas:focus-visible { outline:0; box-shadow:0 0 0 4px var(--ring); }
 
-    /* 큰 그래프 컨테이너 */
-    .chart-wrap{ position:relative; height:460px; } /* OLS(420px)보다 살짝 크게 */
+    .chart-wrap{ position:relative; height:460px; }
     .legend { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:.92rem; }
     .badge { display:inline-flex; align-items:center; gap:.4rem; }
     .swatch { width:.75rem; height:.75rem; border-radius:50%; border:1px solid var(--muted); background:var(--panel); }
@@ -54,6 +47,7 @@
     .nums dd{ margin:0; font-weight:600; }
 
     .muted{ color:var(--muted); }
+    [hidden]{ display:none !important; }
   </style>
 </head>
 <body>
@@ -63,72 +57,106 @@
   </header>
 
   <main class="grid">
-    <!-- 입력 카드 -->
-    <section class="card controls" aria-labelledby="ctl-title">
-      <h2 id="ctl-title">모수 설정</h2>
+    <!-- (1) 시작 화면: 초기값 먼저 받기 -->
+    <section class="card controls" id="init-card" aria-labelledby="init-title">
+      <h2 id="init-title">초기값 입력 후 그리기</h2>
+      <div class="row">
+        <label for="i-alpha">α (x의 지수)</label>
+        <input id="i-alpha" type="number" min="0.05" max="0.95" step="0.01" value="0.50" inputmode="decimal">
+      </div>
+      <div class="row">
+        <label for="i-beta">β (y의 지수)</label>
+        <input id="i-beta" type="number" min="0.05" max="0.95" step="0.01" value="0.50" inputmode="decimal">
+      </div>
+      <div class="row">
+        <label for="i-px">가격 p<sub>x</sub></label>
+        <input id="i-px" type="number" min="0.2" step="0.1" value="1.00" inputmode="decimal">
+      </div>
+      <div class="row">
+        <label for="i-py">가격 p<sub>y</sub></label>
+        <input id="i-py" type="number" min="0.2" step="0.1" value="1.00" inputmode="decimal">
+      </div>
+      <div class="row">
+        <label for="i-M">소득 M</label>
+        <input id="i-M" type="number" min="5" step="1" value="60" inputmode="numeric">
+      </div>
+      <button id="drawBtn" style="margin-top:.5rem;">그리기</button>
+      <p class="muted" style="margin-top:6px;">※ 그리기 후에 각 값 주변 범위로 슬라이더가 자동 생성됩니다.</p>
+    </section>
+
+    <!-- (2) 입력 카드: 초기 그리기 이후에만 표시 -->
+    <section class="card controls" id="ctl-card" aria-labelledby="ctl-title" hidden>
+      <h2 id="ctl-title">모수 조정(초기값 주변)</h2>
 
       <div class="row">
         <label for="alpha">α (x의 지수)</label>
-        <input id="alpha" type="range" min="0.05" max="0.95" step="0.01" value="0.50" aria-describedby="alpha-v">
+        <input id="alpha" type="range">
       </div>
       <div class="row">
-        <span id="alpha-v"><strong>α = <span id="alphaVal">0.50</span></strong></span>
-        <input id="alphaNum" type="number" min="0.05" max="0.95" step="0.01" value="0.50" inputmode="decimal">
+        <span id="alpha-v"><strong>α = <span id="alphaVal">–</span></strong></span>
+        <input id="alphaNum" type="number" inputmode="decimal">
       </div>
 
       <div class="row">
         <label for="beta">β (y의 지수)</label>
-        <input id="beta" type="range" min="0.05" max="0.95" step="0.01" value="0.50" aria-describedby="beta-v">
+        <input id="beta" type="range">
       </div>
       <div class="row">
-        <span id="beta-v"><strong>β = <span id="betaVal">0.50</span></strong></span>
-        <input id="betaNum" type="number" min="0.05" max="0.95" step="0.01" value="0.50" inputmode="decimal">
+        <span id="beta-v"><strong>β = <span id="betaVal">–</span></strong></span>
+        <input id="betaNum" type="number" inputmode="decimal">
       </div>
 
       <div class="row">
         <label for="px">가격 p<sub>x</sub></label>
-        <input id="px" type="range" min="0.2" max="5" step="0.1" value="1.00">
+        <input id="px" type="range">
       </div>
       <div class="row">
-        <span><strong>p<sub>x</sub> = <span id="pxVal">1.00</span></strong></span>
-        <input id="pxNum" type="number" min="0.2" max="5" step="0.1" value="1.00" inputmode="decimal">
+        <span><strong>p<sub>x</sub> = <span id="pxVal">–</span></strong></span>
+        <input id="pxNum" type="number" inputmode="decimal">
       </div>
 
       <div class="row">
         <label for="py">가격 p<sub>y</sub></label>
-        <input id="py" type="range" min="0.2" max="5" step="0.1" value="1.00">
+        <input id="py" type="range">
       </div>
       <div class="row">
-        <span><strong>p<sub>y</sub> = <span id="pyVal">1.00</span></strong></span>
-        <input id="pyNum" type="number" min="0.2" max="5" step="0.1" value="1.00" inputmode="decimal">
+        <span><strong>p<sub>y</sub> = <span id="pyVal">–</span></strong></span>
+        <input id="pyNum" type="number" inputmode="decimal">
       </div>
 
       <div class="row">
         <label for="M">소득 M</label>
-        <input id="M" type="range" min="5" max="200" step="1" value="60">
+        <input id="M" type="range">
       </div>
       <div class="row">
-        <span><strong>M = <span id="MVal">60</span></strong></span>
-        <input id="MNum" type="number" min="5" max="200" step="1" value="60" inputmode="numeric">
+        <span><strong>M = <span id="MVal">–</span></strong></span>
+        <input id="MNum" type="number" inputmode="numeric">
       </div>
 
-      <dl class="nums" aria-live="polite">
-        <dt>x* (최적)</dt><dd id="xStar">30.00</dd>
-        <dt>y* (최적)</dt><dd id="yStar">30.00</dd>
-        <dt>x절편 (M/p<sub>x</sub>)</dt><dd id="xInt">60.00</dd>
-        <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">60.00</dd>
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem;">
+        <button id="refitBtn" title="현재 값 기준으로 축 범위를 다시 맞춥니다.">축 재설정</button>
+        <span class="muted">가격·소득을 바꿔도 축은 고정되고, 예산선이 실제로 회전/이동합니다.</span>
+      </div>
+
+      <dl class="nums" aria-live="polite" style="margin-top:.5rem;">
+        <dt>x* (최적)</dt><dd id="xStar">–</dd>
+        <dt>y* (최적)</dt><dd id="yStar">–</dd>
+        <dt>x절편 (M/p<sub>x</sub>)</dt><dd id="xInt">–</dd>
+        <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">–</dd>
       </dl>
       <p class="muted">내부해(α,β&gt;0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp; y*=(β/(α+β))·M/p<sub>y</sub></em></p>
     </section>
 
-    <!-- 차트 카드 -->
-    <section class="card">
+    <!-- (3) 차트 카드: 초기 그리기 이후에만 표시 -->
+    <section class="card" id="chart-card" hidden>
       <h2>예산선 · 무차별곡선(U*) · 최적점</h2>
 
-      <div class="legend" aria-hidden="true" style="margin-bottom:8px;">
-        <span class="badge"><span class="swatch" style="background:var(--text)"></span>예산선</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선(U*)</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>최적점 &amp; 투영</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="legend" aria-hidden="true">
+          <span class="badge"><span class="swatch" style="background:var(--text)"></span>예산선</span>
+          <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선(U*)</span>
+          <span class="badge"><span class="swatch" style="background:var(--primary)"></span>최적점 &amp; 투영</span>
+        </div>
       </div>
 
       <div class="chart-wrap">
@@ -150,8 +178,15 @@
 
   <!-- 페이지 전용 스크립트 -->
   <script>
-    // ====== Cobb–Douglas 최적선택점 (U = x^α · y^β) — Chart.js 버전 ======
+    // ====== Cobb–Douglas 최적선택점 — "초기값 먼저 받고, 축 고정" 버전 ======
     const $ = (s)=>document.querySelector(s);
+
+    // 초기값 폼
+    const iA=$('#i-alpha'), iB=$('#i-beta'), iPx=$('#i-px'), iPy=$('#i-py'), iM=$('#i-M');
+    const drawBtn=$('#drawBtn');
+
+    // 컨트롤/표시 엘리먼트
+    const ctlCard=$('#ctl-card'), chartCard=$('#chart-card');
     const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
     const betaR =$('#beta'),  betaN =$('[id="betaNum"]'),  betaVal=$('#betaVal');
     const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
@@ -159,18 +194,25 @@
     const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal');
 
     const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
+    const refitBtn=$('#refitBtn');
 
-    // CSS 변수 -> 실제 색상값 (캔버스에서 사용)
-    function cssVar(name){
-      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    }
+    // CSS 변수 -> 실제 색상값
+    function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
     let C_TEXT, C_PRIMARY, C_MUTED;
-    function loadColors(){
-      C_TEXT = cssVar('--text');
-      C_PRIMARY = cssVar('--primary');
-      C_MUTED = cssVar('--muted');
+    function loadColors(){ C_TEXT=cssVar('--text'); C_PRIMARY=cssVar('--primary'); C_MUTED=cssVar('--muted'); }
+
+    // 상태: 축 고정 범위
+    let BASE_XMAX=1, BASE_YMAX=1;
+
+    // 유틸
+    function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
+    function fmt(v,d=2){ return Number.isFinite(v)?(+v).toFixed(d):'–'; }
+    function setRange(rangeEl, numberEl, {min, max, step, value, decimals=2}){
+      rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+value.toFixed(decimals);
+      numberEl.min=min; numberEl.max=max; numberEl.step=step; numberEl.value=+value.toFixed(decimals);
     }
 
+    // 현재 파라미터 읽기
     function params(){
       const a=+(+alphaR.value).toFixed(2);
       const b=+(+betaR.value).toFixed(2);
@@ -187,44 +229,35 @@
       pyVal.textContent   =py.toFixed(2); pyN.value  =py.toFixed(2);
       mVal.textContent    =M;             mN.value   =M;
     }
-    function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
-    function fmt(v,d=2){ return Number.isFinite(v)?(+v).toFixed(d):'–'; }
 
-    // 차트 생성
+    // 차트
     let cdChart;
     function createChart(){
       const ctx = document.getElementById('cdChart').getContext('2d');
       cdChart = new Chart(ctx,{
         type:'line',
         data:{ datasets:[
-          // 0: 예산선
           { label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0 },
-          // 1: 무차별곡선(U*)
           { label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0 },
-          // 2: 최적점 (점)
           { label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
             pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter' },
-          // 3: x* 수평 투영선
           { label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0 },
-          // 4: y* 수직 투영선
           { label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0 },
         ]},
         options:{
           maintainAspectRatio:false,
           scales:{
-            x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }},
-            y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }}
+            x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_XMAX },
+            y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_YMAX }
           },
-          plugins:{
-            legend:{ display:true },
-            tooltip:{ mode:'nearest', intersect:false }
-          },
+          plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } },
           animation:{ duration:150 }
         }
       });
     }
 
-    function recomputeAndDraw(){
+    // 핵심: 축은 고정, 선이 회전/이동
+    function recomputeAndDraw({fitAxes=false}={}){
       syncUI();
       const {a,b,px,py,M}=params();
       const sum=a+b;
@@ -237,32 +270,29 @@
 
       const Ustar = Math.pow(xStar,a)*Math.pow(yStar,b);
 
-      // 도메인: 절편/최적값 기준으로 여유를 두고 스케일
-      const xMax = Math.max(xInt, xStar) * 1.15 || 1;
-      const yMax = Math.max(yInt, yStar) * 1.15 || 1;
-
-      cdChart.options.scales.x.min = 0;
-      cdChart.options.scales.x.max = xMax;
-      cdChart.options.scales.y.min = 0;
-      cdChart.options.scales.y.max = yMax;
-
-      // 예산선 두 점
-      const budgetData = [ {x:0, y:yInt}, {x:xInt, y:0} ];
-
-      // 무차별곡선 샘플
-      const steps=160, curve=[];
-      for(let i=1;i<=steps;i++){
-        const x = (xMax/steps)*i;
-        const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
-        if(Number.isFinite(y) && y>=0 && y<=yMax) curve.push({x, y});
+      // 축 재설정이 요청된 경우에만 조정
+      if(fitAxes){
+        BASE_XMAX = Math.max(xInt, xStar) * 1.3 || 1;
+        BASE_YMAX = Math.max(yInt, yStar) * 1.3 || 1;
+        cdChart.options.scales.x.max = BASE_XMAX;
+        cdChart.options.scales.y.max = BASE_YMAX;
       }
 
-      // 최적점/투영선
+      // 예산선: 절편 2점(기울기 = -px/py)
+      const budgetData = [ {x:0, y:yInt}, {x:xInt, y:0} ];
+
+      // 무차별곡선 샘플 (축 범위 고정)
+      const steps=160, curve=[];
+      for(let i=1;i<=steps;i++){
+        const x = (BASE_XMAX/steps)*i;
+        const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
+        if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x, y});
+      }
+
       const optPt=[{x:xStar, y:yStar}];
       const projY=[{x:0, y:yStar}, {x:xStar, y:yStar}];
       const projX=[{x:xStar, y:0}, {x:xStar, y:yStar}];
 
-      // 차트 데이터 반영
       cdChart.data.datasets[0].data = budgetData;
       cdChart.data.datasets[1].data = curve;
       cdChart.data.datasets[2].data = optPt;
@@ -270,38 +300,96 @@
       cdChart.data.datasets[4].data = projX;
       cdChart.update('active');
 
-      // 숫자 패널
       xStarEl.textContent = fmt(xStar);
       yStarEl.textContent = fmt(yStar);
       xIntEl.textContent  = fmt(xInt);
       yIntEl.textContent  = fmt(yInt);
     }
 
-    function bindPair(rangeEl, numberEl, onChange){
-      rangeEl.addEventListener('input', ()=>{ numberEl.value=(+rangeEl.value).toFixed(2); onChange(); });
+    function bindPair(rangeEl, numberEl, decimals, onChange){
+      rangeEl.addEventListener('input', ()=>{
+        numberEl.value=(+rangeEl.value).toFixed(decimals);
+        onChange();
+      });
       numberEl.addEventListener('change', ()=>{
         const v = clamp(+numberEl.value, +rangeEl.min, +rangeEl.max);
-        numberEl.value = v.toFixed(2); rangeEl.value = numberEl.value; onChange();
+        numberEl.value = v.toFixed(decimals);
+        rangeEl.value = numberEl.value;
+        onChange();
       });
     }
 
-    // 초기화
-    window.addEventListener('DOMContentLoaded', ()=>{
+    // (A) 초기값 제출 → 슬라이더 범위/축 고정/차트 생성
+    drawBtn.addEventListener('click', ()=>{
+      // 1) 초기값 확보 + 기본 검증
+      const a0 = clamp(+iA.value || 0.5, 0.05, 0.95);
+      const b0 = clamp(+iB.value || 0.5, 0.05, 0.95);
+      const px0 = Math.max(0.2, +(+iPx.value||1).toFixed(2));
+      const py0 = Math.max(0.2, +(+iPy.value||1).toFixed(2));
+      const M0  = Math.max(5,   (iM.value|0)||60);
+
+      // 2) 슬라이더 범위: "초기값 주변"
+      setRange(alphaR, alphaN, {
+        min: +clamp(a0-0.20, 0.05, 0.95).toFixed(2),
+        max: +clamp(a0+0.20, 0.05, 0.95).toFixed(2),
+        step: 0.01, value: a0, decimals:2
+      });
+      setRange(betaR, betaN, {
+        min: +clamp(b0-0.20, 0.05, 0.95).toFixed(2),
+        max: +clamp(b0+0.20, 0.05, 0.95).toFixed(2),
+        step: 0.01, value: b0, decimals:2
+      });
+      setRange(pxR, pxN, {
+        min: +Math.max(0.2, (px0*0.5)).toFixed(2),
+        max: +(px0*1.5).toFixed(2),
+        step: 0.05, value: px0, decimals:2
+      });
+      setRange(pyR, pyN, {
+        min: +Math.max(0.2, (py0*0.5)).toFixed(2),
+        max: +(py0*1.5).toFixed(2),
+        step: 0.05, value: py0, decimals:2
+      });
+      setRange(mR, mN, {
+        min: Math.max(5, Math.floor(M0*0.5)),
+        max: Math.max(6, Math.ceil(M0*1.5)),
+        step: 1, value: M0, decimals:0
+      });
+
+      // 3) 축 고정: 초기 절편 기준 여유
+      const xInt0 = M0/px0;
+      const yInt0 = M0/py0;
+      BASE_XMAX = Math.max(xInt0, (a0/(a0+b0))*xInt0) * 1.3 || 1;
+      BASE_YMAX = Math.max(yInt0, (b0/(a0+b0))*yInt0) * 1.3 || 1;
+
+      // 4) 차트 생성 & 첫 그리기
       loadColors();
       createChart();
 
-      bindPair(alphaR, alphaN, recomputeAndDraw);
-      bindPair(betaR,  betaN,  recomputeAndDraw);
-      bindPair(pxR,    pxN,    recomputeAndDraw);
-      bindPair(pyR,    pyN,    recomputeAndDraw);
+      // 5) 페어 바인딩
+      bindPair(alphaR, alphaN, 2, ()=>recomputeAndDraw());
+      bindPair(betaR,  betaN,  2, ()=>recomputeAndDraw());
+      bindPair(pxR,    pxN,    2, ()=>recomputeAndDraw());
+      bindPair(pyR,    pyN,    2, ()=>recomputeAndDraw());
+      bindPair(mR,     mN,     0, ()=>recomputeAndDraw());
 
-      mR.addEventListener('input', ()=>{ mN.value=mR.value; recomputeAndDraw(); });
-      mN.addEventListener('change', ()=>{
-        const v = clamp(+mN.value, +mR.min, +mR.max) | 0;
-        mN.value = v; mR.value = v; recomputeAndDraw();
-      });
+      // 6) 화면 전환
+      $('#init-card').hidden = true;
+      ctlCard.hidden = false;
+      chartCard.hidden = false;
 
+      // 7) 첫 렌더
       recomputeAndDraw();
+    });
+
+    // (B) 축 재설정 버튼
+    refitBtn.addEventListener('click', ()=>{
+      recomputeAndDraw({fitAxes:true});
+    });
+
+    // 연도 표기
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const y = document.querySelector('#year');
+      if(y) y.textContent = new Date().getFullYear();
     });
   </script>
 </body>
