@@ -90,7 +90,7 @@
 
     <!-- (2) 입력 카드: 초기 그리기 이후에만 표시 -->
     <section class="card controls" id="ctl-card" aria-labelledby="ctl-title" hidden>
-      <h2 id="ctl-title">모수 조정(초기값 주변)</h2>
+      <h2 id="ctl-title">파라미터 조정(초기값 주변)</h2>
 
       <div class="row">
         <label for="alpha">α (x의 지수)</label>
@@ -142,9 +142,9 @@
         <span class="muted">가격·소득을 바꿔도 축은 고정되고, 예산선이 실제로 회전/이동합니다.</span>
       </div>
 
-      <!-- (2-1) 모수 재입력 칸 -->
+      <!-- (2-1) 파라미터 재입력 칸 -->
       <details class="reinit" id="reinitBox">
-        <summary>모수 재입력</summary>
+        <summary>파라미터 재입력</summary>
         <div class="subgrid">
           <label for="ri-alpha">α (새 기준)</label>
           <input id="ri-alpha" type="number" step="0.01" inputmode="decimal">
@@ -213,7 +213,7 @@
 
   <!-- 페이지 전용 스크립트 -->
   <script>
-    // ====== Cobb–Douglas 최적선택점 — 제약 완화 & 모수 재입력 지원 ======
+    // ====== Cobb–Douglas 최적선택점 — 제약 완화 & 파라미터 재입력 지원 ======
     const $ = (s)=>document.querySelector(s);
 
     // 초기값 폼
@@ -252,7 +252,6 @@
       return (+v).toFixed(d);
     }
     function setRange(rangeEl, numberEl, {min, max, step, value, decimals=2}){
-      // range는 min<max가 필요
       if(min===max){ max = min + (Math.abs(min)||1); }
       if(min>max){ const t=min; min=max; max=t; }
       rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+(+value).toFixed(decimals);
@@ -284,15 +283,21 @@
       cdChart = new Chart(ctx,{
         type:'line',
         data:{ datasets:[
-          { label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0 },
-          { label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0 },
-          { label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
-            pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter' },
-          { label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0 },
-          { label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0 },
+          // 0: 예산선
+          { label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
+          // 1: 무차별곡선(U*)
+          { label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
+          // 2: 최적점 (마커 제거)
+          { label:'최적점', data:[], parsing:false, showLine:false, pointRadius:0, pointHoverRadius:0,
+            pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:0, type:'scatter' },
+          // 3: x* 수평 투영선
+          { label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
+          // 4: y* 수직 투영선
+          { label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
         ]},
         options:{
           maintainAspectRatio:false,
+          elements:{ point:{ radius:0, hoverRadius:0 } }, /* 전역 마커 제거 */
           scales:{
             x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_XMAX },
             y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_YMAX }
@@ -346,7 +351,7 @@
         budgetData = [ {x:0, y:yInt}, {x:xInt, y:0} ];
       }
 
-      // 무차별곡선 & 최적점/투영선
+      // 무차별곡선 & 투영선 (최적점 마커 없이)
       let curve=[], optPt=[], projY=[], projX=[];
       if(validInterior){
         const steps=160;
@@ -355,6 +360,7 @@
           const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
           if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x, y});
         }
+        // 점은 그리지 않지만 내부적으로 좌표는 유지(투영선용)
         optPt=[{x:xStar, y:yStar}];
         projY=[{x:0, y:yStar}, {x:xStar, y:yStar}];
         projX=[{x:xStar, y:0}, {x:xStar, y:yStar}];
@@ -363,7 +369,7 @@
       // 차트 반영
       cdChart.data.datasets[0].data = budgetData;
       cdChart.data.datasets[1].data = curve;
-      cdChart.data.datasets[2].data = optPt;
+      cdChart.data.datasets[2].data = optPt;  // pointRadius=0이라 시각적으로 보이지 않음
       cdChart.data.datasets[3].data = projY;
       cdChart.data.datasets[4].data = projX;
       cdChart.update('active');
@@ -457,7 +463,7 @@
       applyInitial(a0,b0,px0,py0,M0);
     });
 
-    // 모수 재입력: 열 때 현재값으로 프리필
+    // 파라미터 재입력: 열 때 현재값으로 프리필
     reinitBox.addEventListener('toggle', (e)=>{
       if(e.target.open){
         const {a,b,px,py,M} = params();
