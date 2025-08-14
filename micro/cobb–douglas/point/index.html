@@ -4,71 +4,72 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>최적선택점 | Cobb–Douglas</title>
-  <meta name="description" content="Cobb–Douglas 효용 U(x,y)=x^α·y^β에서 α,β와 가격, 소득을 바꾸며 최적선택점을 시각화합니다." />
+  <meta name="description" content="Cobb–Douglas U(x,y)=x^α·y^β에서 α,β·가격·소득을 조절하며 최적선택점을 시각화합니다." />
 
-  <!-- 폰트 (규칙 준수) -->
+  <!-- 공통: 폰트/스타일 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <!-- 공통 리소스: 상대경로 -->
   <link rel="stylesheet" href="../../../assets/style.css" />
 
+  <!-- 차트(CDN, 버전 고정) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+
   <style>
-    /* 페이지 전용 최소 스타일 (색·보더·배경은 CSS 변수만 사용) */
-    .controls { display: grid; gap: .75rem; }
-    .row { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center; }
+    /* ===== 페이지 전용 최소 스타일 (공통 톤 준수) ===== */
+
+    /* 레이아웃: OLS와 유사 — 좌측 컨트롤, 우측 큰 그래프 */
+    main.grid { grid-template-columns: minmax(280px,420px) 1fr; }
+
+    .controls { display:flex; flex-direction:column; gap:10px; }
+    .row { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; }
+
+    /* 입력/버튼 톤: 사이트 변수 사용 */
     .controls input[type="range"],
     .controls input[type="number"],
-    .controls button,
     .controls a {
-      border: 1px solid var(--muted);
-      background: var(--panel);
-      color: var(--text);
-      padding: .5rem .75rem;
-      border-radius: .5rem;
-      box-shadow: 0 1px 0 var(--shadow) inset;
+      border:1px solid var(--muted);
+      background:var(--panel);
+      color:var(--text);
+      padding:.5rem .75rem;
+      border-radius:.5rem;
+      box-shadow: var(--shadow);
+      font:inherit;
     }
-    .controls input[type="range"] { padding: 0; }
+    .controls input[type="range"]{ padding:0; }
     .controls input:focus-visible,
-    .controls button:focus-visible,
     .controls a:focus-visible,
-    #plot:focus-visible {
-      outline: 0;
-      box-shadow: 0 0 0 4px var(--ring);
+    canvas:focus-visible {
+      outline:0; box-shadow:0 0 0 4px var(--ring);
     }
-    .chart { display: grid; gap: .5rem; }
-    .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .9rem; color: var(--muted); }
-    .badge { display:inline-flex; align-items:center; gap:.375rem; }
-    .swatch { width:.75rem; height:.75rem; border-radius:50%; border:1px solid var(--muted); background: var(--panel); }
 
-    svg { width: 100%; height: 360px; background: var(--panel); border:1px solid var(--muted); border-radius: .75rem; }
-    .axis { stroke: var(--muted); stroke-width: 1; }
-    .gridline { stroke: var(--muted); stroke-dasharray: 4 4; opacity: .4; }
-    .budget { stroke: var(--text); stroke-width: 2; fill: none; }
-    .indiff { stroke: var(--primary); stroke-width: 2; fill: none; }
-    .opt { fill: var(--primary); stroke: var(--panel); stroke-width: 2; }
-    .proj { stroke: var(--primary); stroke-dasharray: 6 4; opacity: .8; }
-    .label { fill: var(--text); font-size: 12px; }
-    .muted { color: var(--muted); }
-    .nums { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:.25rem .75rem; }
-    .nums dt { color: var(--muted); }
-    .nums dd { margin:0; font-weight:600; }
+    /* 큰 그래프 컨테이너 */
+    .chart-wrap{ position:relative; height:460px; } /* OLS(420px)보다 살짝 크게 */
+    .legend { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:.92rem; }
+    .badge { display:inline-flex; align-items:center; gap:.4rem; }
+    .swatch { width:.75rem; height:.75rem; border-radius:50%; border:1px solid var(--muted); background:var(--panel); }
+
+    .nums { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem .75rem; }
+    .nums dt{ color:var(--muted); }
+    .nums dd{ margin:0; font-weight:600; }
+
+    .muted{ color:var(--muted); }
   </style>
 </head>
 <body>
   <header class="site-header">
     <h1>최적선택점</h1>
+    <p class="subtitle">U(x,y)=x^α·y^β, 예산: pₓx + pᵧy = M</p>
   </header>
 
   <main class="grid">
-    <!-- 컨트롤 카드 -->
+    <!-- 입력 카드 -->
     <section class="card controls" aria-labelledby="ctl-title">
       <h2 id="ctl-title">모수 설정</h2>
 
       <div class="row">
         <label for="alpha">α (x의 지수)</label>
-        <input id="alpha" type="range" min="0.05" max="0.95" step="0.01" value="0.5" aria-describedby="alpha-v">
+        <input id="alpha" type="range" min="0.05" max="0.95" step="0.01" value="0.50" aria-describedby="alpha-v">
       </div>
       <div class="row">
         <span id="alpha-v"><strong>α = <span id="alphaVal">0.50</span></strong></span>
@@ -77,7 +78,7 @@
 
       <div class="row">
         <label for="beta">β (y의 지수)</label>
-        <input id="beta" type="range" min="0.05" max="0.95" step="0.01" value="0.5" aria-describedby="beta-v">
+        <input id="beta" type="range" min="0.05" max="0.95" step="0.01" value="0.50" aria-describedby="beta-v">
       </div>
       <div class="row">
         <span id="beta-v"><strong>β = <span id="betaVal">0.50</span></strong></span>
@@ -86,7 +87,7 @@
 
       <div class="row">
         <label for="px">가격 p<sub>x</sub></label>
-        <input id="px" type="range" min="0.2" max="5" step="0.1" value="1">
+        <input id="px" type="range" min="0.2" max="5" step="0.1" value="1.00">
       </div>
       <div class="row">
         <span><strong>p<sub>x</sub> = <span id="pxVal">1.00</span></strong></span>
@@ -95,7 +96,7 @@
 
       <div class="row">
         <label for="py">가격 p<sub>y</sub></label>
-        <input id="py" type="range" min="0.2" max="5" step="0.1" value="1">
+        <input id="py" type="range" min="0.2" max="5" step="0.1" value="1.00">
       </div>
       <div class="row">
         <span><strong>p<sub>y</sub> = <span id="pyVal">1.00</span></strong></span>
@@ -104,32 +105,37 @@
 
       <div class="row">
         <label for="M">소득 M</label>
-        <input id="M" type="range" min="5" max="150" step="1" value="40">
+        <input id="M" type="range" min="5" max="200" step="1" value="60">
       </div>
       <div class="row">
-        <span><strong>M = <span id="MVal">40</span></strong></span>
-        <input id="MNum" type="number" min="5" max="150" step="1" value="40" inputmode="numeric">
+        <span><strong>M = <span id="MVal">60</span></strong></span>
+        <input id="MNum" type="number" min="5" max="200" step="1" value="60" inputmode="numeric">
       </div>
 
       <dl class="nums" aria-live="polite">
-        <dt>x* (최적)</dt><dd id="xStar">20.00</dd>
-        <dt>y* (최적)</dt><dd id="yStar">20.00</dd>
-        <dt>x절편 (M/p<sub>x</sub>)</dt><dd id="xInt">40.00</dd>
-        <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">40.00</dd>
+        <dt>x* (최적)</dt><dd id="xStar">30.00</dd>
+        <dt>y* (최적)</dt><dd id="yStar">30.00</dd>
+        <dt>x절편 (M/p<sub>x</sub>)</dt><dd id="xInt">60.00</dd>
+        <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">60.00</dd>
       </dl>
-      <p class="muted">내부해(α,β &gt; 0)에서 <em>x* = (α/(α+β))·M/p<sub>x</sub>,&nbsp;&nbsp;y* = (β/(α+β))·M/p<sub>y</sub></em></p>
+      <p class="muted">내부해(α,β&gt;0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp; y*=(β/(α+β))·M/p<sub>y</sub></em></p>
     </section>
 
     <!-- 차트 카드 -->
-    <section class="card chart" aria-labelledby="chart-title">
-      <h2 id="chart-title">예산선 · 무차별곡선(U*) · 최적점</h2>
-      <div class="legend" aria-hidden="true">
+    <section class="card">
+      <h2>예산선 · 무차별곡선(U*) · 최적점</h2>
+
+      <div class="legend" aria-hidden="true" style="margin-bottom:8px;">
         <span class="badge"><span class="swatch" style="background:var(--text)"></span>예산선</span>
         <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선(U*)</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>최적점 (x*, y*)</span>
+        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>최적점 &amp; 투영</span>
       </div>
-      <svg id="plot" role="img" aria-label="예산선과 무차별곡선으로 본 최적선택점" tabindex="0"></svg>
-      <p class="muted">무차별곡선 방정식: <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
+
+      <div class="chart-wrap">
+        <canvas id="cdChart" aria-label="예산선과 무차별곡선, 최적점"></canvas>
+      </div>
+
+      <p class="muted" style="margin-top:8px;">무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
     </section>
   </main>
 
@@ -139,209 +145,164 @@
     <small>© <span id="year"></span> aries0401-svc</small>
   </footer>
 
-  <!-- 공통 스크립트: 상대경로 -->
+  <!-- 공통 스크립트 -->
   <script src="../../../assets/site.js"></script>
+
+  <!-- 페이지 전용 스크립트 -->
   <script>
-    // ====== Cobb–Douglas 최적선택점 (U = x^α · y^β) ======
-    const $ = (s) => document.querySelector(s);
+    // ====== Cobb–Douglas 최적선택점 (U = x^α · y^β) — Chart.js 버전 ======
+    const $ = (s)=>document.querySelector(s);
+    const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
+    const betaR =$('#beta'),  betaN =$('[id="betaNum"]'),  betaVal=$('#betaVal');
+    const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
+    const pyR=$('#py'), pyN=$('#pyNum'), pyVal=$('#pyVal');
+    const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal');
 
-    // 요소 참조
-    const alphaR = $('#alpha'), alphaN = $('#alphaNum'), alphaVal = $('#alphaVal');
-    const betaR  = $('#beta'),  betaN  = $('#betaNum'),  betaVal  = $('#betaVal');
-    const pxR = $('#px'), pxN = $('#pxNum'), pxVal = $('#pxVal');
-    const pyR = $('#py'), pyN = $('#pyNum'), pyVal = $('#pyVal');
-    const mR  = $('#M'),  mN  = $('#MNum'),  mVal  = $('#MVal');
+    const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
 
-    const xStarEl = $('#xStar'), yStarEl = $('#yStar'), xIntEl = $('#xInt'), yIntEl = $('#yInt');
-    const svg = $('#plot');
-
-    // 유틸
-    const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
-    const fmt = (v, d=2) => Number.isFinite(v) ? (+v).toFixed(d) : '—';
-
-    function params() {
-      const a = +(+alphaR.value).toFixed(2);
-      const b = +(+betaR.value).toFixed(2);
-      const px = +(+pxR.value).toFixed(2);
-      const py = +(+pyR.value).toFixed(2);
-      const M  = +(mR.value|0);
-      return { a, b, px, py, M };
+    // CSS 변수 -> 실제 색상값 (캔버스에서 사용)
+    function cssVar(name){
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    let C_TEXT, C_PRIMARY, C_MUTED;
+    function loadColors(){
+      C_TEXT = cssVar('--text');
+      C_PRIMARY = cssVar('--primary');
+      C_MUTED = cssVar('--muted');
     }
 
-    function syncUI() {
-      const { a, b, px, py, M } = params();
-      alphaVal.textContent = a.toFixed(2); alphaN.value = a.toFixed(2);
-      betaVal.textContent  = b.toFixed(2); betaN.value  = b.toFixed(2);
-      pxVal.textContent    = px.toFixed(2); pxN.value   = px.toFixed(2);
-      pyVal.textContent    = py.toFixed(2); pyN.value   = py.toFixed(2);
-      mVal.textContent     = M;             mN.value    = M;
+    function params(){
+      const a=+(+alphaR.value).toFixed(2);
+      const b=+(+betaR.value).toFixed(2);
+      const px=+(+pxR.value).toFixed(2);
+      const py=+(+pyR.value).toFixed(2);
+      const M =+(mR.value|0);
+      return {a,b,px,py,M};
     }
-
-    // 스케일/레이아웃
-    const W = 760, H = 360, padL = 48, padB = 36, padR = 16, padT = 16;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-    // 고정 축/격자 초기 렌더
-    function drawStatic(xMax, yMax) {
-      svg.innerHTML = '';
-      const g = (cls) => { const el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.setAttribute('class', cls); svg.appendChild(el); return el; };
-      const axes = g('axes'), grid = g('grid'), curves = g('curves'), points = g('points'), labels = g('labels');
-      svg._layers = { axes, grid, curves, points, labels };
-      // 스케일 함수
-      svg._sx = (x) => padL + (x / xMax) * (W - padL - padR);
-      svg._sy = (y) => H - padB - (y / yMax) * (H - padT - padB);
-
-      // 축
-      const axX = document.createElementNS('http://www.w3.org/2000/svg','line');
-      axX.setAttribute('x1', svg._sx(0)); axX.setAttribute('y1', svg._sy(0));
-      axX.setAttribute('x2', svg._sx(xMax)); axX.setAttribute('y2', svg._sy(0));
-      axX.setAttribute('class','axis'); axes.appendChild(axX);
-
-      const axY = document.createElementNS('http://www.w3.org/2000/svg','line');
-      axY.setAttribute('x1', svg._sx(0)); axY.setAttribute('y1', svg._sy(0));
-      axY.setAttribute('x2', svg._sx(0)); axY.setAttribute('y2', svg._sy(yMax));
-      axY.setAttribute('class','axis'); axes.appendChild(axY);
-
-      // 격자 (5분할)
-      const ticks = 5;
-      for (let i=1;i<=ticks;i++){
-        const x = (xMax/ticks)*i, y = (yMax/ticks)*i;
-        const gx = document.createElementNS('http://www.w3.org/2000/svg','line');
-        gx.setAttribute('x1', svg._sx(x)); gx.setAttribute('y1', svg._sy(0));
-        gx.setAttribute('x2', svg._sx(x)); gx.setAttribute('y2', svg._sy(yMax));
-        gx.setAttribute('class','gridline'); grid.appendChild(gx);
-
-        const gy = document.createElementNS('http://www.w3.org/2000/svg','line');
-        gy.setAttribute('x1', svg._sx(0)); gy.setAttribute('y1', svg._sy(y));
-        gy.setAttribute('x2', svg._sx(xMax)); gy.setAttribute('y2', svg._sy(y));
-        gy.setAttribute('class','gridline'); grid.appendChild(gy);
-      }
-
-      // 축 라벨
-      const lx = document.createElementNS('http://www.w3.org/2000/svg','text');
-      lx.setAttribute('x', svg._sx(xMax)); lx.setAttribute('y', svg._sy(0) + 28);
-      lx.setAttribute('text-anchor','end'); lx.setAttribute('class','label'); lx.textContent = 'x';
-      labels.appendChild(lx);
-
-      const ly = document.createElementNS('http://www.w3.org/2000/svg','text');
-      ly.setAttribute('x', svg._sx(0) - 20); ly.setAttribute('y', svg._sy(yMax) - 8);
-      ly.setAttribute('text-anchor','start'); ly.setAttribute('class','label'); ly.textContent = 'y';
-      labels.appendChild(ly);
-
-      // 동적 레이어 참조 저장
-      svg._curves = curves; svg._points = points; svg._labels = labels;
+    function syncUI(){
+      const {a,b,px,py,M}=params();
+      alphaVal.textContent=a.toFixed(2); alphaN.value=a.toFixed(2);
+      betaVal.textContent =b.toFixed(2); betaN.value =b.toFixed(2);
+      pxVal.textContent   =px.toFixed(2); pxN.value  =px.toFixed(2);
+      pyVal.textContent   =py.toFixed(2); pyN.value  =py.toFixed(2);
+      mVal.textContent    =M;             mN.value   =M;
     }
+    function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
+    function fmt(v,d=2){ return Number.isFinite(v)?(+v).toFixed(d):'–'; }
 
-    // 동적 곡선/포인트 렌더
-    function drawDynamic(xInt, yInt, xStar, yStar, U, a, b) {
-      const { _curves:curves, _points:points, _labels:labels, _sx:sx, _sy:sy } = svg;
-      curves.innerHTML = ''; points.innerHTML = '';
-
-      // 예산선
-      const budget = document.createElementNS('http://www.w3.org/2000/svg','path');
-      budget.setAttribute('d', `M ${sx(0)} ${sy(yInt)} L ${sx(xInt)} ${sy(0)}`);
-      budget.setAttribute('class','budget');
-      curves.appendChild(budget);
-
-      // 무차별곡선 (U*) 샘플링
-      const path = [];
-      const xMax = xInt * 1.05; // 살짝 여유
-      const steps = 160;
-      for (let i=1;i<=steps;i++){
-        const x = (xMax/steps)*i;
-        const y = Math.pow(U / Math.pow(x, a), 1/b);
-        if (Number.isFinite(y) && y>=0) {
-          path.push([sx(x), sy(y)]);
+    // 차트 생성
+    let cdChart;
+    function createChart(){
+      const ctx = document.getElementById('cdChart').getContext('2d');
+      cdChart = new Chart(ctx,{
+        type:'line',
+        data:{ datasets:[
+          // 0: 예산선
+          { label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0 },
+          // 1: 무차별곡선(U*)
+          { label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0 },
+          // 2: 최적점 (점)
+          { label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
+            pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter' },
+          // 3: x* 수평 투영선
+          { label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0 },
+          // 4: y* 수직 투영선
+          { label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0 },
+        ]},
+        options:{
+          maintainAspectRatio:false,
+          scales:{
+            x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }},
+            y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }}
+          },
+          plugins:{
+            legend:{ display:true },
+            tooltip:{ mode:'nearest', intersect:false }
+          },
+          animation:{ duration:150 }
         }
-      }
-      if (path.length>1) {
-        const d = 'M ' + path.map(([X,Y]) => `${X} ${Y}`).join(' L ');
-        const ind = document.createElementNS('http://www.w3.org/2000/svg','path');
-        ind.setAttribute('d', d);
-        ind.setAttribute('class','indiff');
-        curves.appendChild(ind);
-      }
-
-      // 최적점
-      const opt = document.createElementNS('http://www.w3.org/2000/svg','circle');
-      opt.setAttribute('cx', sx(xStar)); opt.setAttribute('cy', sy(yStar)); opt.setAttribute('r', 5);
-      opt.setAttribute('class','opt');
-      points.appendChild(opt);
-
-      // 투영선
-      const projX = document.createElementNS('http://www.w3.org/2000/svg','line');
-      projX.setAttribute('x1', sx(xStar)); projX.setAttribute('y1', sy(yStar));
-      projX.setAttribute('x2', sx(xStar)); projX.setAttribute('y2', sy(0));
-      projX.setAttribute('class','proj'); points.appendChild(projX);
-
-      const projY = document.createElementNS('http://www.w3.org/2000/svg','line');
-      projY.setAttribute('x1', sx(xStar)); projY.setAttribute('y1', sy(yStar));
-      projY.setAttribute('x2', sx(0)); projY.setAttribute('y2', sy(yStar));
-      projY.setAttribute('class','proj'); points.appendChild(projY);
-
-      // 라벨 (x*, y*)
-      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
-      t.setAttribute('x', sx(xStar) + 6); t.setAttribute('y', sy(yStar) - 6);
-      t.setAttribute('class','label'); t.textContent = `(${fmt(xStar,2)}, ${fmt(yStar,2)})`;
-      labels.appendChild(t);
+      });
     }
 
-    function computeAndRender() {
+    function recomputeAndDraw(){
       syncUI();
-      const { a, b, px, py, M } = params();
-      const sum = a + b;
+      const {a,b,px,py,M}=params();
+      const sum=a+b;
 
-      // 예산선 절편
-      const xInt = M / px;
-      const yInt = M / py;
+      const xInt = M/px;
+      const yInt = M/py;
 
-      // 최적해 (내부해) : x* = (a/(a+b))·M/px, y* = (b/(a+b))·M/py
-      const xStar = (a / sum) * xInt;
-      const yStar = (b / sum) * yInt;
+      const xStar = (a/sum)*xInt;
+      const yStar = (b/sum)*yInt;
 
-      // 효용수준 U* = x*^a y*^b
-      const U = Math.pow(xStar, a) * Math.pow(yStar, b);
+      const Ustar = Math.pow(xStar,a)*Math.pow(yStar,b);
 
-      // 수치 패널 업데이트
+      // 도메인: 절편/최적값 기준으로 여유를 두고 스케일
+      const xMax = Math.max(xInt, xStar) * 1.15 || 1;
+      const yMax = Math.max(yInt, yStar) * 1.15 || 1;
+
+      cdChart.options.scales.x.min = 0;
+      cdChart.options.scales.x.max = xMax;
+      cdChart.options.scales.y.min = 0;
+      cdChart.options.scales.y.max = yMax;
+
+      // 예산선 두 점
+      const budgetData = [ {x:0, y:yInt}, {x:xInt, y:0} ];
+
+      // 무차별곡선 샘플
+      const steps=160, curve=[];
+      for(let i=1;i<=steps;i++){
+        const x = (xMax/steps)*i;
+        const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
+        if(Number.isFinite(y) && y>=0 && y<=yMax) curve.push({x, y});
+      }
+
+      // 최적점/투영선
+      const optPt=[{x:xStar, y:yStar}];
+      const projY=[{x:0, y:yStar}, {x:xStar, y:yStar}];
+      const projX=[{x:xStar, y:0}, {x:xStar, y:yStar}];
+
+      // 차트 데이터 반영
+      cdChart.data.datasets[0].data = budgetData;
+      cdChart.data.datasets[1].data = curve;
+      cdChart.data.datasets[2].data = optPt;
+      cdChart.data.datasets[3].data = projY;
+      cdChart.data.datasets[4].data = projX;
+      cdChart.update('active');
+
+      // 숫자 패널
       xStarEl.textContent = fmt(xStar);
       yStarEl.textContent = fmt(yStar);
       xIntEl.textContent  = fmt(xInt);
       yIntEl.textContent  = fmt(yInt);
-
-      // 스케일 갱신 및 정적요소 리렌더 (도메인은 절편 기준으로 자동 조절)
-      const xMax = Math.max(xInt, xStar) * 1.15;
-      const yMax = Math.max(yInt, yStar) * 1.15;
-      drawStatic(xMax || 1, yMax || 1);
-
-      // 동적 요소
-      drawDynamic(xInt, yInt, xStar, yStar, U, a, b);
     }
 
-    // 양방향 동기화
-    function bindPair(rangeEl, numberEl, onChange) {
-      rangeEl.addEventListener('input', () => { numberEl.value = (+rangeEl.value).toFixed(2); onChange(); });
-      numberEl.addEventListener('change', () => {
+    function bindPair(rangeEl, numberEl, onChange){
+      rangeEl.addEventListener('input', ()=>{ numberEl.value=(+rangeEl.value).toFixed(2); onChange(); });
+      numberEl.addEventListener('change', ()=>{
         const v = clamp(+numberEl.value, +rangeEl.min, +rangeEl.max);
-        numberEl.value = v.toFixed ? v.toFixed(2) : v;
-        rangeEl.value = numberEl.value;
-        onChange();
+        numberEl.value = v.toFixed(2); rangeEl.value = numberEl.value; onChange();
       });
     }
 
-    bindPair(alphaR, alphaN, computeAndRender);
-    bindPair(betaR,  betaN,  computeAndRender);
-    bindPair(pxR,    pxN,    computeAndRender);
-    bindPair(pyR,    pyN,    computeAndRender);
-    // 정수 소득 M은 별도 처리
-    mR.addEventListener('input', () => { mN.value = mR.value; computeAndRender(); });
-    mN.addEventListener('change', () => {
-      const v = clamp(+mN.value, +mR.min, +mR.max) | 0;
-      mN.value = v; mR.value = v; computeAndRender();
-    });
+    // 초기화
+    window.addEventListener('DOMContentLoaded', ()=>{
+      loadColors();
+      createChart();
 
-    // 초기 렌더
-    computeAndRender();
+      bindPair(alphaR, alphaN, recomputeAndDraw);
+      bindPair(betaR,  betaN,  recomputeAndDraw);
+      bindPair(pxR,    pxN,    recomputeAndDraw);
+      bindPair(pyR,    pyN,    recomputeAndDraw);
+
+      mR.addEventListener('input', ()=>{ mN.value=mR.value; recomputeAndDraw(); });
+      mN.addEventListener('change', ()=>{
+        const v = clamp(+mN.value, +mR.min, +mR.max) | 0;
+        mN.value = v; mR.value = v; recomputeAndDraw();
+      });
+
+      recomputeAndDraw();
+    });
   </script>
 </body>
 </html>
-
