@@ -213,7 +213,7 @@
 
   <!-- 페이지 전용 스크립트 -->
   <script>
-    // ====== Cobb–Douglas 최적선택점 — 애니메이션 제거로 즉시/딱딱 갱신 ======
+    // ====== Cobb–Douglas 최적선택점 — 상단 경계 앵커 + 비선형 샘플링, 애니메이션 비활성 ======
     const $ = (s)=>document.querySelector(s);
 
     // 초기값 폼
@@ -301,7 +301,7 @@
             point:{ radius:0, hoverRadius:0 },
             line: { tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' }
           },
-          // ★ 애니메이션 전부 비활성화: 부드러운 보간(흐물흐물함) 제거
+          // ★ 애니메이션 전부 비활성화: 부드러운 보간 제거
           animation:false,
           animations:{},
           transitions:{ active:{ animation:{ duration:0 } } },
@@ -357,17 +357,43 @@
         budgetData = [ {x:0, y:yInt}, {x:xInt, y:0} ];
       }
 
-      // 무차별곡선 & 투영선
+      // ===== 무차별곡선(U*): 상단 경계(y=BASE_YMAX) 앵커 + 비선형 샘플링 =====
       let curve=[], optPt=[], projY=[], projX=[];
       if(validInterior){
-        const steps=220; // 약간 늘려 더 촘촘하게
-        for(let i=1;i<=steps;i++){
-          const x = (BASE_XMAX/steps)*i;
-          const denom = Math.pow(x,a);
-          if(denom<=0 || !Number.isFinite(denom)) continue;
-          const y = Math.pow(Ustar / denom, 1/b);
-          if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x, y});
+        // 1) y 상한과의 교점 xStart
+        let xStart = 0;
+        if (a > 0 && b > 0 && Ustar > 0 && BASE_YMAX > 0) {
+          const denomAtTop = Math.pow(BASE_YMAX, b);
+          const xTop = Math.pow(Ustar / denomAtTop, 1 / a);
+          if (Number.isFinite(xTop)) xStart = Math.min(Math.max(xTop, 0), BASE_XMAX);
         }
+        // 2) 앵커 점 (보이는 범위면 추가)
+        if (Number.isFinite(xStart) && xStart >= 0 && xStart <= BASE_XMAX) {
+          curve.push({ x: xStart, y: BASE_YMAX });
+        }
+        // 3) xStart→BASE_XMAX 구간을 비선형 샘플링(앵커 근처 촘촘)
+        const N = 240;
+        const gamma = 2.2;
+        if (xStart < BASE_XMAX - 1e-12) {
+          for (let i = 1; i <= N; i++) {
+            const t = i / N;
+            const x = xStart + (BASE_XMAX - xStart) * Math.pow(t, gamma);
+            const denom = Math.pow(x, a);
+            if (denom <= 0 || !Number.isFinite(denom)) continue;
+            const y = Math.pow(Ustar / denom, 1 / b);
+            if (Number.isFinite(y) && y >= 0 && y <= BASE_YMAX) {
+              curve.push({ x, y });
+            }
+          }
+        } else {
+          // xStart가 우측 경계에 거의 붙은 경우: 끝점 하나만 안정적으로 추가
+          const yEnd = Math.pow(Ustar / Math.pow(BASE_XMAX, a), 1 / b);
+          if (Number.isFinite(yEnd) && yEnd >= 0 && yEnd <= BASE_YMAX) {
+            curve.push({ x: BASE_XMAX, y: yEnd });
+          }
+        }
+
+        // 최적점/투영선
         optPt=[{x:xStar, y:yStar}];
         projY=[{x:0, y:yStar}, {x:xStar, y:yStar}];
         projX=[{x:xStar, y:0}, {x:xStar, y:yStar}];
@@ -494,7 +520,7 @@
     });
     cancelReinit.addEventListener('click', ()=>{ reinitBox.open=false; });
 
-    // ★ 빠져있던 "축 재설정" 버튼 동작 추가
+    // ★ "축 재설정" 버튼
     refitBtn.addEventListener('click', ()=>recomputeAndDraw({fitAxes:true}));
 
     // 연도 표기
