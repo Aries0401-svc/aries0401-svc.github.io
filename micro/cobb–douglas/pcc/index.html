@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../../assets/style.css" />
 
-  <!-- 차트(CDN, 버전 고정) - defer 유지 (DOMContentLoaded 전에 로드되지만 네트워크 지연 대비 코드에서 대기 처리함) -->
+  <!-- 차트(CDN, 버전 고정) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 
   <style>
@@ -254,12 +254,10 @@
           const onError = () => reject(new Error('Chart.js 로드 실패'));
           tag.addEventListener('load', onLoad, { once:true });
           tag.addEventListener('error', onError, { once:true });
-          // 혹시 이미 로드됐는데 이벤트가 늦게 바인딩되었을 경우 대비
           setTimeout(() => { if (window.Chart) resolve(); }, 0);
         });
       }
 
-      // 가격 하한
       const PRICE_FLOOR = 0.2;
 
       // 초기 입력
@@ -296,7 +294,7 @@
       // 축 (고정 범위)
       let BASE_XMAX=1, BASE_YMAX=1;
 
-      // 애니메이션
+      // 애니메이션(가격 왕복)
       let timer=null, dir=1; // 1: up, -1: down
 
       // 유틸
@@ -331,7 +329,7 @@
       function params(){
         const a=+(+alphaR.value), b=+(+betaR.value);
         const px=+(+pxR.value),  py=+(+pyR.value);
-        const M = parseFloat(mR.value || '0'); // 안전 파싱
+        const M = parseFloat(mR.value || '0');
         const vary = varySel.value; // 'px' | 'py'
         const P = +(pVarR.value), Pmin=+(pVarR.min), Pmax=+(pVarR.max);
         return {a,b,px,py,M,vary,P,Pmin,Pmax};
@@ -363,23 +361,30 @@
         pccChart=new Chart(ctx,{
           type:'line',
           data:{ datasets:[
-            {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-            {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+            {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},
+            {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false, spanGaps:false},
             {label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
              pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter'},
-            {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-            {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-            {label:'PCC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0}
+            {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},
+            {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},
+            {label:'PCC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false}
           ]},
           options:{
+            responsive:true,
             maintainAspectRatio:false,
-            elements:{ point:{ radius:0, hoverRadius:0 } },
+            elements:{
+              point:{ radius:0, hoverRadius:0 },
+              line:{ tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' }
+            },
+            // ★ 모든 애니메이션 비활성화 → 딱딱하게 즉시 갱신
+            animation:false,
+            animations:{},
+            transitions:{ active:{ animation:{ duration:0 } } },
             scales:{
               x:{type:'linear', title:{display:true,text:'x'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_XMAX},
               y:{type:'linear', title:{display:true,text:'y'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_YMAX}
             },
-            plugins:{legend:{display:true}, tooltip:{mode:'nearest', intersect:false}},
-            animation:{duration:120}
+            plugins:{legend:{display:true}, tooltip:{mode:'nearest', intersect:false}}
           }
         });
       }
@@ -433,15 +438,42 @@
           budgetData=[{x:0,y:yInt},{x:xInt,y:0}];
         }
 
-        // 무차별곡선(현재 U*)
+        // ===== 무차별곡선(U*): 상단 경계 앵커 + 비선형 샘플링 =====
         let curve=[],optPt=[],projY=[],projX=[];
         if(validInterior){
-          const steps=200;
-          for(let i=1;i<=steps;i++){
-            const x=(BASE_XMAX/steps)*i;
-            const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
-            if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x,y});
+          // 1) y=BASE_YMAX와의 교점 xStart
+          let xStart = 0;
+          if (a > 0 && b > 0 && Ustar > 0 && BASE_YMAX > 0) {
+            const denomAtTop = Math.pow(BASE_YMAX, b);
+            const xTop = Math.pow(Ustar / denomAtTop, 1 / a);
+            if (Number.isFinite(xTop)) xStart = Math.min(Math.max(xTop, 0), BASE_XMAX);
           }
+          // 2) 앵커 추가
+          if (Number.isFinite(xStart) && xStart >= 0 && xStart <= BASE_XMAX) {
+            curve.push({ x: xStart, y: BASE_YMAX });
+          }
+          // 3) xStart→BASE_XMAX 비선형 샘플링(앵커 근처 촘촘)
+          const N = 240, gamma = 2.2;
+          if (xStart < BASE_XMAX - 1e-12) {
+            for (let i = 1; i <= N; i++) {
+              const t = i / N;
+              const x = xStart + (BASE_XMAX - xStart) * Math.pow(t, gamma);
+              const denom = Math.pow(x, a);
+              if (denom <= 0 || !Number.isFinite(denom)) continue;
+              const y = Math.pow(Ustar / denom, 1 / b);
+              if (Number.isFinite(y) && y >= 0 && y <= BASE_YMAX) {
+                curve.push({ x, y });
+              }
+            }
+          } else {
+            // 우측 경계에 거의 붙는 경우 보정 끝점
+            const yEnd = Math.pow(Ustar / Math.pow(BASE_XMAX, a), 1 / b);
+            if (Number.isFinite(yEnd) && yEnd >= 0 && yEnd <= BASE_YMAX) {
+              curve.push({ x: BASE_XMAX, y: yEnd });
+            }
+          }
+
+          // 최적점/투영
           optPt=[{x:xStar,y:yStar}];
           projY=[{x:0,y:yStar},{x:xStar,y:yStar}];
           projX=[{x:xStar,y:0},{x:xStar,y:yStar}];
@@ -467,13 +499,13 @@
           pccChart.data.datasets[5].data=pcc;
         }
 
-        // 적용
+        // 적용 (★ 애니메이션 없이 즉시 갱신)
         pccChart.data.datasets[0].data=budgetData;
         pccChart.data.datasets[1].data=curve;
         pccChart.data.datasets[2].data=optPt;
         pccChart.data.datasets[3].data=projY;
         pccChart.data.datasets[4].data=projX;
-        pccChart.update('active');
+        pccChart.update('none');
 
         // 숫자/상태
         xStarEl.textContent=fmt(xStar);
@@ -495,7 +527,7 @@
         numberEl.addEventListener('change', ()=>{
           let v=+numberEl.value;
           if(rangeEl===pxR || rangeEl===pyR || rangeEl===pVarR){ v = Math.max(PRICE_FLOOR, v); }
-          numberEl.value=v.toFixed(decals=decimals);
+          numberEl.value=v.toFixed(decimals); // ← 오타(decals) 수정
           rangeEl.value=numberEl.value;
           onChange();
         });
@@ -573,7 +605,7 @@
         recomputeAndDraw({fitAxes:true, rebuildPCC:true});
       }
 
-      // 그리기 버튼: Chart.js 준비 보장 + UI 상태 표시
+      // 그리기 버튼
       drawBtn.addEventListener('click', async ()=>{
         const a0=+iA.value, b0=+iB.value, px0=+iPx.value, py0=+iPy.value, M0=+iM.value;
         const vary0=iVary.value;
@@ -584,7 +616,7 @@
         drawBtn.textContent = '로딩 중…';
 
         try{
-          await ensureChartReady(); // 여기서 확실히 Chart 사용 가능
+          await ensureChartReady();
           const Pmin0 = Number.isFinite(+iPmin.value) && +iPmin.value>0 ? Math.max(+iPmin.value, PRICE_FLOOR)
                          : Math.max(PRICE_FLOOR, +(baseP*0.2).toFixed(2));
           const Pmax0 = Number.isFinite(+iPmax.value) && +iPmax.value>0 ? Math.max(+iPmax.value, Pmin0+0.5)
