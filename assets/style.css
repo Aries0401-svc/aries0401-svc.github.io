@@ -7,6 +7,7 @@
   --primary: #6aa9ff;
   --ring: rgba(106,169,255,.6);
   --shadow: 0 10px 24px rgba(0,0,0,.35);
+  --overlay: rgba(0,0,0,.35); /* 배경 위 가독성용 오버레이 */
 }
 
 @media (prefers-color-scheme: light) {
@@ -18,21 +19,48 @@
     --primary: #2563eb;
     --ring: rgba(37, 99, 235, .35);
     --shadow: 0 12px 24px rgba(2, 6, 23, .08);
+    --overlay: rgba(255,255,255,.08); /* 라이트 모드에선 살짝 밝게 */
   }
 }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+
 body{
   margin:0;
   font-family: "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: radial-gradient(1200px 800px at 10% -10%, rgba(99,102,241,.25), transparent 60%),
-              radial-gradient(1200px 800px at 110% 10%, rgba(59,130,246,.25), transparent 60%),
-              var(--bg);
+
+  /* 배경: 그라디언트(위) + 이미지(중간) + 단색(아래) */
+  background:
+    radial-gradient(1200px 800px at 10% -10%, rgba(99,102,241,.25), transparent 60%),
+    radial-gradient(1200px 800px at 110% 10%, rgba(59,130,246,.25), transparent 60%),
+    url("./background.png"),
+    var(--bg);
+
+  /* 각 레이어별 설정 (이미지만 cover) */
+  background-size: auto, auto, cover, auto;
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed;
+
   color: var(--text);
   display:flex;
   flex-direction:column;
   align-items:center;
+}
+
+/* 글자 가독성 위해 살짝 오버레이 */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background: var(--overlay);
+  pointer-events:none;
+}
+
+/* 모바일에서 fixed가 버벅이면 스크롤로 전환 */
+@media (max-width: 768px){
+  body{ background-attachment: scroll; }
 }
 
 /* 헤더 */
@@ -110,4 +138,3 @@ body{
   text-align:center;
   color: var(--muted);
 }
-
