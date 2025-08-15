@@ -193,7 +193,7 @@
 
   <script src="../../../assets/site.js"></script>
   <script>
-    // ===== ICC (소득–소비 곡선) — 애니메이션 제거로 즉시/딱딱 갱신 =====
+    // ===== ICC (소득–소비 곡선) — 상단 경계 앵커 + 비선형 샘플링, 애니메이션 비활성 =====
     const $ = (s)=>document.querySelector(s);
 
     // 초기 입력
@@ -291,7 +291,7 @@
             point:{ radius:0, hoverRadius:0 },
             line:{ tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' }
           },
-          // ★ 모든 애니메이션 비활성화 → 흐물거림 제거
+          // ★ 모든 애니메이션 비활성화 → 떨림 제거
           animation:false,
           animations:{},
           transitions:{ active:{ animation:{ duration:0 } } },
@@ -347,17 +347,34 @@
         budgetData=[{x:0,y:yInt},{x:xInt,y:0}];
       }
 
-      // 무차별곡선(현재 U*)
-      let curve=[],optPt=[],projY=[],projX=[];
+      // ===== 무차별곡선(U*): 상단 경계(y=BASE_YMAX) 앵커 + 비선형 샘플링 =====
+      let curve=[], optPt=[], projY=[], projX=[];
       if(validInterior){
-        const steps=220; // 조금 더 촘촘하게
-        for(let i=1;i<=steps;i++){
-          const x=(BASE_XMAX/steps)*i;
-          const denom = Math.pow(x,a);
-          if(denom<=0 || !Number.isFinite(denom)) continue;
-          const y = Math.pow(Ustar / denom, 1/b);
-          if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x,y});
+        // 1) y 상한과의 교점(앵커) xStart
+        let xStart = 0;
+        if (a > 0 && b > 0 && Ustar > 0 && BASE_YMAX > 0) {
+          const denomAtTop = Math.pow(BASE_YMAX, b);
+          const xTop = Math.pow(Ustar / denomAtTop, 1 / a);
+          if (Number.isFinite(xTop)) xStart = Math.min(Math.max(xTop, 0), BASE_XMAX);
         }
+        // 2) 앵커 점 추가 (보이는 범위이면)
+        if (Number.isFinite(xStart) && xStart >= 0 && xStart <= BASE_XMAX) {
+          curve.push({ x: xStart, y: BASE_YMAX });
+        }
+        // 3) xStart→BASE_XMAX 구간 비선형 샘플링(상단 근처에 촘촘)
+        const N = 240;
+        const gamma = 2.2; // 1<t^gamma → 시작부(앵커 근처) 더 촘촘
+        for (let i = 1; i <= N; i++) {
+          const t = i / N;
+          const x = xStart + (BASE_XMAX - xStart) * Math.pow(t, gamma);
+          const denom = Math.pow(x, a);
+          if (denom <= 0 || !Number.isFinite(denom)) continue;
+          const y = Math.pow(Ustar / denom, 1 / b);
+          if (Number.isFinite(y) && y >= 0 && y <= BASE_YMAX) {
+            curve.push({ x, y });
+          }
+        }
+        // 최적점/투영선
         optPt=[{x:xStar,y:yStar}];
         projY=[{x:0,y:yStar},{x:xStar,y:yStar}];
         projX=[{x:xStar,y:0},{x:xStar,y:yStar}];
