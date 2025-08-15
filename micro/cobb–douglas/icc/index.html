@@ -63,12 +63,10 @@
       <h2 id="init-title">파라미터 입력 후 그리기</h2>
       <div class="row">
         <label for="i-alpha">α (x의 지수)</label>
-        <!-- 초기값 0.50 -->
         <input id="i-alpha" type="number" step="0.01" value="0.50" inputmode="decimal">
       </div>
       <div class="row">
         <label for="i-beta">β (y의 지수)</label>
-        <!-- 초기값 0.50 -->
         <input id="i-beta" type="number" step="0.01" value="0.50" inputmode="decimal">
       </div>
       <div class="row">
@@ -184,7 +182,6 @@
       <div class="chart-wrap">
         <canvas id="iccChart" aria-label="ICC, 예산선, 무차별곡선, 최적점"></canvas>
       </div>
-      <!-- 함수식 표기(텍스트) 완전히 제거 -->
     </section>
   </main>
 
@@ -196,7 +193,7 @@
 
   <script src="../../../assets/site.js"></script>
   <script>
-    // ===== ICC (소득–소비 곡선) — 함수식 표기 제거, α/β 초기값 0.50 =====
+    // ===== ICC (소득–소비 곡선) — 애니메이션 제거로 즉시/딱딱 갱신 =====
     const $ = (s)=>document.querySelector(s);
 
     // 초기 입력
@@ -228,7 +225,7 @@
     // 축 범위(고정)
     let BASE_XMAX=1, BASE_YMAX=1;
 
-    // 애니메이션
+    // 자동 왕복(소득) 타이머
     let timer=null, dir=1; // 1: up, -1: down
 
     // 유틸
@@ -253,7 +250,8 @@
     function params(){
       const a=+(+alphaR.value), b=+(+betaR.value);
       const px=+(+pxR.value),  py=+(+pyR.value);
-      const M =+(mR.value|0),  Mmax=+(mR.max);
+      const M =+mR.value;              // 소수도 허용
+      const Mmax=+(mR.max);
       return {a,b,px,py,M,Mmax};
     }
     function syncUI(){
@@ -262,7 +260,7 @@
       betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);  betaN.value =isNaN(b)?'':(+b).toFixed(2);
       pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2); pxN.value  =isNaN(px)?'':(+px).toFixed(2);
       pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2); pyN.value  =isNaN(py)?'':(+py).toFixed(2);
-      mVal    .textContent=isNaN(M)?'–':M;                  mN.value   =isNaN(M)?'':M;
+      mVal    .textContent=isNaN(M)?'–':(+M).toFixed(0);   mN.value   =isNaN(M)?'':(+M).toFixed(0);
       mMaxView.textContent=isNaN(Mmax)?'–':Mmax;
     }
 
@@ -274,27 +272,34 @@
         type:'line',
         data:{ datasets:[
           // 0: 예산선(현재 M)
-          {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+          {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},
           // 1: 무차별곡선(U*)
-          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
+          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},
           // 2: 최적점(단일 점)
           {label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
            pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter'},
           // 3: x*, y* 투영
-          {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-          {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0},
-          // 5: ICC(자취) — 선만 (마커 없음)
-          {label:'ICC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0}
+          {label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},
+          {label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},
+          // 5: ICC(자취)
+          {label:'ICC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false}
         ]},
         options:{
+          responsive:true,
           maintainAspectRatio:false,
-          elements:{ point:{ radius:0, hoverRadius:0 } }, /* 전역 마커 제거 */
+          elements:{
+            point:{ radius:0, hoverRadius:0 },
+            line:{ tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' }
+          },
+          // ★ 모든 애니메이션 비활성화 → 흐물거림 제거
+          animation:false,
+          animations:{},
+          transitions:{ active:{ animation:{ duration:0 } } },
           scales:{
             x:{type:'linear', title:{display:true,text:'x'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_XMAX},
             y:{type:'linear', title:{display:true,text:'y'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_YMAX}
           },
-          plugins:{legend:{display:true}, tooltip:{mode:'nearest', intersect:false}},
-          animation:{duration:120}
+          plugins:{legend:{display:true}, tooltip:{mode:'nearest', intersect:false}}
         }
       });
     }
@@ -328,7 +333,7 @@
         iccChart.options.scales.y.max=BASE_YMAX;
       }
 
-      // 예산선 (축은 고정, 기울기만 변화)
+      // 예산선 (축 고정, 기울기만 변화)
       let budgetData=[];
       if(px===0 && py===0){
         budgetData=[];
@@ -345,10 +350,12 @@
       // 무차별곡선(현재 U*)
       let curve=[],optPt=[],projY=[],projX=[];
       if(validInterior){
-        const steps=200;
+        const steps=220; // 조금 더 촘촘하게
         for(let i=1;i<=steps;i++){
           const x=(BASE_XMAX/steps)*i;
-          const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
+          const denom = Math.pow(x,a);
+          if(denom<=0 || !Number.isFinite(denom)) continue;
+          const y = Math.pow(Ustar / denom, 1/b);
           if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x,y});
         }
         optPt=[{x:xStar,y:yStar}];
@@ -370,13 +377,13 @@
         iccChart.data.datasets[5].data=icc;
       }
 
-      // 적용
+      // 적용 (★ 애니메이션 없이 즉시 갱신)
       iccChart.data.datasets[0].data=budgetData;
       iccChart.data.datasets[1].data=curve;
       iccChart.data.datasets[2].data=optPt;
       iccChart.data.datasets[3].data=projY;
       iccChart.data.datasets[4].data=projX;
-      iccChart.update('active');
+      iccChart.update('none');
 
       // 숫자/상태
       xStarEl.textContent=fmt(xStar);
@@ -438,7 +445,6 @@
       if(!alphaR.dataset.bound){
         bindPair(alphaR, alphaN, 2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
         bindPair(betaR,  betaN,  2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
-        /* px/py 변경 시에도 축은 고정(fitAxes:false) → 기울기만 변함 */
         bindPair(pxR,    pxN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
         bindPair(pyR,    pyN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
         bindPair(mR,     mN,     0, ()=>{ stopAnim(); recomputeAndDraw(); });
