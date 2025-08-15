@@ -213,7 +213,7 @@
 
   <!-- 페이지 전용 스크립트 -->
   <script>
-    // ====== Cobb–Douglas 최적선택점 — 제약 완화 & 파라미터 재입력 지원 ======
+    // ====== Cobb–Douglas 최적선택점 — 애니메이션 제거로 즉시/딱딱 갱신 ======
     const $ = (s)=>document.querySelector(s);
 
     // 초기값 폼
@@ -246,7 +246,6 @@
     let BASE_XMAX=1, BASE_YMAX=1;
 
     // 유틸
-    function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
     function fmt(v,d=2){
       if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–';
       return (+v).toFixed(d);
@@ -264,7 +263,7 @@
       const b=+(+betaR.value);
       const px=+(+pxR.value);
       const py=+(+pyR.value);
-      const M =+(mR.value|0);
+      const M =+mR.value; // 소수도 허용
       return {a,b,px,py,M};
     }
     function syncUI(){
@@ -273,7 +272,7 @@
       betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);  betaN.value =isNaN(b)?'':(+b).toFixed(2);
       pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2); pxN.value  =isNaN(px)?'':(+px).toFixed(2);
       pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2); pyN.value  =isNaN(py)?'':(+py).toFixed(2);
-      mVal    .textContent=isNaN(M)?'–':M;                  mN.value   =isNaN(M)?'':M;
+      mVal    .textContent=isNaN(M)?'–':(+M).toFixed(0);   mN.value   =isNaN(M)?'':(+M).toFixed(0);
     }
 
     // 차트
@@ -284,26 +283,33 @@
         type:'line',
         data:{ datasets:[
           // 0: 예산선
-          { label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
+          { label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
           // 1: 무차별곡선(U*)
-          { label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
+          { label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false, spanGaps:false },
           // 2: 최적점 (마커 제거)
           { label:'최적점', data:[], parsing:false, showLine:false, pointRadius:0, pointHoverRadius:0,
             pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:0, type:'scatter' },
           // 3: x* 수평 투영선
-          { label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
+          { label:'투영선(y)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
           // 4: y* 수직 투영선
-          { label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0 },
+          { label:'투영선(x)', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
         ]},
         options:{
+          responsive:true,
           maintainAspectRatio:false,
-          elements:{ point:{ radius:0, hoverRadius:0 } }, /* 전역 마커 제거 */
+          elements:{
+            point:{ radius:0, hoverRadius:0 },
+            line: { tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' }
+          },
+          // ★ 애니메이션 전부 비활성화: 부드러운 보간(흐물흐물함) 제거
+          animation:false,
+          animations:{},
+          transitions:{ active:{ animation:{ duration:0 } } },
           scales:{
             x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_XMAX },
             y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_YMAX }
           },
-          plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } },
-          animation:{ duration:150 }
+          plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } }
         }
       });
     }
@@ -351,28 +357,29 @@
         budgetData = [ {x:0, y:yInt}, {x:xInt, y:0} ];
       }
 
-      // 무차별곡선 & 투영선 (최적점 마커 없이)
+      // 무차별곡선 & 투영선
       let curve=[], optPt=[], projY=[], projX=[];
       if(validInterior){
-        const steps=160;
+        const steps=220; // 약간 늘려 더 촘촘하게
         for(let i=1;i<=steps;i++){
           const x = (BASE_XMAX/steps)*i;
-          const y = Math.pow(Ustar / Math.pow(x,a), 1/b);
+          const denom = Math.pow(x,a);
+          if(denom<=0 || !Number.isFinite(denom)) continue;
+          const y = Math.pow(Ustar / denom, 1/b);
           if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x, y});
         }
-        // 점은 그리지 않지만 내부적으로 좌표는 유지(투영선용)
         optPt=[{x:xStar, y:yStar}];
         projY=[{x:0, y:yStar}, {x:xStar, y:yStar}];
         projX=[{x:xStar, y:0}, {x:xStar, y:yStar}];
       }
 
-      // 차트 반영
+      // 차트 반영 (★ 모드 'none'으로 즉시 갱신)
       cdChart.data.datasets[0].data = budgetData;
       cdChart.data.datasets[1].data = curve;
-      cdChart.data.datasets[2].data = optPt;  // pointRadius=0이라 시각적으로 보이지 않음
+      cdChart.data.datasets[2].data = optPt;
       cdChart.data.datasets[3].data = projY;
       cdChart.data.datasets[4].data = projX;
-      cdChart.update('active');
+      cdChart.update('none');
 
       // 숫자/상태
       xStarEl.textContent = fmt(xStar);
@@ -404,7 +411,7 @@
       });
     }
 
-    // 슬라이더 범위 생성 헬퍼 (제약 거의 없음)
+    // 슬라이더 범위 생성 헬퍼
     function setAroundAlphaBeta(rangeEl, numberEl, base){
       const span = Math.max(0.2, Math.abs(base)*0.2); // ±20% (최소 폭 0.2)
       setRange(rangeEl, numberEl, { min: base - span, max: base + span, step: 0.01, value: base, decimals: 2 });
@@ -486,6 +493,9 @@
       reinitBox.open = false;
     });
     cancelReinit.addEventListener('click', ()=>{ reinitBox.open=false; });
+
+    // ★ 빠져있던 "축 재설정" 버튼 동작 추가
+    refitBtn.addEventListener('click', ()=>recomputeAndDraw({fitAxes:true}));
 
     // 연도 표기
     document.addEventListener('DOMContentLoaded', ()=>{
