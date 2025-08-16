@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>선형 수요·공급 곡선 | Micro</title>
-  <meta name="description" content="Q = A − B·P (수요), Q = C + D·P (공급)을 시각화하고 균형점, 소비자·생산자 잉여를 한 그래프에서 보여줍니다." />
+  <meta name="description" content="수요 Q = s_d·P + t_d, 공급 Q = s_s·P + t_s 를 시각화하고 균형점과 소비자·생산자 잉여를 한 그래프에서 보여줍니다." />
 
   <!-- 공통: 폰트/스타일 (상대경로 고정) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,12 +16,21 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 
   <style>
-    main.grid { grid-template-columns: minmax(280px,420px) 1fr; }
-    .controls { display:flex; flex-direction:column; gap:10px; }
-    .row { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; }
-    .controls input[type="number"],
-    .controls button,
-    .controls a {
+    main.grid { grid-template-columns: minmax(300px,460px) 1fr; }
+    .controls { display:flex; flex-direction:column; gap:12px; }
+    .eq { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+    .eq code { color:var(--muted); }
+    .eq input[type="number"]{
+      width:9ch;
+      border:1px solid var(--muted);
+      background:var(--panel);
+      color:var(--text);
+      padding:.4rem .6rem;
+      border-radius:.5rem;
+      box-shadow: var(--shadow);
+      font:inherit;
+    }
+    .controls button {
       border:1px solid var(--muted);
       background:var(--panel);
       color:var(--text);
@@ -29,11 +38,10 @@
       border-radius:.5rem;
       box-shadow: var(--shadow);
       font:inherit;
+      cursor:pointer;
     }
-    .controls input[type="number"]{ width:9ch; }
     .controls input:focus-visible,
     .controls button:focus-visible,
-    .controls a:focus-visible,
     canvas:focus-visible { outline:0; box-shadow:0 0 0 4px var(--ring); }
 
     .chart-wrap{ position:relative; height:460px; }
@@ -47,42 +55,38 @@
 
     .muted{ color:var(--muted); }
     [hidden]{ display:none !important; }
-
-    .note{ font-size:.92rem; color:var(--muted); }
   </style>
 </head>
 <body>
   <header class="site-header">
     <h1>선형 수요·공급 곡선</h1>
-    <p class="subtitle">수요: <em>Q = A − B·P</em>, 공급: <em>Q = C + D·P</em></p>
+    <p class="subtitle">수요: <em>Q = s<sub>d</sub>·P + t<sub>d</sub></em>, 공급: <em>Q = s<sub>s</sub>·P + t<sub>s</sub></em></p>
   </header>
 
   <main class="grid">
     <!-- 컨트롤 -->
     <section class="card controls" aria-labelledby="ctl-title">
-      <h2 id="ctl-title">파라미터</h2>
+      <h2 id="ctl-title">식으로 입력</h2>
 
-      <div class="row">
-        <label for="A">A (수요 절편)</label>
-        <input id="A" type="number" step="1" value="120" inputmode="numeric" aria-describedby="hintA">
-      </div>
-      <div class="row">
-        <label for="B">B (수요 기울기 &gt; 0)</label>
-        <input id="B" type="number" step="0.1" value="1.0" inputmode="decimal" aria-describedby="hintB">
-      </div>
-
-      <div class="row">
-        <label for="C">C (공급 절편)</label>
-        <input id="C" type="number" step="1" value="20" inputmode="numeric" aria-describedby="hintC">
-      </div>
-      <div class="row">
-        <label for="D">D (공급 기울기 &gt; 0)</label>
-        <input id="D" type="number" step="0.1" value="1.0" inputmode="decimal" aria-describedby="hintD">
+      <div class="eq" aria-label="수요곡선 식 입력">
+        <strong>수요</strong>
+        <code>Q =</code>
+        <input id="sd" type="number" step="0.1" value="-1.0" inputmode="decimal" aria-label="수요 기울기 s_d">
+        <code>·P +</code>
+        <input id="td" type="number" step="1" value="120" inputmode="numeric" aria-label="수요 절편 t_d">
       </div>
 
-      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem;">
+      <div class="eq" aria-label="공급곡선 식 입력">
+        <strong>공급</strong>
+        <code>Q =</code>
+        <input id="ss" type="number" step="0.1" value="1.0" inputmode="decimal" aria-label="공급 기울기 s_s">
+        <code>·P +</code>
+        <input id="ts" type="number" step="1" value="20" inputmode="numeric" aria-label="공급 절편 t_s">
+      </div>
+
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.25rem;">
         <button id="refitBtn" title="현재 곡선과 균형점을 모두 포함하도록 축을 다시 맞춥니다.">축 재설정</button>
-        <span class="note" id="statusMsg" aria-live="polite"></span>
+        <span class="muted" id="statusMsg" aria-live="polite"></span>
       </div>
 
       <dl class="nums" aria-live="polite" style="margin-top:.5rem;">
@@ -91,11 +95,7 @@
         <dt>소비자잉여 (CS)</dt><dd id="csVal">–</dd>
         <dt>생산자잉여 (PS)</dt><dd id="psVal">–</dd>
       </dl>
-
-      <p class="note" id="hints">
-        기본값: A=120, B=1.0, C=20, D=1.0 → P*=50, Q*=70<br/>
-        소비자잉여 CS = ½·(P<sub>max</sub> − P*)·Q*, 생산자잉여 PS = ½·(P* − P<sub>min</sub>)·Q*
-      </p>
+      <p class="muted">CS = ½·(P<sub>choke</sub> − P*)·Q*,&nbsp; PS = ½·(P* − P<sub>min</sub>)·Q*</p>
     </section>
 
     <!-- 차트 -->
@@ -105,17 +105,14 @@
       <div class="legend" aria-hidden="true">
         <span class="badge"><span class="swatch" style="background:var(--primary)"></span>수요</span>
         <span class="badge"><span class="swatch" style="background:var(--text)"></span>공급</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>균형점/투영</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>소비자잉여(반투명)</span>
-        <span class="badge"><span class="swatch" style="background:var(--text)"></span>생산자잉여(반투명)</span>
+        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>소비자잉여</span>
+        <span class="badge"><span class="swatch" style="background:var(--text)"></span>생산자잉여</span>
       </div>
 
       <div class="chart-wrap">
         <canvas id="sdcChart" tabindex="0" aria-label="수요·공급 곡선과 균형점, 소비자/생산자 잉여"></canvas>
       </div>
-      <p class="muted" style="margin-top:8px;">
-        축: 가로(Q, 수량), 세로(P, 가격). 파라미터를 바꾸면 곡선·균형점·잉여가 즉시 갱신됩니다.
-      </p>
+      <p class="muted" style="margin-top:8px;">축: 가로(Q, 수량), 세로(P, 가격). 식을 바꾸면 곡선·균형점·잉여가 즉시 갱신됩니다.</p>
     </section>
   </main>
 
@@ -130,94 +127,99 @@
 
   <!-- 페이지 전용 스크립트 -->
   <script>
-    // ====== 선형 수요·공급 곡선 — 균형/잉여 시각화 (Chart.js, 축 고정/재설정 지원) ======
+    // ====== 선형 수요·공급 — 식 기반 입력, 균형/잉여 시각화 ======
     const $ = (s)=>document.querySelector(s);
 
-    // 입력 요소
-    const A=$('#A'), B=$('#B'), C=$('#C'), D=$('#D');
+    // 입력
+    const sd=$('#sd'), td=$('#td'), ss=$('#ss'), ts=$('#ts');
     const refitBtn=$('#refitBtn'), statusMsg=$('#statusMsg');
     const pStarEl=$('#pStar'), qStarEl=$('#qStar'), csValEl=$('#csVal'), psValEl=$('#psVal');
 
-    // CSS 변수 → 실제 색
+    // CSS 변수 → 실제 색상
     function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
     let C_TEXT, C_PRIMARY, C_MUTED;
     function loadColors(){ C_TEXT=cssVar('--text'); C_PRIMARY=cssVar('--primary'); C_MUTED=cssVar('--muted'); }
-
-    // 색상 alpha 적용 유틸 (가능하면 #rrggbb → #rrggbbaa, 아니면 rgba로 변환 시도)
-    function withAlpha(color, alpha=0.2){
+    function withAlpha(color, alpha=0.22){
       const aByte = Math.round(alpha*255).toString(16).padStart(2,'0');
-      if(/^#([0-9a-f]{6})$/i.test(color)){ return color + aByte; }        // #rrggbb → #rrggbbaa
-      if(/^#([0-9a-f]{3})$/i.test(color)){                                // #rgb → #rrggbbaa
-        const r=color[1], g=color[2], b=color[3];
-        return '#' + r+r + g+g + b+b + aByte;
-      }
-      // rgb(...) 또는 hsl(...) 등: 그대로 반환(투명도 조절이 안될 수 있음)
-      return color;
+      if(/^#([0-9a-f]{6})$/i.test(color)) return color + aByte;
+      if(/^#([0-9a-f]{3})$/i.test(color)){ const r=color[1],g=color[2],b=color[3]; return '#'+r+r+g+g+b+b+aByte; }
+      return color; // rgb/hsl은 그대로
     }
 
-    // 상태: 축 고정 범위
+    // 상태: 축 고정
     let BASE_QMAX=1, BASE_PMAX=1;
 
-    // 숫자 포맷
     const fmt = (v, d=2)=> (Number.isFinite(v)?(+v).toFixed(d):'–');
 
-    // 파라미터 읽기
     function params(){
-      return {
-        A:+A.value, B:+B.value,
-        C:+C.value, D:+D.value
-      };
+      return { sd:+sd.value, td:+td.value, ss:+ss.value, ts:+ts.value };
     }
 
     // 축 후보 계산
-    function fitAxes(A,B,C,D){
-      // 대표 교차/절편
-      const chokeP = (B>0)? (A/B) : 0;        // 수요 P-절편
-      const minP   = (D>0)? (-C/D) : 0;       // 공급 P-절편
-      const denom  = (B + D);
-      const pStar  = (denom!==0)? (A - C)/denom : 0;
-      const qStar  = A - B*pStar;
+    function fitAxes(sd,td,ss,ts){
+      // 가격 절편(수요의 choke price, 공급의 최소가격)
+      const Pchoke = (sd!==0)? (-td/sd) : NaN;
+      const Pmin   = (ss!==0)? (-ts/ss) : NaN;
 
-      const qAtP0d = A;          // 수요 P=0에서 Q
-      const qAtP0s = C;          // 공급 P=0에서 Q
+      // 균형
+      const denom  = (ss - sd);
+      const pStar  = (denom!==0)? (td - ts)/denom : 0;
+      const qStar  = (denom!==0)? (sd*pStar + td) : 0;
 
-      const QmaxCandidate = Math.max(0, qAtP0d, qAtP0s, qStar);
-      const PmaxCandidate = Math.max(0, chokeP, minP, pStar);
-
-      BASE_QMAX = (QmaxCandidate>0? QmaxCandidate*1.25 : 1);
+      // P 최댓값 후보
+      const PmaxCandidate = Math.max(
+        0,
+        Number.isFinite(Pchoke)? Pchoke : 0,
+        Number.isFinite(Pmin)?   Pmin   : 0,
+        Number.isFinite(pStar)?  pStar  : 0
+      );
       BASE_PMAX = (PmaxCandidate>0? PmaxCandidate*1.25 : 1);
+
+      // Q 최댓값 후보: P=0과 P=Pmax에서의 Q들 + q*
+      const Qd0 = td, Qs0 = ts;
+      const QdPmax = sd*BASE_PMAX + td, QsPmax = ss*BASE_PMAX + ts;
+
+      const QmaxCandidate = Math.max(
+        0,
+        Number.isFinite(Qd0)?Qd0:0, Number.isFinite(Qs0)?Qs0:0,
+        Number.isFinite(QdPmax)?QdPmax:0, Number.isFinite(QsPmax)?QsPmax:0,
+        Number.isFinite(qStar)?qStar:0
+      );
+      BASE_QMAX = (QmaxCandidate>0? QmaxCandidate*1.25 : 1);
     }
 
-    // 차트 생성
+    // 차트
     let sdcChart;
     function createChart(){
       const ctx = document.getElementById('sdcChart').getContext('2d');
       sdcChart = new Chart(ctx,{
         type:'line',
         data:{ datasets:[
-          // 0: 수요 전체(Q = A - B·P → (x=Q, y=P))
-          { label:'수요', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
-          // 1: 공급 전체(Q = C + D·P)
-          { label:'공급', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
+          // 0: 수요 전체 (P∈[0,Pmax] 샘플링, (x=Q, y=P))
+          { label:'수요', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false },
+          // 1: 공급 전체
+          { label:'공급', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false },
 
-          // 2: CS 기준선(수평선: P=P*, x∈[0,Q*]) — 숨김선
+          // 2: CS 기준선 (P=P*, x∈[0,Q*]) — 숨김
           { label:'CS-Base', data:[], borderColor:'transparent', backgroundColor:'transparent', pointRadius:0, borderWidth:0, parsing:false, fill:false },
           // 3: 소비자잉여 (수요 세그먼트, fill: 이전 데이터셋)
-          { label:'소비자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(C_PRIMARY, 0.22), pointRadius:0, tension:0, parsing:false, fill:{ target:2 } },
+          { label:'소비자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(C_PRIMARY,0.22),
+            pointRadius:0, tension:0, parsing:false, fill:{ target:2 } },
 
-          // 4: PS 기준선(수평선: P=P*, x∈[0,Q*]) — 숨김선
+          // 4: PS 기준선 (P=P*, x∈[0,Q*]) — 숨김
           { label:'PS-Base', data:[], borderColor:'transparent', backgroundColor:'transparent', pointRadius:0, borderWidth:0, parsing:false, fill:false },
           // 5: 생산자잉여 (공급 세그먼트, fill: 이전 데이터셋)
-          { label:'생산자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(C_TEXT, 0.18), pointRadius:0, tension:0, parsing:false, fill:{ target:4 } },
+          { label:'생산자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(C_TEXT,0.18),
+            pointRadius:0, tension:0, parsing:false, fill:{ target:4 } },
 
-          // 6: 균형점 (산점)
+          // 6: 균형점
           { label:'균형점', data:[], parsing:false, showLine:false, pointRadius:4, pointHoverRadius:5,
             pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:0, type:'scatter' },
 
-          // 7: 수직 투영(Q*) — 점선
-          { label:'Q* 투영', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
-          // 8: 수평 투영(P*) — 점선
-          { label:'P* 투영', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
+          // 7: 투영선(Q*)
+          { label:'Q* 투영', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
+          // 8: 투영선(P*)
+          { label:'P* 투영', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
         ]},
         options:{
           responsive:true,
@@ -228,86 +230,93 @@
             x:{ type:'linear', title:{display:true,text:'Q (수량)'}, grid:{ color:C_MUTED }, min:0, max:BASE_QMAX },
             y:{ type:'linear', title:{display:true,text:'P (가격)'}, grid:{ color:C_MUTED }, min:0, max:BASE_PMAX }
           },
-          plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } }
+          plugins:{
+            legend:{
+              display:true,
+              labels:{ filter:(item)=> item.text!=='CS-Base' && item.text!=='PS-Base' }
+            },
+            tooltip:{ mode:'nearest', intersect:false }
+          }
         }
       });
     }
 
-    // 선 그리기용 샘플링: P∈[0, Pmax] → (Q, P)
-    function sampleLineQP(fnQofP, Pmax, N=240){
+    // 선 샘플링: P∈[0,Pmax] → (Q,P)
+    function sampleLineQP(qOfP, Pmax, N=240){
       const arr=[];
       for(let i=0;i<=N;i++){
         const t=i/N, P=t*Pmax;
-        const Q=fnQofP(P);
-        if(Number.isFinite(Q) && Q>=0) arr.push({x:Q, y:P});
+        const Q=qOfP(P);
+        if(Number.isFinite(Q)) arr.push({x:Q, y:P}); // 음수 Q도 허용(뷰포트 밖은 차트가 클리핑)
       }
       return arr;
     }
 
-    // 잉여 세그먼트: x∈[0,Q*]에서 선분 정의
-    function segmentBetween(fnPofQ, QmaxSeg, N=100){
+    // 잉여 세그먼트: Q∈[0,Q*]에서 P(Q)
+    // ※ 음수 P도 포함해 생성 (뷰포트가 알아서 클리핑) → PS가 정확히 채워짐
+    function segment_PofQ(PofQ, QmaxSeg, N=100){
       const arr=[];
       for(let i=0;i<=N;i++){
         const t=i/N, Q=t*QmaxSeg;
-        const P=fnPofQ(Q);
-        if(Number.isFinite(P) && P>=0) arr.push({x:Q, y:P});
+        const P=PofQ(Q);
+        if(Number.isFinite(P)) arr.push({x:Q, y:P});
       }
       return arr;
     }
 
     function recomputeAndDraw({fit=false}={}){
-      const {A:AA,B:BB,C:CC,D:DD} = params();
+      const {sd:SD, td:TD, ss:SS, ts:TS} = params();
 
-      // 검증
-      let warn='';
-      if(!(BB>0)) warn+=' B>0 이어야 합니다. ';
-      if(!(DD>0)) warn+=' D>0 이어야 합니다. ';
-      const denom = (BB + DD);
-      if(denom===0) warn+=' 수요/공급 기울기의 합이 0이면 균형이 정의되지 않습니다. ';
-      statusMsg.textContent = warn.trim();
+      // 검증/안내
+      let warn=[];
+      if(!(SD<0)) warn.push('수요 기울기 s_d는 보통 음수입니다.');
+      if(!(SS>0)) warn.push('공급 기울기 s_s는 보통 양수입니다.');
+      const denom = (SS - SD);
+      if(denom===0) warn.push('s_s - s_d = 0이면 균형이 정의되지 않습니다.');
+      statusMsg.textContent = warn.join(' ');
 
       // 균형
-      const pStar = (denom!==0)? (AA - CC)/denom : NaN;
-      const qStar = (denom!==0)? (AA - BB*pStar) : NaN;
+      const pStar = (denom!==0)? (TD - TS)/denom : NaN;
+      const qStar = (denom!==0)? (SD*pStar + TD) : NaN;
 
       // 축 재설정
-      if(fit){ fitAxes(AA,BB,CC,DD); }
+      if(fit){ fitAxes(SD,TD,SS,TS); }
       sdcChart.options.scales.x.max = BASE_QMAX;
       sdcChart.options.scales.y.max = BASE_PMAX;
 
       // 전체 라인
-      const demandAll = sampleLineQP(P=>AA - BB*P, BASE_PMAX);
-      const supplyAll = sampleLineQP(P=>CC + DD*P, BASE_PMAX);
+      const demandAll = sampleLineQP(P=>SD*P + TD, BASE_PMAX);
+      const supplyAll = sampleLineQP(P=>SS*P + TS, BASE_PMAX);
 
-      // 잉여 및 기준선 세그먼트 (유효할 때만)
+      // 잉여 및 보조요소
       let csBase=[], csSeg=[], psBase=[], psSeg=[], eqPt=[], vProj=[], hProj=[];
       let CS=NaN, PS=NaN;
 
-      const valid = Number.isFinite(pStar) && Number.isFinite(qStar) && (pStar>=0) && (qStar>=0) && BB>0 && DD>0;
+      const valid = Number.isFinite(pStar) && Number.isFinite(qStar) && (pStar>=0) && (qStar>=0);
 
       if(valid){
-        // P(Q) 형태
-        const Pd = (Q)=> (AA - Q)/BB;   // 수요의 역함수
-        const Ps = (Q)=> (Q - CC)/DD;   // 공급의 역함수
+        // 역함수 P(Q)
+        const Pd = (Q)=> (SD!==0)? ((Q - TD)/SD) : NaN;  // 수요
+        const Ps = (Q)=> (SS!==0)? ((Q - TS)/SS) : NaN;  // 공급
 
-        // 기준선: P=P* @ [0, Q*]
+        // 기준선: P=P* @ [0,Q*]
         csBase = [{x:0, y:pStar}, {x:qStar, y:pStar}];
         psBase = csBase.slice();
 
-        // 세그먼트: [0, Q*]
-        csSeg = segmentBetween(Pd, qStar);
-        psSeg = segmentBetween(Ps, qStar);
+        // 세그먼트: [0,Q*] 전체(음수 P도 허용)
+        csSeg = segment_PofQ(Pd, qStar);
+        psSeg = segment_PofQ(Ps, qStar);
 
-        // 투영선 & 점
+        // 투영선 & 균형점
         eqPt = [{x:qStar, y:pStar}];
         vProj = [{x:qStar, y:0}, {x:qStar, y:pStar}];
         hProj = [{x:0, y:pStar}, {x:qStar, y:pStar}];
 
-        // 잉여 계산
-        const chokeP = (BB>0)? (AA/BB) : NaN;       // 수요 P절편
-        const minP   = (DD>0)? (-CC/DD) : NaN;      // 공급 P절편
-        CS = 0.5 * Math.max(0, chokeP - pStar) * qStar;
-        PS = 0.5 * Math.max(0, pStar - minP) * qStar;
+        // 잉여 계산(일반식)
+        const Pchoke = (SD!==0)? (-TD/SD) : NaN;
+        const Pmin   = (SS!==0)? (-TS/SS) : NaN;
+        CS = 0.5 * Math.max(0, (Pchoke - pStar)) * qStar;
+        PS = 0.5 * Math.max(0, (pStar - Pmin)) * qStar;
       }
 
       // 차트 반영
@@ -335,7 +344,7 @@
     }
 
     // 바인딩
-    [A,B,C,D].forEach(inp=>{
+    [sd,td,ss,ts].forEach(inp=>{
       inp.addEventListener('input', ()=>recomputeAndDraw());
       inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); recomputeAndDraw(); } });
     });
@@ -344,7 +353,8 @@
     // 초기화
     document.addEventListener('DOMContentLoaded', ()=>{
       loadColors();
-      fitAxes(+A.value, +B.value, +C.value, +D.value);
+      const p = params();
+      fitAxes(p.sd,p.td,p.ss,p.ts);
       createChart();
       recomputeAndDraw({fit:true});
       const y = document.querySelector('#year'); if(y) y.textContent = new Date().getFullYear();
@@ -352,4 +362,3 @@
   </script>
 </body>
 </html>
-
