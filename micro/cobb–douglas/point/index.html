@@ -184,25 +184,6 @@
       <p id="statusMsg" class="muted" aria-live="polite"></p>
       <p class="muted" id="t-internal-solution">내부해(α,β&gt;0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp; y*=(β/(α+β))·M/p<sub>y</sub></em></p>
     </section>
-
-    <!-- (3) 차트 카드: 초기 그리기 이후에만 표시 -->
-    <section class="card" id="chart-card" hidden aria-labelledby="t-chart-title">
-      <h2 id="t-chart-title">예산선 · 무차별곡선(U*) · 최적점</h2>
-
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <div class="legend" aria-hidden="true">
-          <span class="badge"><span class="swatch" style="background:var(--text)"></span><span id="t-legend-budget">예산선</span></span>
-          <span class="badge"><span class="swatch" style="background:var(--primary)"></span><span id="t-legend-curve">무차별곡선(U*)</span></span>
-          <span class="badge"><span class="swatch" style="background:var(--primary)"></span><span id="t-legend-opt">최적점 &amp; 투영</span></span>
-        </div>
-      </div>
-
-      <div class="chart-wrap">
-        <canvas id="cdChart" aria-label="예산선과 무차별곡선, 최적점"></canvas>
-      </div>
-
-      <p class="muted" id="t-curve-formula" style="margin-top:8px;">무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
-    </section>
   </main>
 
   <footer class="site-footer">
@@ -349,7 +330,6 @@
     }
 
     // ===== 안전한 사칙연산 파서 (셔닝야드) — 분수/표현식 지원 =====
-    // 지원: + - ×(x/·) * ÷ /, (), 소수, 분수, 공백/유니코드 기호
     function evalExpr(raw){
       if(typeof raw!=='string') return NaN;
       let s = raw.trim();
@@ -368,7 +348,7 @@
           tokens.push(s.slice(i,j)); prev='n'; i=j; continue;
         }
         if('+-*/()'.includes(c)){ tokens.push(c); prev=c; i++; continue; }
-        return NaN; // 허용되지 않은 문자
+        return NaN;
       }
       const out=[], op=[], prec={'+':1,'-':1,'*':2,'/':2};
       for(const t of tokens){
@@ -428,6 +408,16 @@
     const riA=$('#ri-alpha'), riB=$('#ri-beta'), riPx=$('#ri-px'), riPy=$('#ri-py'), riM=$('#ri-M');
     const applyReinit=$('#applyReinit'), cancelReinit=$('#cancelReinit');
 
+    // 사용자 표현(문자열) 유지용
+    const lastExpr = { a:'', b:'', px:'', py:'', M:'' };
+    function applyExprToNumberInputs(){
+      if(alphaN){ alphaN.value = lastExpr.a || (+alphaR.value).toFixed(2); alphaN.dataset.mode='expr'; alphaN.classList.remove('invalid'); }
+      if(betaN ){ betaN.value  = lastExpr.b || (+betaR.value).toFixed(2);  betaN.dataset.mode='expr';  betaN.classList.remove('invalid'); }
+      if(pxN   ){ pxN.value    = lastExpr.px|| (+pxR.value).toFixed(2);    pxN.dataset.mode='expr';    pxN.classList.remove('invalid'); }
+      if(pyN   ){ pyN.value    = lastExpr.py|| (+pyR.value).toFixed(2);    pyN.dataset.mode='expr';    pyN.classList.remove('invalid'); }
+      if(mN    ){ mN.value     = lastExpr.M || (+mR.value).toFixed(0);     mN.dataset.mode='expr';     mN.classList.remove('invalid'); }
+    }
+
     // CSS 변수 -> 실제 색상값
     function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
     let C_TEXT, C_PRIMARY, C_MUTED;
@@ -441,11 +431,11 @@
       if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–';
       return (+v).toFixed(d);
     }
-    function setRange(rangeEl, numberEl, {min, max, step, value, decimals=2}){
+    // 숫자 슬라이더 범위만 설정(텍스트 칸은 건드리지 않음)
+    function setRange(rangeEl, _numberEl_unused, {min, max, step, value, decimals=2}){
       if(min===max){ max = min + (Math.abs(min)||1); }
       if(min>max){ const t=min; min=max; max=t; }
       rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+(+value).toFixed(decimals);
-      if(numberEl){ numberEl.value=+(+value).toFixed(decimals); numberEl.classList.remove('invalid'); }
     }
 
     // 현재 파라미터(슬라이더 기준)
@@ -457,13 +447,14 @@
       const M =+mR.value;
       return {a,b,px,py,M};
     }
+    // 화면 표시(텍스트 칸은 건드리지 않음)
     function syncUI(){
       const {a,b,px,py,M}=params();
-      alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2); if(alphaN) alphaN.value=isNaN(a)?'':(+a).toFixed(2);
-      betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);  if(betaN)  betaN.value =isNaN(b)?'':(+b).toFixed(2);
-      pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2); if(pxN)    pxN.value  =isNaN(px)?'':(+px).toFixed(2);
-      pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2); if(pyN)    pyN.value  =isNaN(py)?'':(+py).toFixed(2);
-      mVal    .textContent=isNaN(M)?'–':(+M).toFixed(0);   if(mN)     mN.value   =isNaN(M)?'':(+M).toFixed(0);
+      alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2);
+      betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);
+      pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2);
+      pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2);
+      mVal    .textContent=isNaN(M)?'–':(+M).toFixed(0);
     }
 
     // 차트
@@ -585,22 +576,27 @@
       }
     }
 
+    // 슬라이더-텍스트 상호작용
     function bindPair(rangeEl, numberEl, decimals, onChange){
-      // 슬라이더 → 숫자칸(표현식 칸은 결과 수치로 동기화)
+      // 슬라이더 → 텍스트(소수 표기)
       rangeEl.addEventListener('input', ()=>{
-        if(numberEl){ numberEl.value=(+rangeEl.value).toFixed(decimals); numberEl.classList.remove('invalid'); }
+        if(numberEl){
+          numberEl.value=(+rangeEl.value).toFixed(decimals);
+          numberEl.dataset.mode='decimal';
+          numberEl.classList.remove('invalid');
+        }
         onChange();
       });
-      // 숫자칸(표현식) → 슬라이더
+      // 텍스트(표현식) → 슬라이더(커밋)
       const commitFromText = ()=>{
         const v = evalExpr(numberEl.value);
         if(!Number.isFinite(v)){ numberEl.classList.add('invalid'); return; }
         numberEl.classList.remove('invalid');
-        // 범위를 벗어나면 가장자리로 클램프
         const min=+rangeEl.min, max=+rangeEl.max;
         const vv = Math.min(Math.max(v, min), max);
         rangeEl.value = vv.toFixed(decimals);
-        numberEl.value = vv.toFixed(decimals);
+        // 사용자가 직접 입력했으므로 표현을 그대로 유지
+        numberEl.dataset.mode='expr';
         onChange();
       };
       numberEl.addEventListener('change', commitFromText);
@@ -610,11 +606,11 @@
     // 슬라이더 범위 생성 헬퍼
     function setAroundAlphaBeta(rangeEl, numberEl, base){
       const span = Math.max(0.2, Math.abs(base)*0.2); // ±20% (최소 폭 0.2)
-      setRange(rangeEl, numberEl, { min: base - span, max: base + span, step: 0.01, value: base, decimals: 2 });
+      setRange(rangeEl, null, { min: base - span, max: base + span, step: 0.01, value: base, decimals: 2 });
     }
     function setAroundPriceOrIncome(rangeEl, numberEl, base, decimals, step){
       const span = Math.max((Math.abs(base)||1)*0.5, 1); // 기준 ±50%, 최소 폭 1
-      setRange(rangeEl, numberEl, { min: base - span, max: base + span, step, value: base, decimals });
+      setRange(rangeEl, null, { min: base - span, max: base + span, step, value: base, decimals });
     }
 
     // 초기값 제출 → 슬라이더 범위/축 고정/차트 생성
@@ -655,6 +651,8 @@
       ctlCard.hidden = false;
       chartCard.hidden = false;
       recomputeAndDraw({fitAxes:true});
+      // 5) 사용자 표현(분수 등) 그대로 보여주기
+      applyExprToNumberInputs();
     }
 
     // 초기 그리기 버튼: 표현식 파싱 후 적용
@@ -664,12 +662,18 @@
       const px0 = parseInput(iPx);
       const py0 = parseInput(iPy);
       const M0  = parseInput(iM);
-
       if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))){
         initStatus.textContent = '표현식을 올바르게 입력해주세요.';
         return;
       }
       initStatus.textContent = '';
+      // 사용자 입력 문자열 저장
+      lastExpr.a  = iA.value.trim();
+      lastExpr.b  = iB.value.trim();
+      lastExpr.px = iPx.value.trim();
+      lastExpr.py = iPy.value.trim();
+      lastExpr.M  = iM.value.trim();
+
       applyInitial(a0,b0,px0,py0,M0);
     });
 
@@ -693,6 +697,14 @@
       const py0 = parseInput(riPy);
       const M0  = parseInput(riM);
       if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))) return;
+
+      // 사용자가 재입력한 표현 그대로 저장
+      lastExpr.a  = riA.value.trim();
+      lastExpr.b  = riB.value.trim();
+      lastExpr.px = riPx.value.trim();
+      lastExpr.py = riPy.value.trim();
+      lastExpr.M  = riM.value.trim();
+
       applyInitial(a0,b0,px0,py0,M0);
       reinitBox.open = false;
     });
