@@ -12,6 +12,11 @@
 
   <!-- 공통 리소스: 상대경로 필수 -->
   <link rel="stylesheet" href="../../assets/style.css" />
+
+  <!-- 카드 숨김용 간단 스타일(완전 제거) -->
+  <style>
+    .is-hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -29,19 +34,20 @@
       <p>아래 카드에서 세부 주제로 이동하세요.</p>
     </section>
 
-    <a class="card" href="point/" aria-label="최적선택점으로 이동">
+    <!-- 하위 주제 카드들: data-section 부여 -->
+    <a class="card" href="point/" data-section="point" aria-label="최적선택점으로 이동">
       <div class="emoji" aria-hidden="true">🎯</div>
       <h2>최적선택점</h2>
       <p>예산선과 무차별곡선이 접하는 효율적 선택</p>
     </a>
 
-    <a class="card" href="icc/" aria-label="소득소비곡선으로 이동">
+    <a class="card" href="icc/" data-section="icc" aria-label="소득소비곡선으로 이동">
       <div class="emoji" aria-hidden="true">💸</div>
       <h2>소득소비곡선 (ICC)</h2>
       <p>소득 변화에 따른 최적 소비 조합의 궤적</p>
     </a>
 
-    <a class="card" href="pcc/" aria-label="가격소비곡선으로 이동">
+    <a class="card" href="pcc/" data-section="pcc" aria-label="가격소비곡선으로 이동">
       <div class="emoji" aria-hidden="true">🏷️</div>
       <h2>가격소비곡선 (PCC)</h2>
       <p>한 재화의 가격 변화에 따른 최적 조합</p>
@@ -54,10 +60,30 @@
     <small>© <span id="year"></span> aries0401-svc</small>
   </footer>
 
+  <!-- ✅ 하위 주제 가시성 토글: true면 보임, false면 숨김 -->
+  <script>
+    /* 🔧 여기에서 true/false만 바꾸세요 */
+    window.SECTION_VISIBILITY = {
+      point: true, // 최적선택점
+      icc:   true, // 소득소비곡선
+      pcc:   true  // 가격소비곡선
+    };
+
+    // 렌더 직후 적용: false인 카드를 완전히 숨김(시각/키보드 접근 차단)
+    (function () {
+      var flags = window.SECTION_VISIBILITY || {};
+      var cards = document.querySelectorAll('[data-section]');
+      cards.forEach(function(card){
+        var key = card.getAttribute('data-section');
+        if (flags[key] === false) {
+          card.classList.add('is-hidden');
+          card.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+  </script>
+
   <!-- 공통 스크립트: 상대경로 + 지연 로드 -->
   <script src="../../assets/site.js" defer></script>
-  <script>
-    // ====== Cobb–Douglas 인덱스: 페이지 전용 스크립트(현재 필요 없음) ======
-  </script>
 </body>
 </html>
