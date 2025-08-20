@@ -23,7 +23,7 @@
     select option{background:var(--panel);color:var(--text)}
     @media (prefers-color-scheme: light){ select option{background:#fff;color:#0f172a} }
 
-    /* p-value 박스를 항상 오른쪽 첫 줄에 고정 */
+    /* p-value 박스를 항상 왼쪽에 고정 */
     .stat{
       min-width:240px; width:280px; flex:0 0 280px;
       order:99; margin-right:auto;
@@ -41,8 +41,8 @@
 </head>
 <body>
   <header class="site-header">
-    <h1>t-분포 시각화</h1>
-    <p class="subtitle">스튜던트 t (자유도 ν) · 신뢰구간 표식(선/화살표) · p-value 계산</p>
+    <h1>t-분포</h1>
+    <p class="subtitle">t-분포의 p-value 계산</p>
   </header>
 
   <main class="grid" style="grid-template-columns:1fr;">
@@ -78,10 +78,6 @@
 
       <!-- 그래프 -->
       <canvas id="chart" height="120"></canvas>
-
-      <div class="hint">
-        ※ CDF는 정규화 불완전 베타함수(연분수; Lentz) 기반, PDF는 Γ함수(Lanczos) 기반으로 계산합니다.
-      </div>
     </section>
   </main>
 
