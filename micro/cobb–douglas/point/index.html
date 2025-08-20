@@ -58,8 +58,8 @@
 </head>
 <body>
   <header class="site-header">
-    <h1 id="t-siteTitle">최적선택점</h1>
-    <p class="subtitle" id="t-siteSubtitle">U(x,y)=x^α·y^β, 예산: pₓx + pᵧy = M</p>
+    <h1>최적선택점</h1>
+    <p class="subtitle">U(x,y)=x^α·y^β, 예산: pₓx + pᵧy = M</p>
   </header>
 
   <main class="grid">
@@ -67,27 +67,27 @@
     <section class="card controls" id="init-card" aria-labelledby="init-title">
       <h2 id="init-title">초기값 입력 후 그리기 (분수/표현식 가능)</h2>
       <div class="row">
-        <label id="t-i-alpha" for="i-alpha">α (x의 지수)</label>
+        <label for="i-alpha">α (x의 지수)</label>
         <input id="i-alpha" type="text" inputmode="text" value="1/2" placeholder="예: 1/2, 0.5">
       </div>
       <div class="row">
-        <label id="t-i-beta" for="i-beta">β (y의 지수)</label>
+        <label for="i-beta">β (y의 지수)</label>
         <input id="i-beta" type="text" inputmode="text" value="1/2" placeholder="예: 1/2, 0.5">
       </div>
       <div class="row">
-        <label id="t-i-px" for="i-px">가격 p<sub>x</sub></label>
+        <label for="i-px">가격 p<sub>x</sub></label>
         <input id="i-px" type="text" inputmode="text" value="1" placeholder="예: 1, 3/2">
       </div>
       <div class="row">
-        <label id="t-i-py" for="i-py">가격 p<sub>y</sub></label>
+        <label for="i-py">가격 p<sub>y</sub></label>
         <input id="i-py" type="text" inputmode="text" value="1" placeholder="예: 1, 1/3">
       </div>
       <div class="row">
-        <label id="t-i-M" for="i-M">소득 M</label>
+        <label for="i-M">소득 M</label>
         <input id="i-M" type="text" inputmode="text" value="60" placeholder="예: 60, 120/2">
       </div>
       <button id="drawBtn" style="margin-top:.5rem;">그리기</button>
-      <p class="muted" id="t-init-note" style="margin-top:6px;">※ 그리기 후에 각 값 주변 범위로 슬라이더가 자동 생성됩니다. 분수/표현식 입력 가능.</p>
+      <p class="muted" style="margin-top:6px;">※ 그리기 후에 각 값 주변 범위로 슬라이더가 자동 생성됩니다. 분수/표현식 입력 가능.</p>
       <p class="muted" id="initStatus" aria-live="polite"></p>
     </section>
 
@@ -96,104 +96,104 @@
       <h2 id="ctl-title">값 조정</h2>
 
       <div class="row">
-        <label id="t-alpha" for="alpha">α (x의 지수)</label>
+        <label for="alpha">α (x의 지수)</label>
         <input id="alpha" type="range">
       </div>
       <div class="row">
-        <span id="alpha-v"><strong id="t-alpha-cur">α = <span id="alphaVal">–</span></strong></span>
+        <span><strong>α = <span id="alphaVal">–</span></strong></span>
         <input id="alphaNum" type="text" inputmode="text" placeholder="예: 1/2">
       </div>
 
       <div class="row">
-        <label id="t-beta" for="beta">β (y의 지수)</label>
+        <label for="beta">β (y의 지수)</label>
         <input id="beta" type="range">
       </div>
       <div class="row">
-        <span id="beta-v"><strong id="t-beta-cur">β = <span id="betaVal">–</span></strong></span>
+        <span><strong>β = <span id="betaVal">–</span></strong></span>
         <input id="betaNum" type="text" inputmode="text" placeholder="예: 3/5">
       </div>
 
       <div class="row">
-        <label id="t-px" for="px">가격 p<sub>x</sub></label>
+        <label for="px">가격 p<sub>x</sub></label>
         <input id="px" type="range">
       </div>
       <div class="row">
-        <span><strong id="t-px-cur">p<sub>x</sub> = <span id="pxVal">–</span></strong></span>
+        <span><strong>p<sub>x</sub> = <span id="pxVal">–</span></strong></span>
         <input id="pxNum" type="text" inputmode="text" placeholder="예: 3/2">
       </div>
 
       <div class="row">
-        <label id="t-py" for="py">가격 p<sub>y</sub></label>
+        <label for="py">가격 p<sub>y</sub></label>
         <input id="py" type="range">
       </div>
       <div class="row">
-        <span><strong id="t-py-cur">p<sub>y</sub> = <span id="pyVal">–</span></strong></span>
+        <span><strong>p<sub>y</sub> = <span id="pyVal">–</span></strong></span>
         <input id="pyNum" type="text" inputmode="text" placeholder="예: 1/3">
       </div>
 
       <div class="row">
-        <label id="t-M" for="M">소득 M</label>
+        <label for="M">소득 M</label>
         <input id="M" type="range">
       </div>
       <div class="row">
-        <span><strong id="t-M-cur">M = <span id="MVal">–</span></strong></span>
+        <span><strong>M = <span id="MVal">–</span></strong></span>
         <input id="MNum" type="text" inputmode="text" placeholder="예: 120/2">
       </div>
 
       <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem;">
         <button id="refitBtn" title="현재 값 기준으로 축 범위를 다시 맞춥니다.">축 재설정</button>
-        <span class="muted" id="t-axes-note">가격·소득을 바꿔도 축은 고정되고, 예산선이 실제로 회전/이동합니다.</span>
+        <span class="muted">가격·소득을 바꿔도 축은 고정되고, 예산선이 실제로 회전/이동합니다.</span>
       </div>
 
       <!-- (2-1) 파라미터 재입력 칸 (분수/표현식 가능) -->
       <details class="reinit" id="reinitBox">
-        <summary id="t-reinit-title">파라미터 재입력</summary>
+        <summary>파라미터 재입력</summary>
         <div class="subgrid">
-          <label id="t-ri-alpha" for="ri-alpha">α (새 기준)</label>
+          <label for="ri-alpha">α (새 기준)</label>
           <input id="ri-alpha" type="text" inputmode="text" placeholder="예: 1/2">
         </div>
         <div class="subgrid">
-          <label id="t-ri-beta" for="ri-beta">β (새 기준)</label>
+          <label for="ri-beta">β (새 기준)</label>
           <input id="ri-beta" type="text" inputmode="text" placeholder="예: 3/5">
         </div>
         <div class="subgrid">
-          <label id="t-ri-px" for="ri-px">p<sub>x</sub> (새 기준)</label>
+          <label for="ri-px">p<sub>x</sub> (새 기준)</label>
           <input id="ri-px" type="text" inputmode="text" placeholder="예: 3/2">
         </div>
         <div class="subgrid">
-          <label id="t-ri-py" for="ri-py">p<sub>y</sub> (새 기준)</label>
+          <label for="ri-py">p<sub>y</sub> (새 기준)</label>
           <input id="ri-py" type="text" inputmode="text" placeholder="예: 1/3">
         </div>
         <div class="subgrid">
-          <label id="t-ri-M" for="ri-M">M (새 기준)</label>
+          <label for="ri-M">M (새 기준)</label>
           <input id="ri-M" type="text" inputmode="text" placeholder="예: 120/2">
         </div>
         <div style="margin-top:.5rem; display:flex; gap:.5rem;">
           <button id="applyReinit">적용</button>
           <button type="button" id="cancelReinit">취소</button>
         </div>
-        <p class="muted" id="t-reinit-note" style="margin-top:.25rem;">적용 시 슬라이더 범위와 축이 새 기준으로 재설정됩니다.</p>
+        <p class="muted" style="margin-top:.25rem;">적용 시 슬라이더 범위와 축이 새 기준으로 재설정됩니다.</p>
       </details>
 
       <dl class="nums" aria-live="polite" style="margin-top:.5rem;">
-        <dt id="t-xStarLabel">x* (최적)</dt><dd id="xStar">–</dd>
-        <dt id="t-yStarLabel">y* (최적)</dt><dd id="yStar">–</dd>
-        <dt id="t-xIntLabel">x절편 (M/p<sub>x</sub>)</dt><dd id="xInt">–</dd>
-        <dt id="t-yIntLabel">y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">–</dd>
+        <dt>x* (최적)</dt><dd id="xStar">–</dd>
+        <dt>y* (최적)</dt><dd id="yStar">–</dd>
+        <dt>x절편 (M/p<sub>x</sub>)</dt><dd id="xInt">–</dd>
+        <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">–</dd>
       </dl>
       <p id="statusMsg" class="muted" aria-live="polite"></p>
-      <p class="muted" id="t-internal-solution">내부해(α,β&gt;0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp; y*=(β/(α+β))·M/p<sub>y</sub></em></p>
+      <p class="muted">내부해(α,β&gt;0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp; y*=(β/(α+β))·M/p<sub>y</sub></em></p>
     </section>
 
     <!-- (3) 차트 카드: 초기 그리기 이후에만 표시 -->
-    <section class="card" id="chart-card" hidden aria-labelledby="t-chart-title">
-      <h2 id="t-chart-title">예산선 · 무차별곡선(U*) · 최적점</h2>
+    <section class="card" id="chart-card" hidden aria-labelledby="chart-title">
+      <h2 id="chart-title">예산선 · 무차별곡선(U*) · 최적점</h2>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <div class="legend" aria-hidden="true">
-          <span class="badge"><span class="swatch" style="background:var(--text)"></span><span id="t-legend-budget">예산선</span></span>
-          <span class="badge"><span class="swatch" style="background:var(--primary)"></span><span id="t-legend-curve">무차별곡선(U*)</span></span>
-          <span class="badge"><span class="swatch" style="background:var(--primary)"></span><span id="t-legend-opt">최적점 &amp; 투영</span></span>
+          <span class="badge"><span class="swatch" style="background:var(--text)"></span>예산선</span>
+          <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선(U*)</span>
+          <span class="badge"><span class="swatch" style="background:var(--primary)"></span>최적점 &amp; 투영</span>
         </div>
       </div>
 
@@ -201,13 +201,13 @@
         <canvas id="cdChart" aria-label="예산선과 무차별곡선, 최적점"></canvas>
       </div>
 
-      <p class="muted" id="t-curve-formula" style="margin-top:8px;">무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
+      <p class="muted" style="margin-top:8px;">무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
     </section>
   </main>
 
   <footer class="site-footer">
-    <a class="card" id="t-back" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
-    <a class="card" id="t-home" href="../../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
     <small>© <span id="year"></span> aries0401-svc</small>
   </footer>
 
@@ -216,92 +216,17 @@
 
   <!-- 페이지 전용 스크립트 -->
   <script>
-    // ===== 문구 한곳에 모으기 (여기만 고치면 됨) =====
-    const TXT = {
-      meta: {
-        title: '최적선택점 | Cobb–Douglas',
-        description: 'Cobb–Douglas U(x,y)=x^α·y^β에서 α,β·가격·소득을 조절하며 최적선택점을 시각화합니다. 분수/표현식 입력 지원.'
-      },
-      header: { siteTitle: '최적선택점', subtitle: 'U(x,y)=x^α·y^β, 예산: pₓx + pᵧy = M' },
-      init: {
-        title: '초기값 입력 후 그리기 (분수/표현식 가능)',
-        alpha: 'α (x의 지수)', beta: 'β (y의 지수)', px: '가격 p<sub>x</sub>', py: '가격 p<sub>y</sub>', M: '소득 M',
-        draw: '그리기', note: '※ 그리기 후에 각 값 주변 범위로 슬라이더가 자동 생성됩니다. 분수/표현식 입력 가능.'
-      },
-      controls: {
-        title: '값 조정',
-        alpha: 'α (x의 지수)', alphaCur: 'α = ', beta: 'β (y의 지수)', betaCur: 'β = ',
-        px: '가격 p<sub>x</sub>', pxCur: 'p<sub>x</sub> = ', py: '가격 p<sub>y</sub>', pyCur: 'p<sub>y</sub> = ',
-        M: '소득 M', MCur: 'M = ',
-        refit: { label: '축 재설정', title: '현재 값 기준으로 축 범위를 다시 맞춥니다.' },
-        axesNote: '가격·소득을 바꿔도 축은 고정되고, 예산선이 실제로 회전/이동합니다.',
-        reinit: {
-          title: '파라미터 재입력',
-          alpha: 'α (새 기준)', beta: 'β (새 기준)',
-          px: 'p<sub>x</sub> (새 기준)', py: 'p<sub>y</sub> (새 기준)', M: 'M (새 기준)',
-          apply: '적용', cancel:'취소', note: '적용 시 슬라이더 범위와 축이 새 기준으로 재설정됩니다.'
-        },
-        nums: { xStar: 'x* (최적)', yStar: 'y* (최적)', xInt: 'x절편 (M/p<sub>x</sub>)', yInt: 'y절편 (M/p<sub>y</sub>)' },
-        internalSolution: '내부해(α,β>0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp; y*=(β/(α+β))·M/p<sub>y</sub></em>',
-        msg: { noBudget: 'pₓ=0, pᵧ=0이면 예산선이 정의되지 않습니다.', noInterior: '참고: 내부해는 α>0, β>0, α+β>0일 때만 정의됩니다. 현재는 예산선만 표시합니다.' }
-      },
-      chart: {
-        title: '예산선 · 무차별곡선(U*) · 최적점',
-        legend: { budget: '예산선', curve: '무차별곡선(U*)', opt: '최적점 & 투영' },
-        aria: '예산선과 무차별곡선, 최적점', axisX: 'x', axisY: 'y',
-        formula: '무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em>'
-      },
-      footer: { back: '← 이전으로', home: '← 처음으로' }
-    };
-
-    // ===== 텍스트 적용 유틸 =====
-    const setHTML = (sel, html)=>{ const el=document.querySelector(sel); if(el) el.innerHTML = html; };
-    const setText = (sel, text)=>{ const el=document.querySelector(sel); if(el) el.textContent = text; };
-    function applyTXT(){
-      document.title = TXT.meta.title;
-      const md=document.querySelector('meta[name="description"]'); if(md) md.setAttribute('content', TXT.meta.description);
-      setText('#t-siteTitle', TXT.header.siteTitle);
-      setText('#t-siteSubtitle', TXT.header.subtitle);
-
-      setText('#init-title', TXT.init.title);
-      setHTML('#t-i-alpha', TXT.init.alpha); setHTML('#t-i-beta', TXT.init.beta);
-      setHTML('#t-i-px', TXT.init.px); setHTML('#t-i-py', TXT.init.py); setHTML('#t-i-M', TXT.init.M);
-      setText('#drawBtn', TXT.init.draw); setText('#t-init-note', TXT.init.note);
-
-      setText('#ctl-title', TXT.controls.title);
-      setHTML('#t-alpha', TXT.controls.alpha); setHTML('#t-beta', TXT.controls.beta);
-      setHTML('#t-px', TXT.controls.px); setHTML('#t-py', TXT.controls.py); setHTML('#t-M', TXT.controls.M);
-      setText('#t-alpha-cur', TXT.controls.alphaCur); setText('#t-beta-cur', TXT.controls.betaCur);
-      setHTML('#t-px-cur', TXT.controls.pxCur); setHTML('#t-py-cur', TXT.controls.pyCur); setText('#t-M-cur', TXT.controls.MCur);
-
-      const refit=document.querySelector('#refitBtn'); if(refit){ refit.textContent = TXT.controls.refit.label; refit.title = TXT.controls.refit.title; }
-      setText('#t-axes-note', TXT.controls.axesNote);
-
-      setText('#t-reinit-title', TXT.controls.reinit.title);
-      setHTML('#t-ri-alpha', TXT.controls.reinit.alpha); setHTML('#t-ri-beta', TXT.controls.reinit.beta);
-      setHTML('#t-ri-px', TXT.controls.reinit.px); setHTML('#t-ri-py', TXT.controls.reinit.py); setHTML('#t-ri-M', TXT.controls.reinit.M);
-      setText('#applyReinit', TXT.controls.reinit.apply); setText('#cancelReinit', TXT.controls.reinit.cancel); setText('#t-reinit-note', TXT.controls.reinit.note);
-
-      setHTML('#t-xStarLabel', TXT.controls.nums.xStar); setHTML('#t-yStarLabel', TXT.controls.nums.yStar);
-      setHTML('#t-xIntLabel', TXT.controls.nums.xInt); setHTML('#t-yIntLabel', TXT.controls.nums.yInt);
-
-      setHTML('#t-internal-solution', TXT.controls.internalSolution);
-
-      setText('#t-chart-title', TXT.chart.title);
-      setText('#t-legend-budget', TXT.chart.legend.budget);
-      setText('#t-legend-curve', TXT.chart.legend.curve);
-      setText('#t-legend-opt', TXT.chart.legend.opt);
-      const canvas=document.querySelector('#cdChart'); if(canvas) canvas.setAttribute('aria-label', TXT.chart.aria);
-      setHTML('#t-curve-formula', TXT.chart.formula);
-
-      setText('#t-back', TXT.footer.back); setText('#t-home', TXT.footer.home);
-    }
-
     // ===== 안전한 사칙연산 파서 (셔닝야드) — 분수/표현식 지원 =====
+    // 지원: + - ×(x/·) * ÷ /, (), 소수, 분수, 공백/유니코드 기호
     function evalExpr(raw){
       if(typeof raw!=='string') return NaN;
-      let s = raw.trim(); if(!s) return NaN;
-      s = s.replace(/\s+/g,'').replace(/[−–—]/g,'-').replace(/[×·x]/g,'*').replace(/[÷]/g,'/').replace(/[⁄]/g,'/');
+      let s = raw.trim();
+      if(!s) return NaN;
+      s = s.replace(/\s+/g,'')
+           .replace(/[−–—]/g,'-')   // 유니코드 마이너스
+           .replace(/[×·x]/g,'*')   // 곱
+           .replace(/[÷]/g,'/')     // 나눗셈 기호
+           .replace(/[⁄]/g,'/');    // fraction slash
       const tokens=[], isDigit=c=>/[0-9.]/.test(c); let i=0, prev=null;
       while(i<s.length){
         const c=s[i];
@@ -325,9 +250,13 @@
       }
       if(st.length!==1) return NaN; const res=+st[0]; return Number.isFinite(res)?res:NaN;
     }
-    function parseInput(el){ const v=evalExpr(el.value); el.classList.toggle('invalid', !Number.isFinite(v)); return v; }
+    function parseInput(el){
+      const v = evalExpr(el.value);
+      el.classList.toggle('invalid', !Number.isFinite(v));
+      return v;
+    }
 
-    // ===== 기존 계산/차트 로직 =====
+    // ===== 유틸/상태 =====
     const $ = (s)=>document.querySelector(s);
 
     // 초기값 폼(표현식 입력)
@@ -337,28 +266,19 @@
     // 컨트롤/표시 엘리먼트
     const ctlCard=$('#ctl-card'), chartCard=$('#chart-card');
     const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
-    const betaR=$('#beta'), betaN=$('[id="betaNum"]'), betaVal=$('#betaVal');
+    const betaR=$('#beta'),   betaN=$('#betaNum'),  betaVal=$('#betaVal');
     const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
     const pyR=$('#py'), pyN=$('#pyNum'), pyVal=$('#pyVal');
-    const mR=$('#M'), mN=$('#MNum'), mVal=$('#MVal');
+    const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal');
 
     const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
-    const refitBtn=$('#refitBtn'); const statusMsg=$('#statusMsg');
+    const refitBtn=$('#refitBtn');
+    const statusMsg=$('#statusMsg');
 
     // 재입력 박스(표현식 입력)
     const reinitBox=$('#reinitBox');
     const riA=$('#ri-alpha'), riB=$('#ri-beta'), riPx=$('#ri-px'), riPy=$('#ri-py'), riM=$('#ri-M');
     const applyReinit=$('#applyReinit'), cancelReinit=$('#cancelReinit');
-
-    // 사용자 표현(문자열) 유지용
-    const lastExpr = { a:'', b:'', px:'', py:'', M:'' };
-    function applyExprToNumberInputs(){
-      if(alphaN){ alphaN.value = lastExpr.a || (+alphaR.value).toFixed(2); alphaN.dataset.mode='expr'; alphaN.classList.remove('invalid'); }
-      if(betaN ){ betaN.value  = lastExpr.b || (+betaR.value).toFixed(2);   betaN.dataset.mode='expr';  betaN.classList.remove('invalid'); }
-      if(pxN   ){ pxN.value    = lastExpr.px|| (+pxR.value).toFixed(2);     pxN.dataset.mode='expr';    pxN.classList.remove('invalid'); }
-      if(pyN   ){ pyN.value    = lastExpr.py|| (+pyR.value).toFixed(2);     pyN.dataset.mode='expr';    pyN.classList.remove('invalid'); }
-      if(mN    ){ mN.value     = lastExpr.M || (+mR.value).toFixed(0);      mN.dataset.mode='expr';     mN.classList.remove('invalid'); }
-    }
 
     // CSS 변수 -> 실제 색상값
     function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
@@ -368,8 +288,21 @@
     // 상태: 축 고정 범위
     let BASE_XMAX=1, BASE_YMAX=1;
 
+    // 사용자 표현(문자열) 유지용
+    const lastExpr = { a:'', b:'', px:'', py:'', M:'' };
+    function applyExprToNumberInputs(){
+      if(alphaN){ alphaN.value = lastExpr.a || (+alphaR.value).toFixed(2); alphaN.dataset.mode='expr'; alphaN.classList.remove('invalid'); }
+      if(betaN ){ betaN.value  = lastExpr.b || (+betaR.value).toFixed(2);  betaN.dataset.mode='expr';  betaN.classList.remove('invalid'); }
+      if(pxN   ){ pxN.value    = lastExpr.px|| (+pxR.value).toFixed(2);    pxN.dataset.mode='expr';    pxN.classList.remove('invalid'); }
+      if(pyN   ){ pyN.value    = lastExpr.py|| (+pyR.value).toFixed(2);    pyN.dataset.mode='expr';    pyN.classList.remove('invalid'); }
+      if(mN    ){ mN.value     = lastExpr.M || (+mR.value).toFixed(0);     mN.dataset.mode='expr';     mN.classList.remove('invalid'); }
+    }
+
     // 유틸
-    function fmt(v,d=2){ if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–'; return (+v).toFixed(d); }
+    function fmt(v,d=2){
+      if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–';
+      return (+v).toFixed(d);
+    }
     // 숫자 슬라이더 범위만 설정(텍스트 칸은 건드리지 않음)
     function setRange(rangeEl, _numberEl_unused, {min, max, step, value, decimals=2}){
       if(min===max){ max = min + (Math.abs(min)||1); }
@@ -379,7 +312,11 @@
 
     // 현재 파라미터(슬라이더 기준)
     function params(){
-      const a=+(+alphaR.value), b=+(+betaR.value), px=+(+pxR.value), py=+(+pyR.value), M=+mR.value;
+      const a=+(+alphaR.value);
+      const b=+(+betaR.value);
+      const px=+(+pxR.value);
+      const py=+(+pyR.value);
+      const M =+mR.value;
       return {a,b,px,py,M};
     }
     // 화면 표시(텍스트 칸은 건드리지 않음)
@@ -396,14 +333,14 @@
     let cdChart;
     function createChart(){
       const canvas = document.getElementById('cdChart');
-      if(!canvas){ console.error('Canvas #cdChart not found'); return; } // 안전 가드
+      if(!canvas){ console.error('Canvas #cdChart not found'); return; }
       const ctx = canvas.getContext('2d');
       cdChart = new Chart(ctx,{
         type:'line',
         data:{ datasets:[
-          { label:TXT.chart.legend.budget, data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
-          { label:TXT.chart.legend.curve,  data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false, spanGaps:false },
-          { label:TXT.chart.legend.opt,    data:[], parsing:false, showLine:false, pointRadius:0, pointHoverRadius:0,
+          { label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
+          { label:'무차별곡선(U*)', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false, spanGaps:false },
+          { label:'최적점 & 투영', data:[], parsing:false, showLine:false, pointRadius:0, pointHoverRadius:0,
             pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:0, type:'scatter' },
           { label:'', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
           { label:'', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false },
@@ -413,8 +350,8 @@
           elements:{ point:{ radius:0, hoverRadius:0 }, line:{ tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' } },
           animation:false, animations:{}, transitions:{ active:{ animation:{ duration:0 } } },
           scales:{
-            x:{ type:'linear', title:{display:true,text:TXT.chart.axisX}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_XMAX },
-            y:{ type:'linear', title:{display:true,text:TXT.chart.axisY}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_YMAX }
+            x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_XMAX },
+            y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_YMAX }
           },
           plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } }
         }
@@ -424,48 +361,83 @@
     // 축은 고정, 선이 회전/이동
     function recomputeAndDraw({fitAxes=false}={}){
       syncUI();
-      const {a,b,px,py,M}=params(); const sum=a+b;
-      const xInt = (px===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/px;
-      const yInt = (py===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/py;
-      const validInterior = (a>0 && b>0 && sum>0 && Number.isFinite(xInt) && Number.isFinite(yInt));
-      let xStar=NaN, yStar=NaN, Ustar=NaN;
-      if(validInterior){ xStar=(a/sum)*xInt; yStar=(b/sum)*yInt; Ustar=Math.pow(xStar,a)*Math.pow(yStar,b); }
+      const {a,b,px,py,M}=params();
+      const sum=a+b;
 
+      // 절편과 내부해 계산
+      const xInt = (px===0)? ( (M===0)? 0 : ( (M>0)? Infinity : -Infinity ) ) : M/px;
+      const yInt = (py===0)? ( (M===0)? 0 : ( (M>0)? Infinity : -Infinity ) ) : M/py;
+
+      const validInterior = (a>0 && b>0 && sum>0 && Number.isFinite(xInt) && Number.isFinite(yInt));
+
+      let xStar=NaN, yStar=NaN, Ustar=NaN;
+      if(validInterior){
+        xStar = (a/sum)*xInt;
+        yStar = (b/sum)*yInt;
+        Ustar = Math.pow(xStar,a)*Math.pow(yStar,b);
+      }
+
+      // 축 재설정이 요청된 경우만 조정
       if(fitAxes){
         const xMaxCandidate = Math.max(Number.isFinite(xInt)?xInt:0, Number.isFinite(xStar)?xStar:0) * 1.3;
         const yMaxCandidate = Math.max(Number.isFinite(yInt)?yInt:0, Number.isFinite(yStar)?yStar:0) * 1.3;
-        BASE_XMAX = (xMaxCandidate>0?xMaxCandidate:1); BASE_YMAX = (yMaxCandidate>0?yMaxCandidate:1);
-        if(cdChart){ cdChart.options.scales.x.max = BASE_XMAX; cdChart.options.scales.y.max = BASE_YMAX; }
+        BASE_XMAX = (xMaxCandidate>0?xMaxCandidate:1);
+        BASE_YMAX = (yMaxCandidate>0?yMaxCandidate:1);
+        if(cdChart){
+          cdChart.options.scales.x.max = BASE_XMAX;
+          cdChart.options.scales.y.max = BASE_YMAX;
+        }
       }
 
+      // 예산선
       let budgetData=[];
-      if(px===0 && py===0){ budgetData=[]; }
-      else if(px===0){ const y0=M/py; budgetData=[{x:0,y:y0},{x:BASE_XMAX,y:y0}]; }
-      else if(py===0){ const x0=M/px; budgetData=[{x:x0,y:0},{x:x0,y:BASE_YMAX}]; }
-      else { budgetData=[{x:0,y:yInt},{x:xInt,y:0}]; }
+      if(px===0 && py===0){
+        budgetData = [];
+      }else if(px===0){ // 수평선 y = M/py
+        const y0 = M/py;
+        budgetData = [ {x:0, y:y0}, {x:BASE_XMAX, y:y0} ];
+      }else if(py===0){ // 수직선 x = M/px
+        const x0 = M/px;
+        budgetData = [ {x:x0, y:0}, {x:x0, y:BASE_YMAX} ];
+      }else{
+        budgetData = [ {x:0, y:yInt}, {x:xInt, y:0} ];
+      }
 
+      // 무차별곡선(U*): 상단 경계 앵커 + 비선형 샘플링
       let curve=[], optPt=[], projY=[], projX=[];
       if(validInterior){
-        let xStart=0;
-        if (a>0 && b>0 && Ustar>0 && BASE_YMAX>0){
-          const denomAtTop=Math.pow(BASE_YMAX,b);
-          const xTop=Math.pow(Ustar/denomAtTop,1/a);
-          if(Number.isFinite(xTop)) xStart=Math.min(Math.max(xTop,0),BASE_XMAX);
+        let xStart = 0;
+        if (a > 0 && b > 0 && Ustar > 0 && BASE_YMAX > 0) {
+          const denomAtTop = Math.pow(BASE_YMAX, b);
+          const xTop = Math.pow(Ustar / denomAtTop, 1 / a);
+          if (Number.isFinite(xTop)) xStart = Math.min(Math.max(xTop, 0), BASE_XMAX);
         }
-        if(Number.isFinite(xStart) && xStart>=0 && xStart<=BASE_XMAX) curve.push({x:xStart,y:BASE_YMAX});
-        const N=240, gamma=2.2;
-        if(xStart<BASE_XMAX-1e-12){
-          for(let i=1;i<=N;i++){
-            const t=i/N, x=xStart+(BASE_XMAX-xStart)*Math.pow(t,gamma);
-            const denom=Math.pow(x,a); if(denom<=0 || !Number.isFinite(denom)) continue;
-            const y=Math.pow(Ustar/denom,1/b);
-            if(Number.isFinite(y) && y>=0 && y<=BASE_YMAX) curve.push({x,y});
+        if (Number.isFinite(xStart) && xStart >= 0 && xStart <= BASE_XMAX) {
+          curve.push({ x: xStart, y: BASE_YMAX });
+        }
+        const N = 240, gamma = 2.2;
+        if (xStart < BASE_XMAX - 1e-12) {
+          for (let i = 1; i <= N; i++) {
+            const t = i / N;
+            const x = xStart + (BASE_XMAX - xStart) * Math.pow(t, gamma);
+            const denom = Math.pow(x, a);
+            if (denom <= 0 || !Number.isFinite(denom)) continue;
+            const y = Math.pow(Ustar / denom, 1 / b);
+            if (Number.isFinite(y) && y >= 0 && y <= BASE_YMAX) {
+              curve.push({ x, y });
+            }
           }
-        }else{
-          const yEnd=Math.pow(Ustar/Math.pow(BASE_XMAX,a),1/b);
-          if(Number.isFinite(yEnd) && yEnd>=0 && yEnd<=BASE_YMAX) curve.push({x:BASE_XMAX,y:yEnd});
+        } else {
+          const yEnd = Math.pow(Ustar / Math.pow(BASE_XMAX, a), 1 / b);
+          if (Number.isFinite(yEnd) && yEnd >= 0 && yEnd <= BASE_YMAX) {
+            curve.push({ x: BASE_XMAX, y: yEnd });
+          }
         }
-        optPt=[{x:xStar,y:yStar}]; projY=[{x:0,y:yStar},{x:xStar,y:yStar}]; projX=[{x:xStar,y:0},{x:xStar,y:yStar}];
+
+        // 최적점/투영선
+        optPt=[{x:xStar, y:yStar}];
+        projY=[{x:0, y:yStar}, {x:xStar, y:yStar}];
+        projX=[{x:xStar, y:0}, {x:xStar, y:yStar}];
       }
 
       if(cdChart){
@@ -477,19 +449,31 @@
         cdChart.update('none');
       }
 
-      xStarEl.textContent = fmt(xStar); yStarEl.textContent = fmt(yStar);
-      xIntEl.textContent  = fmt(xInt);  yIntEl.textContent  = fmt(yInt);
+      // 숫자/상태
+      xStarEl.textContent = fmt(xStar);
+      yStarEl.textContent = fmt(yStar);
+      xIntEl.textContent  = fmt(xInt);
+      yIntEl.textContent  = fmt(yInt);
 
-      if(!(px===0 && py===0)){ statusMsg.textContent = validInterior ? '' : TXT.controls.msg.noInterior; }
-      else{ statusMsg.textContent = TXT.controls.msg.noBudget; }
+      if(!(px===0 && py===0)){
+        statusMsg.textContent = validInterior ? '' : '참고: 내부해는 α>0, β>0, α+β>0일 때만 정의됩니다. 현재는 예산선만 표시합니다.';
+      }else{
+        statusMsg.textContent = 'pₓ=0, pᵧ=0이면 예산선이 정의되지 않습니다.';
+      }
     }
 
     // 슬라이더-텍스트 상호작용
     function bindPair(rangeEl, numberEl, decimals, onChange){
+      // 슬라이더 → 텍스트(소수 표기)
       rangeEl.addEventListener('input', ()=>{
-        if(numberEl){ numberEl.value=(+rangeEl.value).toFixed(decimals); numberEl.dataset.mode='decimal'; numberEl.classList.remove('invalid'); }
+        if(numberEl){
+          numberEl.value=(+rangeEl.value).toFixed(decimals);
+          numberEl.dataset.mode='decimal';
+          numberEl.classList.remove('invalid');
+        }
         onChange();
       });
+      // 텍스트(표현식) → 슬라이더(커밋)
       const commitFromText = ()=>{
         const v = evalExpr(numberEl.value);
         if(!Number.isFinite(v)){ numberEl.classList.add('invalid'); return; }
@@ -506,11 +490,11 @@
 
     // 슬라이더 범위 생성 헬퍼
     function setAroundAlphaBeta(rangeEl, numberEl, base){
-      const span = Math.max(0.2, Math.abs(base)*0.2);
+      const span = Math.max(0.2, Math.abs(base)*0.2); // ±20% (최소 폭 0.2)
       setRange(rangeEl, null, { min: base - span, max: base + span, step: 0.01, value: base, decimals: 2 });
     }
     function setAroundPriceOrIncome(rangeEl, numberEl, base, decimals, step){
-      const span = Math.max((Math.abs(base)||1)*0.5, 1);
+      const span = Math.max((Math.abs(base)||1)*0.5, 1); // 기준 ±50%, 최소 폭 1
       setRange(rangeEl, null, { min: base - span, max: base + span, step, value: base, decimals });
     }
 
@@ -529,6 +513,7 @@
       const sum0 = a0 + b0;
       const xStar0 = (a0>0 && b0>0 && sum0>0 && Number.isFinite(xInt0)) ? (a0/sum0)*xInt0 : 0;
       const yStar0 = (a0>0 && b0>0 && sum0>0 && Number.isFinite(yInt0)) ? (b0/sum0)*yInt0 : 0;
+
       const xMaxCandidate = Math.max(0, Number.isFinite(xInt0)?xInt0:0, Number.isFinite(xStar0)?xStar0:0)*1.3;
       const yMaxCandidate = Math.max(0, Number.isFinite(yInt0)?yInt0:0, Number.isFinite(yStar0)?yStar0:0)*1.3;
       BASE_XMAX = (xMaxCandidate>0?xMaxCandidate:1);
@@ -559,10 +544,23 @@
 
     // 초기 그리기 버튼: 표현식 파싱 후 적용
     drawBtn.addEventListener('click', ()=>{
-      const a0 = parseInput(iA), b0 = parseInput(iB), px0 = parseInput(iPx), py0 = parseInput(iPy), M0 = parseInput(iM);
-      if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))){ initStatus.textContent = '표현식을 올바르게 입력해주세요.'; return; }
+      const a0 = parseInput(iA);
+      const b0 = parseInput(iB);
+      const px0 = parseInput(iPx);
+      const py0 = parseInput(iPy);
+      const M0  = parseInput(iM);
+      if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))){
+        initStatus.textContent = '표현식을 올바르게 입력해주세요.';
+        return;
+      }
       initStatus.textContent = '';
-      lastExpr.a=iA.value.trim(); lastExpr.b=iB.value.trim(); lastExpr.px=iPx.value.trim(); lastExpr.py=iPy.value.trim(); lastExpr.M=iM.value.trim();
+      // 사용자 입력 문자열 저장(그대로 보여주기 위함)
+      lastExpr.a  = iA.value.trim();
+      lastExpr.b  = iB.value.trim();
+      lastExpr.px = iPx.value.trim();
+      lastExpr.py = iPy.value.trim();
+      lastExpr.M  = iM.value.trim();
+
       applyInitial(a0,b0,px0,py0,M0);
     });
 
@@ -580,20 +578,32 @@
 
     // 재입력 적용(표현식 파싱)
     applyReinit.addEventListener('click', ()=>{
-      const a0=parseInput(riA), b0=parseInput(riB), px0=parseInput(riPx), py0=parseInput(riPy), M0=parseInput(riM);
+      const a0 = parseInput(riA);
+      const b0 = parseInput(riB);
+      const px0 = parseInput(riPx);
+      const py0 = parseInput(riPy);
+      const M0  = parseInput(riM);
       if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))) return;
-      lastExpr.a=riA.value.trim(); lastExpr.b=riB.value.trim(); lastExpr.px=riPx.value.trim(); lastExpr.py=riPy.value.trim(); lastExpr.M=riM.value.trim();
-      applyInitial(a0,b0,px0,py0,M0); reinitBox.open=false;
+
+      // 사용자가 재입력한 표현 그대로 저장
+      lastExpr.a  = riA.value.trim();
+      lastExpr.b  = riB.value.trim();
+      lastExpr.px = riPx.value.trim();
+      lastExpr.py = riPy.value.trim();
+      lastExpr.M  = riM.value.trim();
+
+      applyInitial(a0,b0,px0,py0,M0);
+      reinitBox.open = false;
     });
     cancelReinit.addEventListener('click', ()=>{ reinitBox.open=false; });
 
     // "축 재설정"
     refitBtn.addEventListener('click', ()=>recomputeAndDraw({fitAxes:true}));
 
-    // 초기 문구 적용 + 연도 표기
+    // 연도 표기
     document.addEventListener('DOMContentLoaded', ()=>{
-      applyTXT();
-      const y = document.querySelector('#year'); if(y) y.textContent = new Date().getFullYear();
+      const y = document.querySelector('#year');
+      if(y) y.textContent = new Date().getFullYear();
     });
   </script>
 </body>
