@@ -4,10 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>거시경제학 | 경제학 노트</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/style.css" />
+
+  <!-- 카드 숨김용 간단 스타일(완전 제거) -->
+  <style>
+    .is-hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -16,17 +22,39 @@
   </header>
 
   <main class="grid" style="grid-template-columns:1fr;">
-    <section class="card" style="min-height:160px;">
-      <h2>시작 가이드</h2>
-      <p>여기에 개요, 학습 자료 링크, 그래프 등을 추가하면 됩니다.</p>
-    </section>
+    <!-- ✅ 새 카드: IS-LM모형 시각화 -->
+    <a class="card" href="is-lm/" data-section="islm" aria-label="IS-LM모형 시각화로 이동">
+      <div class="emoji" aria-hidden="true">🏦</div>
+      <h2>IS-LM모형 시각화</h2>
+      <p>재화시장(IS)·화폐시장(LM) 균형과 정책 쇼크 시뮬레이션</p>
+    </a>
   </main>
 
   <footer class="site-footer">
     <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
   </footer>
 
+  <!-- ✅ 섹션 가시성 토글: true면 보임, false면 숨김 -->
+  <script>
+    /* 🔧 여기에서 true/false만 바꾸세요 */
+    window.SECTION_VISIBILITY = {
+      islm: false  // IS-LM모형 시각화 카드
+    };
+
+    // 렌더 직후 적용: false인 카드를 완전히 숨김(시각/키보드 접근 차단)
+    (function () {
+      var flags = window.SECTION_VISIBILITY || {};
+      var cards = document.querySelectorAll('[data-section]');
+      cards.forEach(function(card){
+        var key = card.getAttribute('data-section');
+        if (flags[key] === false) {
+          card.classList.add('is-hidden');
+          card.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+  </script>
+
   <script src="../assets/site.js"></script>
 </body>
 </html>
-
