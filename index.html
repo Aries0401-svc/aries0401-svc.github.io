@@ -6,19 +6,24 @@
   <title>양재_archive | Micro · Macro · Metrics</title>
   <meta name="description" content="미시경제학, 거시경제학, 계량경제학 중에서 선택하세요." />
 
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JYZ7KL1YXZ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-JYZ7KL1YXZ', { transport_type: 'beacon' });
-</script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-JYZ7KL1YXZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-JYZ7KL1YXZ', { transport_type: 'beacon' });
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./assets/style.css" />
+
+  <!-- 카드 숨김용 간단 스타일(완전 제거) -->
+  <style>
+    .is-hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <!-- ⭐ 별을 그릴 캔버스: 배경층 -->
@@ -29,19 +34,20 @@
   </header>
 
   <main class="grid">
-    <a class="card" href="micro/" aria-label="미시경제학으로 이동">
+    <!-- 각 카드에 data-section 키 부여 -->
+    <a class="card" href="micro/" data-section="micro" aria-label="미시경제학으로 이동">
       <div class="emoji" aria-hidden="true">📉</div>
       <h2>미시경제학</h2>
       <p>개인과 기업의 의사결정, 시장 구조</p>
     </a>
 
-    <a class="card" href="macro/" aria-label="거시경제학으로 이동">
+    <a class="card" href="macro/" data-section="macro" aria-label="거시경제학으로 이동">
       <div class="emoji" aria-hidden="true">🌍</div>
       <h2>거시경제학</h2>
       <p>성장·물가·실업, 경기 변동과 정책</p>
     </a>
 
-    <a class="card" href="metrics/" aria-label="계량경제학으로 이동">
+    <a class="card" href="metrics/" data-section="metrics" aria-label="계량경제학으로 이동">
       <div class="emoji" aria-hidden="true">📊</div>
       <h2>계량경제학</h2>
       <p>데이터로 경제를 추정하고 검정하기</p>
@@ -52,7 +58,30 @@
     <small>© <span id="year"></span> aries0401-svc</small>
   </footer>
 
+  <!-- ✅ 섹션 가시성 토글: true면 보임, false면 숨김 -->
+  <script>
+    /* 🔧 여기에서 true/false만 바꾸세요 */
+    window.SECTION_VISIBILITY = {
+      micro:   true,   // 미시경제학 카드 보이기(true) / 숨기기(false)
+      macro:   true,   // 거시경제학
+      metrics: true    // 계량경제학
+    };
+
+    // 렌더 직후 적용: false인 카드 DOM에서 제거(시각/키보드 접근 모두 차단)
+    (function () {
+      var flags = window.SECTION_VISIBILITY || {};
+      var cards = document.querySelectorAll('[data-section]');
+      cards.forEach(function(card){
+        var key = card.getAttribute('data-section');
+        if (flags[key] === false) {
+          // 완전히 숨기기
+          card.classList.add('is-hidden');
+          card.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+  </script>
+
   <script src="./assets/site.js"></script>
 </body>
 </html>
-
