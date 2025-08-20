@@ -13,9 +13,13 @@
   <!-- 공통 리소스: 상대경로 필수 -->
   <link rel="stylesheet" href="../../assets/style.css" />
 
-  <!-- 카드 숨김용 간단 스타일(완전 제거) -->
+  <!-- 카드 숨김/수식용 간단 스타일 -->
   <style>
     .is-hidden { display: none !important; }
+    /* 간단한 분수 표현 (JS/LaTeX 없이 모든 브라우저에서 동작) */
+    .frac { display:inline-block; vertical-align:middle; text-align:center; }
+    .frac .num { display:block; padding:0 2px; }
+    .frac .den { display:block; border-top:1px solid currentColor; line-height:1.1; padding:0 2px; }
   </style>
 </head>
 <body>
@@ -26,11 +30,36 @@
   <main class="grid">
     <section class="card" aria-labelledby="cd-intro-title">
       <h2 id="cd-intro-title">개요</h2>
-      <p>효용함수 <strong>U(x, y) = x<sup>α</sup> · y<sup>β</sup></strong>를 기반으로 한 소비자 선택.</p>
+      <p>효용함수 <strong>U(x, y) = x<sup>&alpha;</sup> · y<sup>&beta;</sup></strong>를 기반으로 한 소비자 선택.</p>
       <ul>
         <li>예산제약: <em>p<sub>x</sub>x + p<sub>y</sub>y = M</em></li>
-        <li>최적해: <em>x* = \(\dfrac{α}{α+β}\)\( \dfrac{M}{p<sub>x</sub>} \),&nbsp; y* = \(\dfrac{β}{α+β}\)\( \dfrac{M}{p<sub>y</sub>} \)</em></li>
+        <li>
+          최적해:
+          <em>
+            x* =
+            <span class="frac">
+              <span class="num">&alpha;</span>
+              <span class="den">&alpha; + &beta;</span>
+            </span>
+            ·
+            <span class="frac">
+              <span class="num">M</span>
+              <span class="den">p<sub>x</sub></span>
+            </span>,
+            &nbsp; y* =
+            <span class="frac">
+              <span class="num">&beta;</span>
+              <span class="den">&alpha; + &beta;</span>
+            </span>
+            ·
+            <span class="frac">
+              <span class="num">M</span>
+              <span class="den">p<sub>y</sub></span>
+            </span>
+          </em>
+        </li>
       </ul>
+      <!-- 요청에 따라 "아래 카드에서 세부 주제로 이동하세요." 문구 삭제 -->
     </section>
 
     <!-- 하위 주제 카드들: data-section 부여 -->
