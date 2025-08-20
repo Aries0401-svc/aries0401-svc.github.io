@@ -12,6 +12,11 @@
 
   <!-- 공통 리소스: 상대경로 -->
   <link rel="stylesheet" href="../assets/style.css" />
+
+  <!-- 카드 숨김용 간단 스타일(완전 제거) -->
+  <style>
+    .is-hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -21,14 +26,14 @@
 
   <main class="grid">
     <!-- Cobb–Douglas로 이동하는 카드 -->
-    <a class="card" href="cobb–douglas/" aria-label="Cobb–Douglas로 이동">
+    <a class="card" href="cobb–douglas/" data-section="cobb_douglas" aria-label="Cobb–Douglas로 이동">
       <div class="emoji" aria-hidden="true">🧮</div>
       <h2>Cobb–Douglas</h2>
       <p>효용함수 U(x, y) = x^a · y^(1−a)을 바탕으로 한 소비자 선택</p>
     </a>
 
     <!-- 선형 수요·공급 곡선으로 이동하는 카드 -->
-    <a class="card" href="./linear-supply-demand-curve/" aria-label="선형 수요·공급 곡선으로 이동">
+    <a class="card" href="./linear-supply-demand-curve/" data-section="linear" aria-label="선형 수요·공급 곡선으로 이동">
       <div class="emoji" aria-hidden="true">📈</div>
       <h2>선형 수요·공급 곡선</h2>
       <p>P = a − bQ, P = c + dQ에서 균형가격·수량과 탄력성 계산</p>
@@ -38,6 +43,28 @@
   <footer class="site-footer">
     <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
   </footer>
+
+  <!-- ✅ 섹션 가시성 토글: true면 보임, false면 숨김 -->
+  <script>
+    /* 🔧 여기에서 true/false만 바꾸세요 */
+    window.SECTION_VISIBILITY = {
+      cobb_douglas: true,  // Cobb–Douglas
+      linear:       true   // 선형 수요·공급 곡선
+    };
+
+    // 렌더 직후 적용: false인 카드를 완전히 숨김(시각/키보드 접근 차단)
+    (function () {
+      var flags = window.SECTION_VISIBILITY || {};
+      var cards = document.querySelectorAll('[data-section]');
+      cards.forEach(function(card){
+        var key = card.getAttribute('data-section');
+        if (flags[key] === false) {
+          card.classList.add('is-hidden');
+          card.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+  </script>
 
   <!-- 공통 스크립트: 상대경로 -->
   <script src="../assets/site.js" defer></script>
