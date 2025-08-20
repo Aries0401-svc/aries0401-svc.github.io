@@ -4,10 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>계량경제학 | 경제학 노트</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="../assets/style.css" />
+
+  <!-- 카드 숨김용 간단 스타일(완전 제거) -->
+  <style>
+    .is-hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -17,21 +24,21 @@
 
   <main class="grid" style="grid-template-columns:1fr;">
     <!-- 표준정규분포 -->
-    <a class="card" href="normal-distribution/">
+    <a class="card" href="normal-distribution/" data-section="normal">
       <div class="emoji" aria-hidden="true">📊</div>
       <h2>표준정규분포 p-value 시각화</h2>
       <p>p-value 계산(면적) 인터랙티브</p>
     </a>
 
     <!-- t-분포 (새로 추가된 카드) -->
-    <a class="card" href="t-distribution/">
+    <a class="card" href="t-distribution/" data-section="t_dist">
       <div class="emoji" aria-hidden="true">📐</div>
       <h2>t-분포 p-value 시각화</h2>
       <p>자유도 ν 입력 · p-value/신뢰구간</p>
     </a>
 
     <!-- OLS 회귀 -->
-    <a class="card" href="ols/">
+    <a class="card" href="ols/" data-section="ols">
       <div class="emoji" aria-hidden="true">📈</div>
       <h2>OLS 회귀 직선 그리기</h2>
       <p>x·y 데이터로 회귀선, 식, R² 계산</p>
@@ -41,6 +48,29 @@
   <footer class="site-footer">
     <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
   </footer>
+
+  <!-- ✅ 하위 주제 가시성 토글: true면 보임, false면 숨김 -->
+  <script>
+    /* 🔧 여기에서 true/false만 바꾸세요 */
+    window.SECTION_VISIBILITY = {
+      normal: true,   // 표준정규분포
+      t_dist: true,   // t-분포
+      ols:    true    // OLS 회귀
+    };
+
+    // 렌더 직후 적용: false인 카드를 완전히 숨김(시각/키보드 접근 차단)
+    (function () {
+      var flags = window.SECTION_VISIBILITY || {};
+      var cards = document.querySelectorAll('[data-section]');
+      cards.forEach(function(card){
+        var key = card.getAttribute('data-section');
+        if (flags[key] === false) {
+          card.classList.add('is-hidden');
+          card.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+  </script>
 
   <script src="../assets/site.js"></script>
 </body>
