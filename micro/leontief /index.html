@@ -1,1 +1,478 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>최적선택점 · ICC | Leontief (완전보완재)</title>
+  <meta name="description" content="완전보완재 U(x,y)=min(x/α, y/β)에서 α,β·가격·소득을 입력해 최적선택점을 시각화하고 ICC(소득–소비 곡선)를 선으로 표시합니다. 분수/표현식 입력 지원." />
+
+  <!-- 공통: 폰트/스타일 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/style.css" />
+
+  <!-- 차트 (버전 고정) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+
+  <style>
+    main.grid { grid-template-columns: minmax(300px,460px) 1fr; }
+    .controls { display:flex; flex-direction:column; gap:10px; }
+    .row { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; }
+    .controls input[type="range"],
+    .controls input[type="text"],
+    .controls button,
+    .controls a { border:1px solid var(--muted); background:var(--panel); color:var(--text); padding:.5rem .75rem; border-radius:.5rem; box-shadow: var(--shadow); font:inherit; }
+    .controls input[type="range"]{ padding:0; }
+    .controls input:focus-visible,
+    .controls button:focus-visible,
+    .controls a:focus-visible,
+    canvas:focus-visible { outline:0; box-shadow:0 0 0 4px var(--ring); }
+    .invalid{ border-color:var(--ring); }
+
+    .chart-wrap{ position:relative; height:460px; }
+    .legend { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:.92rem; }
+    .badge { display:inline-flex; align-items:center; gap:.4rem; }
+    .swatch { width:.75rem; height:.75rem; border-radius:50%; border:1px solid var(--muted); background:var(--panel); }
+
+    .nums { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem .75rem; }
+    .nums dt{ color:var(--muted); }
+    .nums dd{ margin:0; font-weight:600; }
+
+    .muted{ color:var(--muted); }
+    [hidden]{ display:none !important; }
+
+    details.reinit { margin-top:.5rem; border:1px dashed var(--muted); border-radius:.5rem; padding:.5rem .75rem; }
+    details.reinit > summary { cursor:pointer; font-weight:600; color:var(--muted); }
+    .subgrid { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; margin-top:.5rem; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>최적선택점 · ICC</h1>
+    <p class="subtitle">U(x,y)=min(x/α, y/β), 예산: pₓx + pᵧy = M</p>
+  </header>
+
+  <main class="grid">
+    <!-- (1) 시작 화면: 초기값 먼저 받기 (분수/표현식 입력 지원) -->
+    <section class="card controls" id="init-card" aria-labelledby="init-title">
+      <h2 id="init-title">초기값 입력 후 그리기 (분수/표현식 가능)</h2>
+      <div class="row">
+        <label for="i-alpha">α (소비비율의 x 쪽)</label>
+        <input id="i-alpha" type="text" inputmode="text" value="2" placeholder="예: 2, 3/2">
+      </div>
+      <div class="row">
+        <label for="i-beta">β (소비비율의 y 쪽)</label>
+        <input id="i-beta" type="text" inputmode="text" value="1" placeholder="예: 1, 1/3">
+      </div>
+      <div class="row">
+        <label for="i-px">가격 p<sub>x</sub></label>
+        <input id="i-px" type="text" inputmode="text" value="10" placeholder="예: 10, 3/2">
+      </div>
+      <div class="row">
+        <label for="i-py">가격 p<sub>y</sub></label>
+        <input id="i-py" type="text" inputmode="text" value="10" placeholder="예: 10, 1/3">
+      </div>
+      <div class="row">
+        <label for="i-M">소득 M</label>
+        <input id="i-M" type="text" inputmode="text" value="120" placeholder="예: 60, 120/2">
+      </div>
+      <button id="drawBtn" style="margin-top:.5rem;">그리기</button>
+      <p class="muted" style="margin-top:6px;">※ 그리기 후 α,β·가격은 주변 범위의 슬라이더가 생성됩니다. 소득(M)은 재입력으로만 바꿉니다(ICC는 선만 표시).</p>
+      <p class="muted" id="initStatus" aria-live="polite"></p>
+    </section>
+
+    <!-- (2) 컨트롤 카드: 초기 그리기 이후 표시 -->
+    <section class="card controls" id="ctl-card" aria-labelledby="ctl-title" hidden>
+      <h2 id="ctl-title">값 조정</h2>
+
+      <div class="row">
+        <label for="alpha">α (비율)</label>
+        <input id="alpha" type="range">
+      </div>
+      <div class="row">
+        <span><strong>α = <span id="alphaVal">–</span></strong></span>
+        <input id="alphaNum" type="text" inputmode="text" placeholder="예: 2, 3/2">
+      </div>
+
+      <div class="row">
+        <label for="beta">β (비율)</label>
+        <input id="beta" type="range">
+      </div>
+      <div class="row">
+        <span><strong>β = <span id="betaVal">–</span></strong></span>
+        <input id="betaNum" type="text" inputmode="text" placeholder="예: 1, 1/3">
+      </div>
+
+      <div class="row">
+        <label for="px">가격 p<sub>x</sub></label>
+        <input id="px" type="range">
+      </div>
+      <div class="row">
+        <span><strong>p<sub>x</sub> = <span id="pxVal">–</span></strong></span>
+        <input id="pxNum" type="text" inputmode="text" placeholder="예: 3/2">
+      </div>
+
+      <div class="row">
+        <label for="py">가격 p<sub>y</sub></label>
+        <input id="py" type="range">
+      </div>
+      <div class="row">
+        <span><strong>p<sub>y</sub> = <span id="pyVal">–</span></strong></span>
+        <input id="pyNum" type="text" inputmode="text" placeholder="예: 1/3">
+      </div>
+
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem; align-items:center;">
+        <button id="refitBtn" title="현재 값 기준으로 축 범위를 다시 맞춥니다.">축 재설정</button>
+        <span class="muted">M은 슬라이더 없이 고정(재입력으로만 변경). ICC는 y=(β/α)x 직선.</span>
+      </div>
+
+      <!-- (2-1) 파라미터 재입력 (M 포함, 표현식 가능) -->
+      <details class="reinit" id="reinitBox">
+        <summary>파라미터 재입력</summary>
+        <div class="subgrid"><label for="ri-alpha">α (새 기준)</label><input id="ri-alpha" type="text" inputmode="text" placeholder="예: 2"></div>
+        <div class="subgrid"><label for="ri-beta">β (새 기준)</label><input id="ri-beta" type="text" inputmode="text" placeholder="예: 1"></div>
+        <div class="subgrid"><label for="ri-px">p<sub>x</sub> (새 기준)</label><input id="ri-px" type="text" inputmode="text" placeholder="예: 10"></div>
+        <div class="subgrid"><label for="ri-py">p<sub>y</sub> (새 기준)</label><input id="ri-py" type="text" inputmode="text" placeholder="예: 10"></div>
+        <div class="subgrid"><label for="ri-M">M (새 기준)</label><input id="ri-M" type="text" inputmode="text" placeholder="예: 120"></div>
+        <div style="margin-top:.5rem; display:flex; gap:.5rem;">
+          <button id="applyReinit">적용</button>
+          <button type="button" id="cancelReinit">취소</button>
+        </div>
+        <p class="muted" style="margin-top:.25rem;">적용 시 슬라이더 범위·축이 새 기준으로 재설정되고, 최적점/ICC/무차별곡선 5개가 다시 그려집니다.</p>
+      </details>
+
+      <dl class="nums" aria-live="polite" style="margin-top:.5rem;">
+        <dt>x* (최적)</dt><dd id="xStar">–</dd>
+        <dt>y* (최적)</dt><dd id="yStar">–</dd>
+        <dt>t* (=M/(αpₓ+βpᵧ))</dt><dd id="tStar">–</dd>
+        <dt>x절편 (M/p<sub>x</sub>)</dt><dd id="xInt">–</dd>
+        <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">–</dd>
+      </dl>
+      <p id="statusMsg" class="muted" aria-live="polite"></p>
+      <p class="muted">내부해(α,β&gt;0 &amp; αpₓ+βpᵧ&gt;0): <em>t*=M/(αpₓ+βpᵧ), x*=αt*, y*=βt*</em>. ICC: <em>y=(β/α)x</em>.</p>
+    </section>
+
+    <!-- (3) 차트 카드 -->
+    <section class="card" id="chart-card" hidden aria-labelledby="chart-title">
+      <h2 id="chart-title">예산선 · ICC · 무차별곡선(5개) · 최적점</h2>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="legend" aria-hidden="true">
+        <span class="badge"><span class="swatch" style="background:var(--text)"></span>예산선</span>
+        <span class="badge"><span class="swatch" style="background:var(--primary); border-style:dashed;"></span>ICC</span>
+        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선</span>
+        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>최적점 &amp; 투영</span>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="leoChart" aria-label="예산선, ICC, 무차별곡선 5개, 최적점"></canvas>
+      </div>
+
+      <p class="muted" style="margin-top:8px;">무차별곡선(U=t): <em>min(x/α, y/β)=t</em>의 자취 — 굴곡점이 (<em>αt, βt</em>). ICC: <em>y=(β/α)x</em>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+    <small>© <span id="year"></span> aries0401-svc</small>
+  </footer>
+
+  <!-- 공통 스크립트 -->
+  <script src="../../assets/site.js"></script>
+
+  <script>
+    // ===== 안전한 사칙연산 파서 (셔닝야드) — 분수/표현식 지원 =====
+    function evalExpr(raw){
+      if(typeof raw!=='string') return NaN;
+      let s = raw.trim(); if(!s) return NaN;
+      s = s.replace(/\s+/g,'')
+           .replace(/[−–—]/g,'-')
+           .replace(/[×·x]/g,'*')
+           .replace(/[÷]/g,'/')
+           .replace(/[⁄]/g,'/');
+      const tokens=[], isDigit=c=>/[0-9.]/.test(c); let i=0, prev=null;
+      while(i<s.length){ const c=s[i];
+        if(isDigit(c) || (c==='-' && (prev===null || /[+\-*/(]/.test(prev)) && isDigit(s[i+1]))){
+          let j=i+1; while(j<s.length && /[0-9.]/.test(s[j])) j++; tokens.push(s.slice(i,j)); prev='n'; i=j; continue;
+        }
+        if('+-*/()'.includes(c)){ tokens.push(c); prev=c; i++; continue; }
+        return NaN;
+      }
+      const out=[], op=[], prec={'+':1,'-':1,'*':2,'/':2};
+      for(const t of tokens){
+        if(t in prec){ while(op.length){ const k=op[op.length-1]; if((k in prec)&&prec[k]>=prec[t]) out.push(op.pop()); else break; } op.push(t); }
+        else if(t==='('){ op.push(t); }
+        else if(t===')'){ while(op.length && op[op.length-1]!=='(') out.push(op.pop()); if(!op.length) return NaN; op.pop(); }
+        else out.push(t);
+      }
+      while(op.length){ const k=op.pop(); if(k==='('||k===')') return NaN; out.push(k); }
+      const st=[]; for(const t of out){
+        if(t in prec){ const b=+st.pop(), a=+st.pop(); if(!Number.isFinite(a)||!Number.isFinite(b)) return NaN; st.push(t==='+'?a+b:t==='-'?a-b:t==='*'?a*b:(b===0?NaN:a/b)); }
+        else { const v=+t; if(!Number.isFinite(v)) return NaN; st.push(v); }
+      }
+      if(st.length!==1) return NaN; const res=+st[0]; return Number.isFinite(res)?res:NaN;
+    }
+    function parseInput(el){ const v=evalExpr(el.value); el.classList.toggle('invalid', !Number.isFinite(v)); return v; }
+
+    // ===== 유틸 =====
+    const $=(s)=>document.querySelector(s);
+    function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    let C_TEXT, C_PRIMARY, C_MUTED; function loadColors(){ C_TEXT=cssVar('--text'); C_PRIMARY=cssVar('--primary'); C_MUTED=cssVar('--muted'); }
+    function fmt(v,d=2){ if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'\u221E':'–'; return (+v).toFixed(d); }
+    function setRange(rangeEl, _numberEl_unused, {min, max, step, value, decimals=2}){
+      if(min===max){ max = min + (Math.abs(min)||1); }
+      if(min>max){ const t=min; min=max; max=t; }
+      rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+(+value).toFixed(decimals);
+    }
+    function setAroundAlphaBeta(rangeEl, base){ const span=Math.max(0.2, Math.abs(base)*0.2); setRange(rangeEl, null, {min: base-span, max: base+span, step:0.01, value:base, decimals:2}); }
+    function setAroundPrice(rangeEl, base){ const span=Math.max((Math.abs(base)||1)*0.5, 1); setRange(rangeEl, null, {min: base-span, max: base+span, step:0.05, value:base, decimals:2}); }
+
+    // ===== 상태 =====
+    const iA=$('#i-alpha'), iB=$('#i-beta'), iPx=$('#i-px'), iPy=$('#i-py'), iM=$('#i-M');
+    const drawBtn=$('#drawBtn'), initStatus=$('#initStatus');
+
+    const ctlCard=$('#ctl-card'), chartCard=$('#chart-card');
+    const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
+    const betaR=$('#beta'), betaN=$('#betaNum'), betaVal=$('#betaVal');
+    const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
+    const pyR=$('#py'), pyN=$('#pyNum'), pyVal=$('#pyVal');
+
+    const xStarEl=$('#xStar'), yStarEl=$('#yStar'), tStarEl=$('#tStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
+    const refitBtn=$('#refitBtn'), statusMsg=$('#statusMsg');
+
+    const reinitBox=$('#reinitBox');
+    const riA=$('#ri-alpha'), riB=$('#ri-beta'), riPx=$('#ri-px'), riPy=$('#ri-py'), riM=$('#ri-M');
+    const applyReinit=$('#applyReinit'), cancelReinit=$('#cancelReinit');
+
+    // 사용자 원문 표현 보존(텍스트 입력칸)
+    const lastExpr={ a:'', b:'', px:'', py:'', M:'' };
+    function applyExprToNumberInputs(){
+      if(alphaN){ alphaN.value = lastExpr.a || (+alphaR.value).toFixed(2); alphaN.dataset.mode='expr'; alphaN.classList.remove('invalid'); }
+      if(betaN ){ betaN.value  = lastExpr.b || (+betaR.value).toFixed(2);  betaN.dataset.mode='expr';  betaN.classList.remove('invalid'); }
+      if(pxN   ){ pxN.value    = lastExpr.px|| (+pxR.value).toFixed(2);    pxN.dataset.mode='expr';    pxN.classList.remove('invalid'); }
+      if(pyN   ){ pyN.value    = lastExpr.py|| (+pyR.value).toFixed(2);    pyN.dataset.mode='expr';    pyN.classList.remove('invalid'); }
+    }
+
+    // 축 고정 범위
+    let BASE_XMAX=1, BASE_YMAX=1;
+
+    // 현재 파라미터(슬라이더 기준)
+    function params(){
+      const a=+(+alphaR.value), b=+(+betaR.value), px=+(+pxR.value), py=+(+pyR.value);
+      // M은 슬라이더 없음 → lastExpr.M에서 유지, 또는 초기/재입력 시 반영
+      const M = +riM.dataset.currentM || +iM.dataset.currentM || parseInput(iM);
+      return {a,b,px,py,M};
+    }
+    function syncUI(){ const {a,b,px,py}=params(); alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2); betaVal.textContent=isNaN(b)?'–':(+b).toFixed(2); pxVal.textContent=isNaN(px)?'–':(+px).toFixed(2); pyVal.textContent=isNaN(py)?'–':(+py).toFixed(2); }
+
+    // ===== 차트 =====
+    let leoChart; let C_TEXT,C_PRIMARY,C_MUTED;
+    function createChart(){
+      const canvas=document.getElementById('leoChart'); if(!canvas) return;
+      const ctx=canvas.getContext('2d');
+      leoChart=new Chart(ctx,{
+        type:'line',
+        data:{ datasets:[
+          {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},                       // 0
+          {label:'ICC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},   // 1
+          // 2..6 : 무차별곡선 5개 (각각 L-자)
+          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:1.8, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},              // 2
+          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:1.8, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},              // 3
+          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:1.8, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},              // 4
+          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:1.8, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},              // 5
+          {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:1.8, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},              // 6
+          // 7: 최적점
+          {label:'최적점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6, pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:1.5, type:'scatter'},
+          // 8,9: 투영선
+          {label:'', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},      // 8
+          {label:'', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false}       // 9
+        ]},
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          elements:{ point:{ radius:0, hoverRadius:0 }, line:{ tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' } },
+          animation:false, animations:{}, transitions:{ active:{ animation:{ duration:0 } } },
+          scales:{ x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_XMAX }, y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_YMAX } },
+          plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } }
+        }
+      });
+    }
+
+    function recomputeAndDraw({fitAxes=false}={}){
+      syncUI();
+      const {a,b,px,py,M}=params();
+
+      // 유효성
+      const validAB = (a>0 && b>0);
+      const denom = a*px + b*py;
+      const validT = validAB && Number.isFinite(M) && denom>0;
+
+      // 절편
+      const xInt = (px===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/px;
+      const yInt = (py===0)? ((M===0)?0:((M>0)?Infinity:-Infinity)) : M/py;
+
+      // 최적/효용수준
+      let tStar=NaN, xStar=NaN, yStar=NaN;
+      if(validT){ tStar = M/denom; xStar = a*tStar; yStar = b*tStar; }
+
+      // 축 재설정 요청 시
+      if(fitAxes){
+        const xMaxCand = Math.max(0, Number.isFinite(xInt)?xInt:0, Number.isFinite(xStar)?xStar:0) * 1.3;
+        const yMaxCand = Math.max(0, Number.isFinite(yInt)?yInt:0, Number.isFinite(yStar)?yStar:0) * 1.3;
+        BASE_XMAX = (xMaxCand>0?xMaxCand:1);
+        BASE_YMAX = (yMaxCand>0?yMaxCand:1);
+        if(leoChart){ leoChart.options.scales.x.max=BASE_XMAX; leoChart.options.scales.y.max=BASE_YMAX; }
+      }
+
+      // 예산선
+      let budget=[];
+      if(px===0 && py===0){ budget=[]; }
+      else if(px===0){ const y0=M/py; budget=[{x:0,y:y0},{x:BASE_XMAX,y:y0}]; }
+      else if(py===0){ const x0=M/px; budget=[{x:x0,y:0},{x:x0,y:BASE_YMAX}]; }
+      else { budget=[{x:0,y:yInt},{x:xInt,y:0}]; }
+
+      // ICC: y=(β/α)x (원점에서 시작하는 직선, 축 내에서 잘라냄)
+      let icc=[];
+      if(validAB){
+        const slope = b/a; // β/α
+        if(Number.isFinite(slope) && slope>=0){
+          const xEnd = Math.min(BASE_XMAX, (a/b)*BASE_YMAX); // y<=BASE_YMAX 제약
+          const yEnd = slope * xEnd;
+          icc = [{x:0,y:0},{x:xEnd,y:yEnd}];
+        }
+      }
+
+      // 무차별곡선 5개: t 레벨 선택 (tStar 중심, 축 경계 내)
+      let iccCurves=[[],[],[],[],[]];
+      if(validAB && BASE_XMAX>0 && BASE_YMAX>0){
+        const tAxesMax = Math.min(BASE_XMAX/Math.max(a,1e-9), BASE_YMAX/Math.max(b,1e-9));
+        const tTop = Number.isFinite(tStar) && tStar>0 ? Math.min(tStar*1.4, tAxesMax*0.98) : tAxesMax*0.8;
+        const fracs=[0.2,0.4,0.6,0.8,1.0];
+        const levels=fracs.map(f=>f*tTop);
+        iccCurves = levels.map(t=>{
+          const kx=a*t, ky=b*t;
+          // L자: 위쪽 수직선( (kx,BASE_YMAX)→(kx,ky) ) + 오른쪽 수평선( (kx,ky)→(BASE_XMAX,ky) )
+          const path=[];
+          if(Number.isFinite(kx) && Number.isFinite(ky) && kx>=0 && ky>=0){
+            path.push({x:kx, y:BASE_YMAX});
+            if(ky<=BASE_YMAX) path.push({x:kx, y:ky}); else path.push({x:kx, y:BASE_YMAX});
+            const yH = Math.min(ky, BASE_YMAX);
+            path.push({x:BASE_XMAX, y:yH});
+          }
+          return path;
+        });
+      }
+
+      // 최적점/투영선
+      let optPt=[], projY=[], projX=[];
+      if(Number.isFinite(xStar)&&Number.isFinite(yStar)&&xStar>=0&&yStar>=0){
+        optPt=[{x:xStar,y:yStar}];
+        projY=[{x:0,y:yStar},{x:xStar,y:yStar}];
+        projX=[{x:xStar,y:0},{x:xStar,y:yStar}];
+      }
+
+      // 적용
+      if(leoChart){
+        leoChart.data.datasets[0].data=budget;
+        leoChart.data.datasets[1].data=icc;
+        for(let i=0;i<5;i++){ leoChart.data.datasets[2+i].data = iccCurves[i]; }
+        leoChart.data.datasets[7].data=optPt;
+        leoChart.data.datasets[8].data=projY;
+        leoChart.data.datasets[9].data=projX;
+        leoChart.update('none');
+      }
+
+      // 숫자/상태
+      xStarEl.textContent=fmt(xStar);
+      yStarEl.textContent=fmt(yStar);
+      tStarEl.textContent=fmt(tStar,3);
+      xIntEl.textContent =fmt(xInt);
+      yIntEl.textContent =fmt(yInt);
+
+      if(!(px===0 && py===0)){
+        statusMsg.textContent = validT ? '' : '참고: α>0, β>0, αpₓ+βpᵧ>0, M 유한일 때만 t*와 내부해가 명확합니다. 현재는 예산선/ICC/무차별곡선만 표시될 수 있어요.';
+      }else{
+        statusMsg.textContent = 'pₓ=0, pᵧ=0이면 예산선이 정의되지 않습니다.';
+      }
+    }
+
+    // 슬라이더-텍스트 바인딩 (표현식 지원)
+    function bindPair(rangeEl, numberEl, decimals, onChange){
+      rangeEl.addEventListener('input', ()=>{ numberEl.value=(+rangeEl.value).toFixed(decimals); numberEl.dataset.mode='decimal'; numberEl.classList.remove('invalid'); onChange(); });
+      const commitFromText=()=>{ const v=evalExpr(numberEl.value); if(!Number.isFinite(v)){ numberEl.classList.add('invalid'); return; } numberEl.classList.remove('invalid'); const min=+rangeEl.min, max=+rangeEl.max; const vv=Math.min(Math.max(v,min),max); rangeEl.value=vv.toFixed(decimals); numberEl.dataset.mode='expr'; onChange(); };
+      numberEl.addEventListener('change', commitFromText);
+      numberEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); commitFromText(); } });
+    }
+
+    function applyInitial(a0,b0,px0,py0,M0){
+      // 슬라이더 범위
+      setAroundAlphaBeta(alphaR, a0);
+      setAroundAlphaBeta(betaR,  b0);
+      setAroundPrice(pxR, px0);
+      setAroundPrice(pyR, py0);
+
+      // 축: 절편/최적 기준 고정
+      const denom0=a0*px0+b0*py0; const t0 = (denom0>0)? (M0/denom0) : 0;
+      const xInt0=(px0===0)?0:(M0/px0); const yInt0=(py0===0)?0:(M0/py0);
+      const xStar0=(a0>0&&b0>0&&denom0>0)? a0*t0 : 0; const yStar0=(a0>0&&b0>0&&denom0>0)? b0*t0 : 0;
+      const xMaxCand=Math.max(0, Number.isFinite(xInt0)?xInt0:0, Number.isFinite(xStar0)?xStar0:0)*1.3;
+      const yMaxCand=Math.max(0, Number.isFinite(yInt0)?yInt0:0, Number.isFinite(yStar0)?yStar0:0)*1.3;
+      BASE_XMAX=(xMaxCand>0?xMaxCand:1); BASE_YMAX=(yMaxCand>0?yMaxCand:1);
+
+      // 화면 전환
+      $('#init-card').hidden=true; ctlCard.hidden=false; chartCard.hidden=false;
+
+      // 색/차트
+      if(!leoChart){ loadColors(); createChart(); }
+
+      // 바인딩(1회)
+      if(!alphaR.dataset.bound){
+        bindPair(alphaR, alphaN, 2, ()=>recomputeAndDraw());
+        bindPair(betaR,  betaN,  2, ()=>recomputeAndDraw());
+        bindPair(pxR,    pxN,    2, ()=>recomputeAndDraw());
+        bindPair(pyR,    pyN,    2, ()=>recomputeAndDraw());
+        alphaR.dataset.bound=betaR.dataset.bound=pxR.dataset.bound=pyR.dataset.bound='1';
+      }
+
+      // 첫 렌더 + 사용자 표현 반영
+      recomputeAndDraw({fitAxes:true});
+      applyExprToNumberInputs();
+    }
+
+    // 초기 그리기
+    drawBtn.addEventListener('click', ()=>{
+      const a0=parseInput(iA), b0=parseInput(iB), px0=parseInput(iPx), py0=parseInput(iPy), M0=parseInput(iM);
+      if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))){ initStatus.textContent='표현식을 올바르게 입력해주세요.'; return; }
+      initStatus.textContent='';
+      // 사용자 입력 원문 보존
+      lastExpr.a=iA.value.trim(); lastExpr.b=iB.value.trim(); lastExpr.px=iPx.value.trim(); lastExpr.py=iPy.value.trim(); lastExpr.M=iM.value.trim();
+      // 현재 M 저장
+      iM.dataset.currentM = M0;
+      applyInitial(a0,b0,px0,py0,M0);
+    });
+
+    // 재입력 박스 프리필
+    reinitBox.addEventListener('toggle',(e)=>{
+      if(e.target.open){ const {a,b,px,py,M}=params(); riA.value=isNaN(a)?'':(+a).toFixed(2); riB.value=isNaN(b)?'':(+b).toFixed(2); riPx.value=isNaN(px)?'':(+px).toFixed(2); riPy.value=isNaN(py)?'':(+py).toFixed(2); riM.value=isNaN(M)?'':(+M).toFixed(0); }
+    });
+
+    // 재입력 적용
+    applyReinit.addEventListener('click', ()=>{
+      const a0=parseInput(riA), b0=parseInput(riB), px0=parseInput(riPx), py0=parseInput(riPy), M0=parseInput(riM);
+      if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))) return;
+      lastExpr.a=riA.value.trim(); lastExpr.b=riB.value.trim(); lastExpr.px=riPx.value.trim(); lastExpr.py=riPy.value.trim(); lastExpr.M=riM.value.trim();
+      riM.dataset.currentM = M0; // 현재 M 갱신
+      applyInitial(a0,b0,px0,py0,M0);
+      reinitBox.open=false;
+    });
+    cancelReinit.addEventListener('click', ()=>{ reinitBox.open=false; });
+
+    // 축 재설정
+    refitBtn.addEventListener('click', ()=>recomputeAndDraw({fitAxes:true}));
+
+    // 연도 표기
+    document.addEventListener('DOMContentLoaded', ()=>{ const y=document.querySelector('#year'); if(y) y.textContent=new Date().getFullYear(); });
+  </script>
+</body>
+</html>
 
