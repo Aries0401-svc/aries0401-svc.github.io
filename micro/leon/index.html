@@ -267,7 +267,8 @@
     function syncUI(){ const {a,b,px,py}=params(); alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2); betaVal.textContent=isNaN(b)?'–':(+b).toFixed(2); pxVal.textContent=isNaN(px)?'–':(+px).toFixed(2); pyVal.textContent=isNaN(py)?'–':(+py).toFixed(2); }
 
     // ===== 차트 =====
-    let leoChart; let C_TEXT,C_PRIMARY,C_MUTED;
+    let leoChart; // <-- 중복 선언 제거 (C_TEXT, C_PRIMARY, C_MUTED는 위에서 한 번만 선언)
+
     function createChart(){
       const canvas=document.getElementById('leoChart'); if(!canvas) return;
       const ctx=canvas.getContext('2d');
@@ -475,4 +476,3 @@
   </script>
 </body>
 </html>
-
