@@ -24,7 +24,15 @@
     .controls input[type="range"],
     .controls input[type="text"],
     .controls button,
-    .controls a { border:1px solid var(--muted); background:var(--panel); color:var(--text); padding:.5rem .75rem; border-radius:.5rem; box-shadow: var(--shadow); font:inherit; }
+    .controls a {
+      border:1px solid var(--muted);
+      background:var(--panel);
+      color:var(--text);
+      padding:.5rem .75rem;
+      border-radius:.5rem;
+      box-shadow: var(--shadow);
+      font:inherit;
+    }
     .controls input[type="range"]{ padding:0; }
     .controls input:focus-visible,
     .controls button:focus-visible,
@@ -32,10 +40,10 @@
     canvas:focus-visible { outline:0; box-shadow:0 0 0 4px var(--ring); }
     .invalid{ border-color:var(--ring); }
 
-    /* ===== 차트 ===== */
+    /* ===== 차트 컨테이너 ===== */
     .chart-wrap{ position:relative; height:460px; }
 
-    /* 수동 범례 (시각 가이드) */
+    /* 수동 범례(요청 2: 간결한 3개 항목만 표기) */
     .legend { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:.92rem; }
     .badge { display:inline-flex; align-items:center; gap:.4rem; }
     .swatch { width:.75rem; height:.75rem; border-radius:50%; border:1px solid var(--muted); background:var(--panel); }
@@ -52,15 +60,13 @@
     details.reinit > summary { cursor:pointer; font-weight:600; color:var(--muted); }
     .subgrid { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; margin-top:.5rem; }
 
-    /* ===== (요청 1) α,β 입력을 수식형으로 표기 ===== */
+    /* ===== (요청 1 유지) α,β 입력을 수식형으로 표기 ===== */
     .formula { display:flex; align-items:center; flex-wrap:wrap; gap:.5rem .6rem; font-weight:700; }
     .formula kbd { font-family:inherit; background:transparent; padding:0; }
     .frac { display:inline-flex; align-items:center; gap:.35rem; }
     .frac-input { width:6ch; text-align:center; padding:.35rem .5rem; }
 
-    /* 수식형 설명 보조 스타일 */
     .formula-note { font-weight:600; color:var(--muted); }
-
   </style>
 </head>
 <body>
@@ -70,11 +76,11 @@
   </header>
 
   <main class="grid">
-    <!-- (1) 시작 화면: 초기값 먼저 받기 (분수/표현식 입력 지원) -->
+    <!-- (1) 시작 화면 -->
     <section class="card controls" id="init-card" aria-labelledby="init-title">
       <h2 id="init-title">초기값 입력 후 그리기 (분수/표현식 가능)</h2>
 
-      <!-- (요청 1) α,β 수식형 입력 -->
+      <!-- α,β 수식형 입력 -->
       <div class="formula" aria-label="효용함수와 α,β 입력">
         <span>U(x,y) = min(</span>
         <span class="frac">x / <input id="i-alpha" class="frac-input" type="text" inputmode="text" value="2" aria-label="α (x 쪽)" placeholder="예: 2, 3/2"></span>
@@ -102,11 +108,11 @@
       <p class="muted" id="initStatus" aria-live="polite"></p>
     </section>
 
-    <!-- (2) 컨트롤 카드: 초기 그리기 이후 표시 -->
+    <!-- (2) 컨트롤 카드 -->
     <section class="card controls" id="ctl-card" aria-labelledby="ctl-title" hidden>
       <h2 id="ctl-title">값 조정</h2>
 
-      <!-- (요청 1) α,β 수식형 입력 (조정 화면용) -->
+      <!-- α,β 수식형 즉시 편집 -->
       <div class="formula" aria-label="α,β 즉시 편집">
         <span>U(x,y) = min(</span>
         <span class="frac">x / <input id="alphaNum" class="frac-input" type="text" inputmode="text" placeholder="예: 2"></span>
@@ -125,7 +131,7 @@
         <input id="beta" type="range">
       </div>
 
-      <!-- 가격 슬라이더 + 숫자 입력(그대로 유지) -->
+      <!-- 가격 슬라이더 -->
       <div class="row">
         <label for="px">가격 p<sub>x</sub></label>
         <input id="px" type="range">
@@ -149,7 +155,7 @@
         <span class="muted">M은 슬라이더 없이 고정(재입력으로만 변경). ICC는 y=(β/α)x 직선.</span>
       </div>
 
-      <!-- (2-1) 파라미터 재입력 (M 포함, 표현식 가능) -->
+      <!-- (2-1) 파라미터 재입력 (M 포함) -->
       <details class="reinit" id="reinitBox">
         <summary>파라미터 재입력</summary>
         <div class="subgrid"><label for="ri-alpha">α (새 기준)</label><input id="ri-alpha" type="text" inputmode="text" placeholder="예: 2"></div>
@@ -177,18 +183,17 @@
 
     <!-- (3) 차트 카드 -->
     <section class="card" id="chart-card" hidden aria-labelledby="chart-title">
-      <h2 id="chart-title">예산선 · ICC · 무차별곡선(배경) · 최적 무차별곡선 · 최적점</h2>
+      <h2 id="chart-title">예산선 · ICC · 무차별곡선 · 최적점</h2>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;" class="legend" aria-hidden="true">
+      <!-- (요청 2) 간결한 수동 범례: 3개만 표기 -->
+      <div class="legend" aria-hidden="true" style="margin-bottom:8px;">
         <span class="badge"><span class="swatch" style="background:var(--text)"></span>예산선</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary); border-style:dashed;"></span>ICC</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선(배경)</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선(최적)</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>최적점 &amp; 투영</span>
+        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>무차별곡선</span>
+        <span class="badge"><span class="swatch" style="background:#e74c3c; border-style:dashed;"></span>ICC</span>
       </div>
 
       <div class="chart-wrap">
-        <canvas id="leoChart" aria-label="예산선, ICC, 무차별곡선, 최적 무차별곡선, 최적점"></canvas>
+        <canvas id="leoChart" aria-label="예산선, ICC, 무차별곡선, 최적점"></canvas>
       </div>
 
       <p class="muted" style="margin-top:8px;">무차별곡선(U=t): <em>min(x/α, y/β)=t</em>의 자취 — 굴곡점이 (<em>αt, βt</em>). ICC: <em>y=(β/α)x</em>.</p>
@@ -206,9 +211,9 @@
 
   <script>
     /* ──────────────────────────────────────────────────────────────────────────
-       안전한 사칙연산 파서 (셔닝야드) — 분수/표현식 입력 지원
-       - 사용자 텍스트(예: "3/2", "10-2*3")를 안전하게 숫자로 평가
-       - NaN을 반환해 유효성 처리에 사용
+       1) 안전한 사칙연산 파서 (셔닝야드) — 분수/표현식 입력 지원
+          - 사용자 텍스트(예: "3/2", "10-2*3")를 안전하게 숫자로 평가
+          - NaN을 반환해 유효성 처리에 사용
        ────────────────────────────────────────────────────────────────────────── */
     function evalExpr(raw){
       if(typeof raw!=='string') return NaN;
@@ -242,14 +247,16 @@
     function parseInput(el){ const v=evalExpr(el.value); el.classList.toggle('invalid', !Number.isFinite(v)); return v; }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       유틸리티 / 전역 상태
-       - C_* : CSS 변수 색상 캐시
-       - BASE_XMAX, BASE_YMAX : 고정 축 범위(수동 '축 재설정' 시 갱신)
-       - IC_LEVELS : (요청 4 반영) 배경 무차별곡선의 t-레벨 집합 — 가격 변동과 무관하게 고정
+       2) 유틸리티 / 전역 상태
+          - C_* : CSS 변수 색상 캐시
+          - C_ICC : (요청 1) ICC 전용 빨간색
+          - BASE_XMAX, BASE_YMAX : 고정 축 범위(수동 '축 재설정' 시 갱신)
+          - IC_LEVELS : (요청 4 유지) 배경 무차별곡선의 t-레벨 — 가격 변동과 무관하게 고정
        ────────────────────────────────────────────────────────────────────────── */
     const $=(s)=>document.querySelector(s);
     function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
     let C_TEXT, C_PRIMARY, C_MUTED; function loadColors(){ C_TEXT=cssVar('--text'); C_PRIMARY=cssVar('--primary'); C_MUTED=cssVar('--muted'); }
+    const C_ICC = '#e74c3c'; // ICC 빨간색(요청 1)
     function fmt(v,d=2){ if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'\u221E':'–'; return (+v).toFixed(d); }
     function setRange(rangeEl, _unused, {min, max, step, value, decimals=2}){
       if(min===max){ max = min + (Math.abs(min)||1); }
@@ -259,7 +266,7 @@
     function setAroundAlphaBeta(rangeEl, base){ const span=Math.max(0.2, Math.abs(base)*0.2); setRange(rangeEl, null, {min: base-span, max: base+span, step:0.01, value:base, decimals:2}); }
     function setAroundPrice(rangeEl, base){ const span=Math.max((Math.abs(base)||1)*0.5, 1); setRange(rangeEl, null, {min: base-span, max: base+span, step:0.05, value:base, decimals:2}); }
 
-    // 입력 엘리먼트(초기화/조정)
+    // 입력 엘리먼트 참조
     const iA=$('#i-alpha'), iB=$('#i-beta'), iPx=$('#i-px'), iPy=$('#i-py'), iM=$('#i-M');
     const drawBtn=$('#drawBtn'), initStatus=$('#initStatus');
 
@@ -279,16 +286,15 @@
     // 사용자가 입력한 원문 보존(텍스트칸)
     const lastExpr={ a:'', b:'', px:'', py:'', M:'' };
     function applyExprToNumberInputs(){
-      // α,β는 수식 막대 입력칸에 직접 반영
       if(alphaN){ alphaN.value = lastExpr.a || (+alphaR.value).toFixed(2); alphaN.dataset.mode='expr'; alphaN.classList.remove('invalid'); }
       if(betaN ){ betaN.value  = lastExpr.b || (+betaR.value).toFixed(2);  betaN.dataset.mode='expr';  betaN.classList.remove('invalid'); }
       if(pxN   ){ pxN.value    = lastExpr.px|| (+pxR.value).toFixed(2);    pxN.dataset.mode='expr';    pxN.classList.remove('invalid'); }
       if(pyN   ){ pyN.value    = lastExpr.py|| (+pyR.value).toFixed(2);    pyN.dataset.mode='expr';    pyN.classList.remove('invalid'); }
     }
 
-    // 고정 축 범위 및 배경 IC 레벨
+    // 축 범위 & 배경 IC 레벨
     let BASE_XMAX=1, BASE_YMAX=1;
-    let IC_LEVELS = [];  // (요청 4) 가격을 바꿔도 변하지 않도록, 한 번 정하면 유지
+    let IC_LEVELS = [];
 
     // 현재 파라미터(슬라이더 기준; M은 별도 보관)
     function params(){
@@ -296,25 +302,26 @@
       const M = +riM.dataset.currentM || +iM.dataset.currentM || parseInput(iM);
       return {a,b,px,py,M};
     }
-
     function syncUI(){
-      // 보조 표기(존재 시에만 갱신)
-      const {a,b,px,py}=params();
+      const {px,py}=params();
       if(pxVal) pxVal.textContent = isNaN(px)?'–':(+px).toFixed(2);
       if(pyVal) pyVal.textContent = isNaN(py)?'–':(+py).toFixed(2);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       차트 생성
-       (요청 2) 내부 격자선을 제거(grid.display=false). 축 눈금/축선만 표시.
-       데이터셋 구성:
-        0  예산선
-        1  ICC (y=(β/α)x, 점선)
-        2  무차별곡선(최적, U=t*)
-        3-7 무차별곡선(배경, 고정 레벨 5개)  ← (요청 4) 가격 변화와 무관
-        8  최적점 (scatter)
-        9  y-투영선
-        10 x-투영선
+       3) 차트 생성
+          - (요청 2) 내부 격자선 제거(grid.display=false). 축 눈금/축선만 표시.
+          - (요청 1) ICC는 빨간색(C_ICC) + 점선.
+          - 범례는 Chart.js 기본 범례를 끄고(plugins.legend.display=false),
+            상단의 수동 범례만 사용(3개 항목).
+          데이터셋 구성:
+            0  예산선
+            1  ICC (y=(β/α)x)
+            2  무차별곡선(최적, U=t*)
+            3-7 무차별곡선(배경, 고정 레벨 5개)
+            8  최적점 (scatter)
+            9  y-투영선
+            10 x-투영선
        ────────────────────────────────────────────────────────────────────────── */
     let leoChart;
     function createChart(){
@@ -325,7 +332,7 @@
         type:'line',
         data:{ datasets:[
           {label:'예산선', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},                       // 0
-          {label:'ICC', data:[], borderColor:C_PRIMARY, borderWidth:1.5, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},   // 1
+          {label:'ICC', data:[], borderColor:C_ICC,   borderWidth:1.8, borderDash:[3,3], fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},     // 1
           {label:'무차별곡선(최적)', data:[], borderColor:C_PRIMARY, borderWidth:2.6, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},       // 2
           // 3..7 : 무차별곡선(배경) 5개
           {label:'무차별곡선', data:[], borderColor:C_PRIMARY, borderWidth:1.4, fill:false, tension:0, pointRadius:0, pointHoverRadius:0, parsing:false},              // 3
@@ -347,7 +354,7 @@
             x:{
               type:'linear',
               title:{display:true,text:'x'},
-              grid:{ display:false },                // (요청 2) 격자선 제거
+              grid:{ display:false },              // (요청 2) 격자선 제거
               ticks:{ display:true },
               border:{ display:true, color:C_MUTED },
               min:0, max:BASE_XMAX
@@ -355,20 +362,20 @@
             y:{
               type:'linear',
               title:{display:true,text:'y'},
-              grid:{ display:false },                // (요청 2) 격자선 제거
+              grid:{ display:false },              // (요청 2) 격자선 제거
               ticks:{ display:true },
               border:{ display:true, color:C_MUTED },
               min:0, max:BASE_YMAX
             }
           },
-          plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } }
+          plugins:{ legend:{ display:false }, tooltip:{ mode:'nearest', intersect:false } } // 기본 범례 끔
         }
       });
     }
 
     /* 배경 무차별곡선 레벨(t) 산출
-       - 축 범위와 α,β에 기반해 대략적으로 5개 레벨 설정
-       - (요청 4) 가격 변동(px,py)으로는 이 레벨을 갱신하지 않음
+       - 축 범위와 α,β에 기반해 5개 레벨 설정
+       - (요청 4) 가격(px,py) 변화로는 갱신하지 않음. 축 재설정 시에만 재계산.
     */
     function computeICLevels(a, b){
       const tAxesMax = Math.min(
@@ -380,9 +387,7 @@
       return fracs.map(f=>f*tTop);
     }
 
-    /* L-자 무차별곡선 경로 생성 (U=t)
-       - (αt, βt)에서 꺾임. 위로 수직 → 오른쪽 수평
-    */
+    /* L-자 무차별곡선 경로(U=t) 생성 */
     function makeL(a,b,t){
       const kx=a*t, ky=b*t;
       const path=[];
@@ -395,7 +400,7 @@
       return path;
     }
 
-    /* 핵심 렌더 함수 */
+    /* 핵심 렌더 */
     function recomputeAndDraw({fitAxes=false}={}){
       syncUI();
       const {a,b,px,py,M}=params();
@@ -413,15 +418,14 @@
       let tStar=NaN, xStar=NaN, yStar=NaN;
       if(validT){ tStar = M/denom; xStar = a*tStar; yStar = b*tStar; }
 
-      // (옵션) 축 재설정
+      // 축 재설정 시(사용자 요청 시에만)
       if(fitAxes){
         const xMaxCand = Math.max(0, Number.isFinite(xInt)?xInt:0, Number.isFinite(xStar)?xStar:0) * 1.3;
         const yMaxCand = Math.max(0, Number.isFinite(yInt)?yInt:0, Number.isFinite(yStar)?yStar:0) * 1.3;
         BASE_XMAX = (xMaxCand>0?xMaxCand:1);
         BASE_YMAX = (yMaxCand>0?yMaxCand:1);
         if(leoChart){ leoChart.options.scales.x.max=BASE_XMAX; leoChart.options.scales.y.max=BASE_YMAX; }
-        // 축이 바뀌면 배경 IC 레벨도 다시 산출 (가격 때문이든 아니든 사용자가 명시적으로 '축 재설정'을 한 경우에만)
-        if(validAB){ IC_LEVELS = computeICLevels(a,b); }
+        if(validAB){ IC_LEVELS = computeICLevels(a,b); } // 축이 바뀌면 배경 IC 레벨 재산출
       }
 
       // 예산선
@@ -431,7 +435,7 @@
       else if(py===0){ const x0=M/px; budget=[{x:x0,y:0},{x:x0,y:BASE_YMAX}]; }
       else { budget=[{x:0,y:yInt},{x:xInt,y:0}]; }
 
-      // ICC: y=(β/α)x (원점에서 시작)
+      // ICC: y=(β/α)x (원점)
       let icc=[];
       if(validAB){
         const slope = b/a;
@@ -441,11 +445,11 @@
         }
       }
 
-      // (요청 3) 최적 무차별곡선: t=t*
+      // 최적 무차별곡선: t=t*
       let icAtOpt=[];
       if(validT && tStar>=0){ icAtOpt = makeL(a,b,tStar); }
 
-      // (요청 4) 배경 무차별곡선(5개): 고정된 IC_LEVELS 사용 (가격 변화와 무관)
+      // 배경 무차별곡선(5개): 고정된 IC_LEVELS 사용
       let icBackground=[[],[],[],[],[]];
       if(validAB && IC_LEVELS.length===5){
         icBackground = IC_LEVELS.map(t => makeL(a,b,t));
@@ -459,10 +463,10 @@
         projX=[{x:xStar,y:0},{x:xStar,y:yStar}];
       }
 
-      // 차트에 적용
+      // 차트 적용
       if(leoChart){
         leoChart.data.datasets[0].data=budget;     // 예산선
-        leoChart.data.datasets[1].data=icc;        // ICC
+        leoChart.data.datasets[1].data=icc;        // ICC(빨간색)
         leoChart.data.datasets[2].data=icAtOpt;    // 최적 무차별곡선
         for(let i=0;i<5;i++){ leoChart.data.datasets[3+i].data = icBackground[i]; } // 배경 IC
         leoChart.data.datasets[8].data=optPt;      // 최적점
@@ -471,7 +475,7 @@
         leoChart.update('none');
       }
 
-      // 숫자/상태
+      // 숫자/상태 갱신
       xStarEl.textContent=fmt(xStar);
       yStarEl.textContent=fmt(yStar);
       tStarEl.textContent=fmt(tStar,3);
@@ -485,20 +489,17 @@
       }
     }
 
-    /* 슬라이더-텍스트 바인딩 (표현식 지원)
-       - α,β: 수식 막대의 입력(alphaNum/betaNum)과 슬라이더 동기화
-       - px,py: 숫자 입력(pxNum/pyNum)과 슬라이더 동기화
-    */
+    /* 텍스트-슬라이더 바인딩 (표현식 지원) */
     function bindPair(rangeEl, numberEl, decimals, onChange){
       rangeEl.addEventListener('input', ()=>{ numberEl.value=(+rangeEl.value).toFixed(decimals); numberEl.dataset.mode='decimal'; numberEl.classList.remove('invalid'); onChange(); });
-      const commitFromText=()=>{ const v=evalExpr(numberEl.value); if(!Number.isFinite(v)){ numberEl.classList.add('invalid'); return; } numberEl.classList.remove('invalid'); const min=+rangeEl.min, max=+rangeEl.max; const vv=Math.min(Math.max(v,min),max); rangeEl.value=vv.toFixed(decimals); numberEl.dataset.mode='expr'; onChange(); };
+      const commitFromText=()=>{ const v=evalExpr(numberEl.value); if(!Number.isFinite(v)){ numberEl.classList.add('invalid'); return; } numberEl.classList.remove('invalid'); const min=+rangeEl.min, max=+rangeEl.max; const vv=Math.min(Math.max(v,min),max); rangeEl.value=vv.toFixed(decals=decimals); numberEl.dataset.mode='expr'; onChange(); };
       numberEl.addEventListener('change', commitFromText);
       numberEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); commitFromText(); } });
     }
 
-    /* 초기 설정(슬라이더 범위/축/색/차트/이벤트) */
+    /* 초기 적용(슬라이더 범위/축/차트/이벤트) */
     function applyInitial(a0,b0,px0,py0,M0){
-      // 슬라이더 범위(초기 기준 주변)
+      // 슬라이더 범위
       setAroundAlphaBeta(alphaR, a0);
       setAroundAlphaBeta(betaR,  b0);
       setAroundPrice(pxR, px0);
@@ -518,7 +519,7 @@
       // 색/차트
       if(!leoChart){ loadColors(); createChart(); }
 
-      // 배경 IC 레벨 초기화 (요청 4: 이후 가격 변동과 무관)
+      // 배경 IC 레벨 초기화 (가격 변동과 무관)
       IC_LEVELS = computeICLevels(a0,b0);
 
       // 바인딩(1회만)
@@ -535,7 +536,7 @@
       applyExprToNumberInputs();
     }
 
-    // 초기 그리기 버튼
+    // 초기 그리기
     const draw = ()=>{
       const a0=parseInput(iA), b0=parseInput(iB), px0=parseInput(iPx), py0=parseInput(iPy), M0=parseInput(iM);
       if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))){ initStatus.textContent='표현식을 올바르게 입력해주세요.'; return; }
@@ -562,7 +563,7 @@
     });
     cancelReinit.addEventListener('click', ()=>{ reinitBox.open=false; });
 
-    // (수동) 축 재설정
+    // 수동 축 재설정
     refitBtn.addEventListener('click', ()=>recomputeAndDraw({fitAxes:true}));
 
     // 연도 표기
