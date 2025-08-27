@@ -19,7 +19,7 @@ document.querySelectorAll('.card').forEach(card => {
 });
 
 // =====================
-/* Starfield: 왼쪽 ➜ 오른쪽 (살짝 하강) 은하수 배경 */
+// Starfield: 왼쪽 ➜ 오른쪽 (살짝 하강) 은하수 배경
 // =====================
 (() => {
   const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -75,7 +75,7 @@ document.querySelectorAll('.card').forEach(card => {
           x: rand(0, w),
           y: rand(0, h),
           r: size,
-          vx: speedX / 60, // px/frame(60fps 기준)
+          vx: speedX / 60,
           vy: speedY / 60,
           baseAlpha: rand(0.55, 0.95),
           twFreq, twAmp, phase,
