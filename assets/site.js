@@ -45,7 +45,7 @@ document.querySelectorAll('.card').forEach(card => {
   /** 리사이즈 */
   function resize() {
     const w = Math.floor(window.innerWidth  * DPR);
-    const h = Math.floor(window.innerHeight * DPR);
+       const h = Math.floor(window.innerHeight * DPR);
     canvas.width = w;
     canvas.height = h;
     canvas.style.width = '100%';
