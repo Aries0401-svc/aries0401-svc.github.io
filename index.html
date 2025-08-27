@@ -25,16 +25,19 @@
     .is-hidden { display: none !important; }
   </style>
 
-  <!-- ✅ 홈(첫 화면) 전용 스타일: 1.3배 확대 + 이모지/설명만 숨기기 -->
+  <!-- ✅ 홈(첫 화면) 전용 스타일: 1.3배 유지 + 좌우 공백 제거 + 이모지/설명 숨김 -->
   <style>
-    /* 1000px → 1300px (약 1.3배) : 헤더/그리드/푸터 모두 폭 확장 */
-    .home-wrap{ width: min(100%, 1300px); }
+    /* 컨테이너를 화면 가로 100%로 확장(좌우 공백 제거) */
+    .home-wrap{ width: 100%; }
 
-    /* 카드 내부 여백/타이포도 1.3x로 조정 (28→36, 22→28) */
-    .home-grid .card{ padding: 36px 31px; }
-    .home-grid .card h2{ font-size: 28px; margin-bottom: 16px; }
+    /* 그리드 좌우 기본 패딩(20px)을 홈에서만 0으로 */
+    .home-grid{ padding-left: 0; padding-right: 0; }
 
-    /* 홈에서만 이모티콘/설명 감추기 (하위 페이지엔 영향 없음) */
+    /* 1.3배 느낌 유지: 카드 내부 여백/타이포 업스케일 */
+    .home-grid .card{ padding: 36px 31px; }             /* 28→36 (대략 1.3x) */
+    .home-grid .card h2{ font-size: 28px; margin-bottom: 16px; } /* 22→28 */
+
+    /* 홈에서만 이모티콘/설명 감추기 (하위 페이지 영향 없음) */
     .home-grid .emoji, .home-grid p { display: none !important; }
   </style>
 </head>
@@ -42,11 +45,11 @@
   <!-- ⭐ 배경 별 -->
   <canvas id="starfield" aria-hidden="true"></canvas>
 
+  <!-- ⬇ 홈 전용 클래스 적용(헤더/그리드/푸터 모두) -->
   <header class="site-header home-wrap">
     <h1>양재_archive</h1>
   </header>
 
-  <!-- ⬇ 홈 전용 클래스 적용 -->
   <main class="grid home-grid home-wrap" id="main">
     <!-- 제목 + PNG(하단 80px 크롭) -->
     <a class="card" href="micro/" data-section="micro" aria-label="미시경제학으로 이동">
@@ -80,7 +83,7 @@
         if (flags[key] === false) {
           card.classList.add('is-hidden');
           card.setAttribute('aria-hidden', 'true');
-          card.hidden = true; // 표준 속성
+          card.hidden = true;
         }
       });
     })();
