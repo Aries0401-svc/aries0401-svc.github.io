@@ -7,7 +7,7 @@
   --primary: #6aa9ff;
   --ring: rgba(106,169,255,.6);
   --shadow: 0 10px 24px rgba(0,0,0,.35);
-  --overlay: rgba(0,0,0,.35); /* 배경 위 가독성용 오버레이 */
+  --overlay: rgba(0,0,0,.35);
 }
 
 @media (prefers-color-scheme: light) {
@@ -19,7 +19,7 @@
     --primary: #2563eb;
     --ring: rgba(37, 99, 235, .35);
     --shadow: 0 12px 24px rgba(2, 6, 23, .08);
-    --overlay: rgba(255,255,255,.08); /* 라이트 모드에선 살짝 밝게 */
+    --overlay: rgba(255,255,255,.08);
   }
 }
 
@@ -30,13 +30,11 @@ body{
   margin:0;
   font-family: "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 
-  /* 배경: 그라디언트(위) + 이미지(중간) + 단색(아래) */
   background:
     radial-gradient(1200px 800px at 10% -10%, rgba(99,102,241,.25), transparent 60%),
     radial-gradient(1200px 800px at 110% 10%, rgba(59,130,246,.25), transparent 60%),
     url("./background.png"),
     var(--bg);
-
   background-size: auto, auto, cover, auto;
   background-position: center, center, center, center;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
@@ -45,7 +43,7 @@ body{
   color: var(--text);
 }
 
-/* ⭐ 캔버스: 전체 배경층 */
+/* ⭐ 캔버스 */
 #starfield{
   position: fixed;
   inset: 0;
@@ -55,7 +53,7 @@ body{
   z-index: 0;
 }
 
-/* 글자 가독성 위해 살짝 오버레이(별/배경 위) */
+/* 가독성용 오버레이 */
 body::before{
   content:"";
   position:fixed;
@@ -65,7 +63,7 @@ body::before{
   z-index: 1;
 }
 
-/* 콘텐츠는 오버레이 위로 + 폭 고정(클램프) */
+/* 기본 폭(전역). 홈에서만 home-wrap으로 덮어씀 */
 .site-header, .grid, .site-footer{
   position: relative;
   z-index: 2;
@@ -73,6 +71,7 @@ body::before{
   margin-inline: auto;
 }
 
+/* 모바일에서 fixed 버벅일 때 */
 @media (max-width: 768px){
   body{ background-attachment: scroll; }
 }
@@ -93,7 +92,7 @@ body::before{
   font-size: clamp(14px, 2vw, 16px);
 }
 
-/* 카드 그리드 (기본: 다른 페이지에 영향) */
+/* 카드 그리드 (전역: 3열) */
 .grid{
   padding:24px 20px 48px;
   display:grid;
@@ -104,7 +103,7 @@ body::before{
   .grid{ grid-template-columns: 1fr; }
 }
 
-/* 카드 (기본) */
+/* 카드 (전역) */
 .card{
   background: var(--panel);
   border-radius: 18px;
@@ -126,6 +125,7 @@ body::before{
   border-color: rgba(106,169,255,.45);
 }
 
+/* ✅ 전역에서 이모지/설명 숨김 없음 (하위 페이지 정상 노출) */
 .card .emoji{
   font-size: 38px;
   line-height:1;
@@ -141,13 +141,14 @@ body::before{
   font-size: 15px;
 }
 
-/* 홈 화면에서 사용: 이미지 + 하단 80px 크롭 */
+/* 홈/다른 페이지 공용: 이미지 + 하단 80px 크롭 유틸 */
 .card-img{
   display:block;
   width: 100%;
   height: auto;
   border-radius: 12px;
 }
+/* 아래에서 위로 80px 가림 + 레이아웃 높이 보정 */
 .crop-bottom-80{
   clip-path: inset(0 0 80px 0 round 12px);
   margin-bottom: -80px;
