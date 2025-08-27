@@ -24,6 +24,22 @@
   <style>
     .is-hidden { display: none !important; }
   </style>
+
+  <!-- ✅ 홈 전용(첫 화면만) 카드 1.5배 확대 -->
+  <style>
+    /* 이 블록은 index.html에만 존재하므로 다른 페이지에는 적용되지 않음 */
+    .home-grid{ 
+      /* 3열(기본) → 2열로 변경: 카드 가로폭이 대략 1.5배 확대 */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (max-width: 900px){
+      .home-grid{ grid-template-columns: 1fr; } /* 모바일 동작은 동일 */
+    }
+    /* 내부 여백/타이포도 1.5x 수준으로 키움 */
+    .home-grid .card{ padding: 42px 36px; }              /* 28px → 42px */
+    .home-grid .card h2{ font-size: 28px; margin-bottom: 14px; } /* 22px → 28px */
+    /* 이미지는 카드 폭 1.5배에 따라 자동으로 세로도 비례 확대됨 (크롭은 그대로 80px 유지) */
+  </style>
 </head>
 <body>
   <!-- ⭐ 별을 그릴 캔버스: 배경층 -->
@@ -33,8 +49,9 @@
     <h1>양재_archive</h1>
   </header>
 
-  <main class="grid" id="main">
-    <!-- 각 카드에 data-section 키 부여 -->
+  <!-- ⬇⬇ 첫 화면 전용: 클래스 home-grid 추가 -->
+  <main class="grid home-grid" id="main">
+    <!-- 첫 화면 카드: 제목 + 이미지(하단 80px 크롭)만 보이게 마크업 -->
     <a class="card" href="micro/" data-section="micro" aria-label="미시경제학으로 이동">
       <h2>미시경제학</h2>
       <img class="card-img crop-bottom-80" src="./assets/micro.png" alt="" loading="lazy" decoding="async">
@@ -59,9 +76,9 @@
   <script>
     /* 🔧 여기에서 true/false만 바꾸세요 */
     window.SECTION_VISIBILITY = {
-      micro:   true,   // 미시경제학 카드 보이기(true) / 숨기기(false)
-      macro:   true,   // 거시경제학
-      metrics: true    // 계량경제학
+      micro:   true,
+      macro:   true,
+      metrics: true
     };
 
     // 렌더 직후 적용: false인 카드 DOM에서 제거(시각/키보드 접근 모두 차단)
@@ -73,7 +90,7 @@
         if (flags[key] === false) {
           card.classList.add('is-hidden');
           card.setAttribute('aria-hidden', 'true');
-          card.hidden = true; // 표준 속성 추가
+          card.hidden = true; // 표준 속성
         }
       });
     })();
