@@ -19,7 +19,7 @@ document.querySelectorAll('.card').forEach(card => {
 });
 
 // =====================
-// Starfield: 왼쪽 ➜ 오른쪽 (살짝 하강) 은하수 배경
+/* Starfield: 왼쪽 ➜ 오른쪽 (살짝 하강) 은하수 배경 */
 // =====================
 (() => {
   const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
