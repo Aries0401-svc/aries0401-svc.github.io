@@ -25,16 +25,20 @@
       width: min(100%, 1000px);
       margin: 14px auto;
       padding: 12px 16px;
-      border:1px solid rgba(255,255,255,.06);
+      border:1px solid #223055; /* 불투명 테두리 */
       border-radius: 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05));
+      /* 불투명 배경으로 변경 */
+      background: linear-gradient(180deg, #0f172a, #0b1220);
       display:grid; 
       grid-template-columns: 1fr; /* 버튼행 위, 미터 아래 */
       gap: 12px;
       align-items: start;
     }
     @media (prefers-color-scheme: light){
-      .controls{ border-color: rgba(2,6,23,.12); }
+      .controls{ 
+        border-color: #cbd5e1;               /* 라이트 모드 테두리 */
+        background: linear-gradient(180deg, #ffffff, #f3f4f6); /* 불투명 배경 */
+      }
     }
     .actions{
       display:flex; gap:8px; align-items:center; flex-wrap:wrap;
