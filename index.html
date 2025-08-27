@@ -23,21 +23,7 @@
   <!-- 공용: 카드 완전 숨김 유틸 -->
   <style>
     .is-hidden { display: none !important; }
-  </style>
-
-  <!-- ✅ 홈(첫 화면) 전용 스타일: 1.3배 유지 + 좌우 공백 제거 + 이모지/설명 숨김 -->
-  <style>
-    /* 컨테이너를 화면 가로 100%로 확장(좌우 공백 제거) */
-    .home-wrap{ width: 100%; }
-
-    /* 그리드 좌우 기본 패딩(20px)을 홈에서만 0으로 */
-    .home-grid{ padding-left: 0; padding-right: 0; }
-
-    /* 1.3배 느낌 유지: 카드 내부 여백/타이포 업스케일 */
-    .home-grid .card{ padding: 36px 31px; }             /* 28→36 (대략 1.3x) */
-    .home-grid .card h2{ font-size: 28px; margin-bottom: 16px; } /* 22→28 */
-
-    /* 홈에서만 이모티콘/설명 감추기 (하위 페이지 영향 없음) */
+    /* ✅ 홈(첫 화면)에서만 이모티콘/설명 숨김 — 전역엔 영향 없음 */
     .home-grid .emoji, .home-grid p { display: none !important; }
   </style>
 </head>
@@ -45,12 +31,12 @@
   <!-- ⭐ 배경 별 -->
   <canvas id="starfield" aria-hidden="true"></canvas>
 
-  <!-- ⬇ 홈 전용 클래스 적용(헤더/그리드/푸터 모두) -->
-  <header class="site-header home-wrap">
+  <header class="site-header">
     <h1>양재_archive</h1>
   </header>
 
-  <main class="grid home-grid home-wrap" id="main">
+  <!-- 홈 전용 클래스: home-grid (크기 확대/풀폭 없음) -->
+  <main class="grid home-grid" id="main">
     <!-- 제목 + PNG(하단 80px 크롭) -->
     <a class="card" href="micro/" data-section="micro" aria-label="미시경제학으로 이동">
       <h2>미시경제학</h2>
@@ -68,7 +54,7 @@
     </a>
   </main>
 
-  <footer class="site-footer home-wrap">
+  <footer class="site-footer">
     <small>© <span id="year"></span> aries0401-svc</small>
   </footer>
 
