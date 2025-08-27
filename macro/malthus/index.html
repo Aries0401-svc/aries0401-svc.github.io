@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>맬서스 트랩: 출생·사망률 vs 소득 & 소득 vs 인구 (v3.5)</title>
+  <title>맬서스 트랩</title>
 
   <!-- 에셋: 폰트/스타일 그대로 사용 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,10 +20,7 @@
   <style>
     /* 이 페이지 전용 최소 스타일 (에셋 규칙과 충돌/재정의 최소화) */
 
-    /* 헤더 보조문구 */
-    .site-header .subtitle{ color: var(--muted); line-height:1.5; }
-
-    /* 상단 컨트롤/미터 UI */
+    /* 컨트롤 영역: 버튼 행(수평) + 그 아래에 미터 */
     .controls{
       width: min(100%, 1000px);
       margin: 14px auto;
@@ -31,10 +28,16 @@
       border:1px solid rgba(255,255,255,.06);
       border-radius: 14px;
       background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05));
-      display:grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+      display:grid; 
+      grid-template-columns: 1fr; /* 버튼행 위, 미터 아래 */
+      gap: 12px;
+      align-items: start;
     }
     @media (prefers-color-scheme: light){
       .controls{ border-color: rgba(2,6,23,.12); }
+    }
+    .actions{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
     }
     .btn{
       cursor:pointer; border:1px solid rgba(255,255,255,.06);
@@ -47,8 +50,8 @@
     .btn.primary{ background:#23407a; border-color:#2a4e9b; }
     .btn:disabled{ opacity:.55; cursor:not-allowed; filter:grayscale(.2); }
 
-    .meter{ display:grid; grid-template-columns: repeat(7, auto); gap: 10px; align-items:center; }
-    .meter .label{ color: var(--muted); font-weight: 600; }
+    .meter{ display:grid; grid-template-columns: repeat(6, auto); gap: 10px; align-items:center; }
+    /* "실시간" 라벨 삭제에 맞춰 6칸으로 조정 */
     .chip{
       padding:6px 10px; border-radius:10px;
       border:1px solid rgba(255,255,255,.08);
@@ -62,7 +65,7 @@
     .dot{ width:8px; height:8px; border-radius:999px; display:inline-block; background: var(--primary); }
     .dot.ok{ background:#22c55e; }
 
-    /* 메인 그리드: 이 페이지만 2열 */
+    /* 메인 그리드: 이 페이지만 2열(차트 2개) */
     .two-col{ grid-template-columns: 1fr; }
     @media(min-width: 980px){ .two-col{ grid-template-columns: 1fr 1fr; } }
 
@@ -105,38 +108,37 @@
   </style>
 </head>
 <body>
-  <!-- ⭐ 에셋 배경(은하수) 동작을 위한 고정 캔버스 -->
-  <canvas id="starfield" aria-hidden="true"></canvas>
+  <!-- ⭐ 별 애니메이션 제거: #starfield 캔버스를 포함하지 않음 -->
 
-  <!-- 에셋의 헤더 스타일을 그대로 사용 -->
+  <!-- 에셋의 헤더 스타일을 그대로 사용. 부제(설명)는 요청에 따라 삭제 -->
   <header class="site-header">
-    <h1>맬서스 트랩 – 두 가지 핵심 그림 (v3.5)</h1>
-    <p class="subtitle">각 시나리오에서 <em>곡선이 먼저 천천히 이동</em>하고, 이후 <em>N(t)</em>가 새 목표로 수렴합니다. 시나리오3(기술 진보)에서는 <em>수평 보조 점선</em>으로 <code>y*</code>가 같음을 표시합니다.</p>
+    <h1>맬서스 트랩</h1>
   </header>
 
-  <section class="controls" aria-label="시나리오 & 실시간 측정기">
-    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+  <!-- 컨트롤: 버튼 행(수평) + 아래에 미터 -->
+  <section class="controls" aria-label="시나리오 선택 및 상태">
+    <div class="actions">
       <button id="scenario1" class="btn primary">시나리오 1: 출생률 외생 증가</button>
       <button id="scenario2" class="btn primary">시나리오 2: 사망률 외생 증가</button>
       <button id="scenario3" class="btn primary">시나리오 3: 기술 진보</button>
       <button id="reset" class="btn">초기화</button>
     </div>
-    <div class="meter">
-      <span class="label">실시간</span>
+    <div class="meter" aria-label="실시간 상태">
+      <!-- "실시간" 라벨 삭제 -->
       <span class="chip">N(t): <b id="mN">-</b></span>
       <span class="chip">y(t): <b id="mY">-</b></span>
-      <span class="chip">b(y): <b id="mB">-</b>% · d(y): <b id="mD">-</b>%</span>
+      <span class="chip">b(y): <b id="mB">-</b>%</span>
+      <span class="chip">d(y): <b id="mD">-</b>%</span>
       <span class="chip state"><i class="dot" id="mDot"></i><span id="mState">대기</span></span>
       <span class="chip">y* (고정): <b id="mYStar0">-</b></span>
     </div>
   </section>
 
-  <!-- 에셋의 .grid 레이아웃을 그대로 사용하되, 이 페이지만 two-col로 2열 구성 -->
+  <!-- 메인: 차트 2개 (2열) -->
   <main class="grid two-col">
     <!-- Chart 1 -->
     <section class="card" aria-label="소득에 따른 출생·사망률">
       <h2>출생률·사망률 vs 1인당 소득</h2>
-      <p class="sub">가로축: 1인당 소득 (0–100) · 세로축: 연간 비율(%) — 흰 점선은 <em>현재 소득 y(t)</em>. 초기 교차점의 점(포인트)은 숨김, <span style="color:#ffb85c">노란 점</span>은 시나리오1·2에서 새 교차점 도달 시에만 표시. <strong>점선=변경 전 곡선</strong></p>
       <div id="chart1" class="chart" role="img" aria-label="소득에 따른 출생률과 사망률 곡선"></div>
       <div class="legend">
         <span><i style="background: var(--primary)"></i> 출생률</span>
@@ -147,7 +149,6 @@
     <!-- Chart 2 -->
     <section class="card" aria-label="인구에 따른 1인당 소득">
       <h2>1인당 소득 vs 인구 (선형 우하향)</h2>
-      <p class="sub">가로축: 인구 N (50–150) · 세로축: 1인당 소득 (0–100) — <span style="color:#cfd8ea">회색 점</span>은 <em>초기 균형</em>, <span style="color:var(--primary)">파란 점</span>은 <em>현재 상태</em>. 시나리오3에서 곡선 전체가 <em>상방 이동</em>. <strong>점선=변경 전 곡선</strong></p>
       <div id="chart2" class="chart" role="img" aria-label="인구와 1인당 소득의 선형 우하향 관계"></div>
       <div class="legend">
         <span><i style="background: #22c55e"></i> y(N) = a − s·N</span>
@@ -156,24 +157,16 @@
     </section>
   </main>
 
-  <!-- 정보 풋노트 -->
-  <div class="grid" style="grid-template-columns:1fr;">
-    <div class="card" style="padding:14px;">
-      <p class="sub" style="margin:0;">
-        오른쪽 함수는 <code>y(N)=a-sN</code>이며, 시나리오3(기술 진보)에서는 <code>a</code>(절편)을 <strong>상향</strong> 이동시켜 모든 N에서 y를 높입니다.
-        출생/사망 곡선은 그대로라서 고정 균형 소득 <code>y* = y*₀</code>로 <em>재수렴</em>합니다.
-      </p>
-    </div>
-  </div>
+  <!-- 정보 풋노트: 요청에 따라 삭제(없음) -->
 
-  <!-- 네비게이션 풋터: 에셋의 .card 호버가 그대로 적용(띠용) -->
+  <!-- 네비게이션 풋터: 예시와 동일 사이즈(12px 18px)로 정확히 맞춤 -->
   <footer class="site-footer">
-    <a class="card" href="../" aria-label="이전 페이지로">← 이전으로</a>
-    <a class="card" href="../../" aria-label="처음으로">← 처음으로</a>
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
     <div style="margin-top:10px;"><small>© <span id="year"></span> aries0401-svc</small></div>
   </footer>
 
-  <!-- 공통 스크립트(에셋 배경·키보드 인터랙션 등) -->
+  <!-- 공통 스크립트(키보드 인터랙션 등). 별 애니메이션은 #starfield가 없어서 실행 안 됨 -->
   <script src="../../assets/site.js"></script>
 
 <script>
