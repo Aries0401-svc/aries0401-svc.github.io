@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>맬서스 트랩: 출생·사망률 vs 소득 & 소득 vs 인구 (v3.5)</title>
 
-  <!-- (자잘한 통일) 공통 폰트/스타일 자산 사용 -->
+  <!-- 공통 폰트/스타일 (assets 참조) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
   <!-- favicon 404 방지 -->
   <link rel="icon" href="data:," />
 
-  <!-- D3.js (CDN) — defer 제거 (d3 미정의 방지) -->
+  <!-- D3.js (d3 미정의 방지: defer 사용 안 함) -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
   <style>
@@ -122,9 +122,17 @@
     </section>
   </main>
 
+  <!-- 정보 풋노트 -->
   <div class="footer">
     <p>오른쪽 함수는 <code>y(N)=a-sN</code>이며, 시나리오3(기술 진보)에서는 <code>a</code>(절편)을 <strong>상향</strong> 이동시켜 모든 N에서 y를 높입니다. 출생/사망 곡선은 그대로라서 고정 균형 소득 <code>y* = y*₀</code>로 <em>재수렴</em>합니다.</p>
   </div>
+
+  <!-- 네비게이션 풋터 (요청: 이전/처음 버튼) -->
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+    <small>© <span id="year"></span> aries0401-svc</small>
+  </footer>
 
   <!-- 공통 스크립트 -->
   <script src="../../assets/site.js"></script>
