@@ -44,7 +44,6 @@ body{
   background-attachment: fixed, fixed, fixed, fixed;
 
   color: var(--text);
-  /* ⛳️ 중요: flex 제거 (폭 계산 간섭 방지) */
 }
 
 /* ⭐ 캔버스: 전체 배경층 */
@@ -100,7 +99,7 @@ body::before{
 .grid{
   padding:24px 20px 48px;
   display:grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)); /* minmax(0,1fr)로 초과 폭/오버플로 방지 */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap:20px;
 }
 @media (max-width: 900px){
@@ -128,19 +127,29 @@ body::before{
   transform: translateY(-3px);
   border-color: rgba(106,169,255,.45);
 }
-.card .emoji{
-  font-size: 38px;
-  line-height:1;
-  margin-bottom: 12px;
-}
 .card h2{
-  margin: 0 0 4px;
+  margin: 0 0 12px;
   font-size: 22px;
 }
-.card p{
-  margin:0;
-  color: var(--muted);
-  font-size: 15px;
+
+/* 설명/이모지 제거했지만 규칙은 남겨둠 */
+.card .emoji{ display:none; }
+.card p{ display:none; }
+
+/* 카드 내 이미지 + 하단 80px 크롭 */
+.card-img{
+  display:block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+/* 정확히 '아래에서 80px'을 잘라 보이게 함
+   - clip-path로 하단 80px 마스킹
+   - margin-bottom:-80px로 레이아웃 높이도 80px 줄임 */
+.crop-bottom-80{
+  clip-path: inset(0 0 80px 0 round 12px);
+  margin-bottom: -80px;
 }
 
 /* 푸터 */
