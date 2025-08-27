@@ -63,7 +63,7 @@ body::before{
   z-index: 1;
 }
 
-/* 기본 폭(전역). 홈에서만 home-wrap으로 덮어씀 */
+/* 기본 폭(전역). 홈에선 index.html의 .home-wrap로 100%로 덮어씀 */
 .site-header, .grid, .site-footer{
   position: relative;
   z-index: 2;
@@ -125,7 +125,7 @@ body::before{
   border-color: rgba(106,169,255,.45);
 }
 
-/* ✅ 전역에서 이모지/설명 숨김 없음 (하위 페이지 정상 노출) */
+/* 하위 페이지 정상 노출(전역 규칙) */
 .card .emoji{
   font-size: 38px;
   line-height:1;
@@ -141,7 +141,7 @@ body::before{
   font-size: 15px;
 }
 
-/* 홈/다른 페이지 공용: 이미지 + 하단 80px 크롭 유틸 */
+/* 공용 유틸: 이미지 + 하단 80px 크롭 */
 .card-img{
   display:block;
   width: 100%;
