@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>맬서스 트랩: 출생·사망률 vs 소득 & 소득 vs 인구 (v3.5)</title>
 
-  <!-- 공통 폰트/스타일 (assets 참조) -->
+  <!-- 에셋: 폰트/스타일 그대로 사용 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
@@ -14,69 +14,102 @@
   <!-- favicon 404 방지 -->
   <link rel="icon" href="data:," />
 
-  <!-- D3.js (d3 미정의 방지: defer 사용 안 함) -->
+  <!-- D3.js -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
   <style>
-    :root{ --bg:#0b1020; --panel:#121830; --text:#e8edf7; --muted:#9fb0d3; --accent:#6aa3ff; --accent2:#ff7a7a; --grid:#2a355d; --line:#1e2746; --good:#3bd07a; --warn:#ffb85c; }
-    *{box-sizing:border-box}
-    body{ margin:0; padding:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Noto Sans, Apple SD Gothic Neo, "맑은 고딕", sans-serif; background: var(--bg); color: var(--text); }
-    header{ padding: 28px 20px 10px; max-width: 1100px; margin: 0 auto 6px auto; }
-    h1{ font-size: clamp(20px, 3vw, 28px); margin:0 0 8px 0; font-weight: 700; }
-    p.subtitle{ margin:0; color: var(--muted); line-height:1.5; }
+    /* 이 페이지 전용 최소 스타일 (에셋 규칙과 충돌/재정의 최소화) */
 
-    .controls{ max-width: 1100px; margin: 14px auto; padding: 12px 16px; border:1px solid var(--line); border-radius: 14px; background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05)); display:grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
-    .btn{ cursor:pointer; border:1px solid var(--line); background:#1a2446; color:#e8edf7; padding:10px 14px; border-radius:12px; font-weight:600; letter-spacing:.2px; }
-    .btn:hover{ filter:brightness(1.1); }
+    /* 헤더 보조문구 */
+    .site-header .subtitle{ color: var(--muted); line-height:1.5; }
+
+    /* 상단 컨트롤/미터 UI */
+    .controls{
+      width: min(100%, 1000px);
+      margin: 14px auto;
+      padding: 12px 16px;
+      border:1px solid rgba(255,255,255,.06);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05));
+      display:grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+    }
+    @media (prefers-color-scheme: light){
+      .controls{ border-color: rgba(2,6,23,.12); }
+    }
+    .btn{
+      cursor:pointer; border:1px solid rgba(255,255,255,.06);
+      background:#1a2446; color: var(--text);
+      padding:10px 14px; border-radius:12px; font-weight:600; letter-spacing:.2px;
+    }
+    @media (prefers-color-scheme: light){
+      .btn{ border-color: rgba(2,6,23,.12); }
+    }
     .btn.primary{ background:#23407a; border-color:#2a4e9b; }
     .btn:disabled{ opacity:.55; cursor:not-allowed; filter:grayscale(.2); }
 
     .meter{ display:grid; grid-template-columns: repeat(7, auto); gap: 10px; align-items:center; }
     .meter .label{ color: var(--muted); font-weight: 600; }
-    .chip{ padding:6px 10px; border-radius:10px; border:1px solid var(--line); background:#0f1630; font-size:12px; }
+    .chip{
+      padding:6px 10px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.2);
+      font-size:12px;
+    }
+    @media (prefers-color-scheme: light){
+      .chip{ border-color: rgba(2,6,23,.12); background: rgba(2,6,23,.03); }
+    }
     .state{ display:inline-flex; align-items:center; gap:6px; }
-    .dot{ width:8px; height:8px; border-radius:999px; display:inline-block; background:#7aa8ff; }
-    .dot.ok{ background:#3bd07a; }
+    .dot{ width:8px; height:8px; border-radius:999px; display:inline-block; background: var(--primary); }
+    .dot.ok{ background:#22c55e; }
 
-    .grid{ max-width: 1100px; margin: 12px auto 30px; padding: 0 0 6px 0; display:grid; gap: 16px; grid-template-columns: 1fr; }
-    @media(min-width: 980px){ .grid{ grid-template-columns: 1fr 1fr; } }
+    /* 메인 그리드: 이 페이지만 2열 */
+    .two-col{ grid-template-columns: 1fr; }
+    @media(min-width: 980px){ .two-col{ grid-template-columns: 1fr 1fr; } }
 
-    .card{ background: var(--panel); border:1px solid var(--line); border-radius: 16px; padding: 14px 14px 8px 14px; position: relative; box-shadow: 0 10px 22px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.02); }
-    .card h2{ margin:0 0 6px 6px; font-size: 16px; letter-spacing:.2px; color: #d8e4ff; }
-    .card .sub{ margin:0 0 4px 6px; font-size: 12px; color: var(--muted); }
+    /* 카드 내부(차트) */
+    .card h2{ margin:0 0 8px; }
+    .card .sub{ margin:0 0 8px; color: var(--muted); font-size: 12px; }
     .chart{ width: 100%; height: 340px; }
 
-    .axis path, .axis line{ stroke: #566; shape-rendering: crispEdges; }
-    .gridline line{ stroke: var(--grid); }
+    /* SVG 축/그리드/시리즈 */
+    .axis path, .axis line{ stroke: var(--muted); opacity:.6; shape-rendering: crispEdges; }
+    .gridline line{ stroke: rgba(148,163,184,.2); }
     .gridline .domain{ display:none; }
-    .series-birth{ stroke: var(--accent); fill: none; stroke-width: 2.5; }
-    .series-death{ stroke: var(--accent2); fill: none; stroke-width: 2.5; }
-    .series-income{ stroke: var(--good); fill: none; stroke-width: 2.5; }
+    .series-birth{ stroke: var(--primary); fill: none; stroke-width: 2.5; }
+    .series-death{ stroke: #ef4444; fill: none; stroke-width: 2.5; }
+    .series-income{ stroke: #22c55e; fill: none; stroke-width: 2.5; }
 
     /* 가이드 */
-    .current-line{ stroke:#e8edf7; stroke-width:2; stroke-dasharray:3 6; opacity:.95; }
-    .eq0-line{ stroke: #9fb0d3; stroke-width:1.5; stroke-dasharray:2 4; opacity:.6; }
-    .h-guide{ stroke:#e8edf7; stroke-width:1.6; stroke-dasharray:4 6; opacity:.9; }
+    .current-line{ stroke: var(--text); stroke-width:2; stroke-dasharray:3 6; opacity:.95; }
+    .eq0-line{ stroke: var(--muted); stroke-width:1.5; stroke-dasharray:2 4; opacity:.6; }
+    .h-guide{ stroke: var(--text); stroke-width:1.6; stroke-dasharray:4 6; opacity:.9; }
     .equilibrium{ fill: #fff; stroke: #000; stroke-width: .6; }
-    .eq1-dot{ fill: var(--warn); stroke:#000; stroke-width:.6; }
+    .eq1-dot{ fill: #ffb85c; stroke:#000; stroke-width:.6; }
 
     /* 변경 전(점선) 스타일 */
     .prev-birth, .prev-death, .prev-income{ fill:none; stroke-width:2.5; stroke-dasharray:6 6; opacity:.65; }
-    .prev-birth{ stroke: var(--accent); }
-    .prev-death{ stroke: var(--accent2); }
-    .prev-income{ stroke: var(--good); }
+    .prev-birth{ stroke: var(--primary); }
+    .prev-death{ stroke: #ef4444; }
+    .prev-income{ stroke: #22c55e; }
 
-    .legend{ position:absolute; right: 12px; top: 10px; background: rgba(0,0,0,.25); border:1px solid var(--line); border-radius: 10px; padding: 6px 8px; display:flex; gap: 10px; align-items:center; }
+    .legend{
+      position:absolute; right: 12px; top: 10px;
+      background: rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.06);
+      border-radius: 10px; padding: 6px 8px; display:flex; gap: 10px; align-items:center;
+    }
+    @media (prefers-color-scheme: light){
+      .legend{ border-color: rgba(2,6,23,.12); background: rgba(0,0,0,.05); }
+    }
     .legend span{ display:inline-flex; gap:6px; align-items:center; font-size:12px; color: var(--muted); }
     .legend i{ width:16px; height:3px; display:inline-block; border-radius: 999px; }
-
-    .footer{ max-width:1100px; margin: 0 auto 30px; color: var(--muted); font-size: 12px; padding: 0 6px; }
-    a{ color: #a9cbff; text-decoration: none; }
-    a:hover{ text-decoration: underline; }
   </style>
 </head>
 <body>
-  <header>
+  <!-- ⭐ 에셋 배경(은하수) 동작을 위한 고정 캔버스 -->
+  <canvas id="starfield" aria-hidden="true"></canvas>
+
+  <!-- 에셋의 헤더 스타일을 그대로 사용 -->
+  <header class="site-header">
     <h1>맬서스 트랩 – 두 가지 핵심 그림 (v3.5)</h1>
     <p class="subtitle">각 시나리오에서 <em>곡선이 먼저 천천히 이동</em>하고, 이후 <em>N(t)</em>가 새 목표로 수렴합니다. 시나리오3(기술 진보)에서는 <em>수평 보조 점선</em>으로 <code>y*</code>가 같음을 표시합니다.</p>
   </header>
@@ -98,43 +131,49 @@
     </div>
   </section>
 
-  <main class="grid">
-    <!-- Chart 1: Birth & Death vs Income -->
+  <!-- 에셋의 .grid 레이아웃을 그대로 사용하되, 이 페이지만 two-col로 2열 구성 -->
+  <main class="grid two-col">
+    <!-- Chart 1 -->
     <section class="card" aria-label="소득에 따른 출생·사망률">
       <h2>출생률·사망률 vs 1인당 소득</h2>
-      <p class="sub">가로축: 1인당 소득 (0–100) · 세로축: 연간 비율(%) — 흰 점선은 <em>현재 소득 y(t)</em>. 초기 교차점의 점(포인트)은 숨김, <span style="color:var(--warn)">노란 점</span>은 시나리오1·2에서 새 교차점 도달 시에만 표시. <strong>점선=변경 전 곡선</strong></p>
+      <p class="sub">가로축: 1인당 소득 (0–100) · 세로축: 연간 비율(%) — 흰 점선은 <em>현재 소득 y(t)</em>. 초기 교차점의 점(포인트)은 숨김, <span style="color:#ffb85c">노란 점</span>은 시나리오1·2에서 새 교차점 도달 시에만 표시. <strong>점선=변경 전 곡선</strong></p>
       <div id="chart1" class="chart" role="img" aria-label="소득에 따른 출생률과 사망률 곡선"></div>
       <div class="legend">
-        <span><i style="background: var(--accent)"></i> 출생률</span>
-        <span><i style="background: var(--accent2)"></i> 사망률</span>
+        <span><i style="background: var(--primary)"></i> 출생률</span>
+        <span><i style="background: #ef4444"></i> 사망률</span>
       </div>
     </section>
 
-    <!-- Chart 2: Income vs Population (downward, linear) -->
+    <!-- Chart 2 -->
     <section class="card" aria-label="인구에 따른 1인당 소득">
       <h2>1인당 소득 vs 인구 (선형 우하향)</h2>
-      <p class="sub">가로축: 인구 N (50–150) · 세로축: 1인당 소득 (0–100) — <span style="color:#cfd8ea">회색 점</span>은 <em>초기 균형</em>, <span style="color:#a9cbff">파란 점</span>은 <em>현재 상태</em>. 시나리오3에서 곡선 전체가 <em>상방 이동</em>. <strong>점선=변경 전 곡선</strong></p>
+      <p class="sub">가로축: 인구 N (50–150) · 세로축: 1인당 소득 (0–100) — <span style="color:#cfd8ea">회색 점</span>은 <em>초기 균형</em>, <span style="color:var(--primary)">파란 점</span>은 <em>현재 상태</em>. 시나리오3에서 곡선 전체가 <em>상방 이동</em>. <strong>점선=변경 전 곡선</strong></p>
       <div id="chart2" class="chart" role="img" aria-label="인구와 1인당 소득의 선형 우하향 관계"></div>
       <div class="legend">
-        <span><i style="background: var(--good)"></i> y(N) = a − s·N</span>
-        <span><i style="background: #e8edf7"></i> y(t) (현재)</span>
+        <span><i style="background: #22c55e"></i> y(N) = a − s·N</span>
+        <span><i style="width:10px;height:10px;border-radius:999px;background: var(--primary)"></i> y(t) (현재)</span>
       </div>
     </section>
   </main>
 
   <!-- 정보 풋노트 -->
-  <div class="footer">
-    <p>오른쪽 함수는 <code>y(N)=a-sN</code>이며, 시나리오3(기술 진보)에서는 <code>a</code>(절편)을 <strong>상향</strong> 이동시켜 모든 N에서 y를 높입니다. 출생/사망 곡선은 그대로라서 고정 균형 소득 <code>y* = y*₀</code>로 <em>재수렴</em>합니다.</p>
+  <div class="grid" style="grid-template-columns:1fr;">
+    <div class="card" style="padding:14px;">
+      <p class="sub" style="margin:0;">
+        오른쪽 함수는 <code>y(N)=a-sN</code>이며, 시나리오3(기술 진보)에서는 <code>a</code>(절편)을 <strong>상향</strong> 이동시켜 모든 N에서 y를 높입니다.
+        출생/사망 곡선은 그대로라서 고정 균형 소득 <code>y* = y*₀</code>로 <em>재수렴</em>합니다.
+      </p>
+    </div>
   </div>
 
-  <!-- 네비게이션 풋터 (요청: 이전/처음 버튼) -->
+  <!-- 네비게이션 풋터: 에셋의 .card 호버가 그대로 적용(띠용) -->
   <footer class="site-footer">
-    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
-    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
-    <small>© <span id="year"></span> aries0401-svc</small>
+    <a class="card" href="../" aria-label="이전 페이지로">← 이전으로</a>
+    <a class="card" href="../../" aria-label="처음으로">← 처음으로</a>
+    <div style="margin-top:10px;"><small>© <span id="year"></span> aries0401-svc</small></div>
   </footer>
 
-  <!-- 공통 스크립트 -->
+  <!-- 공통 스크립트(에셋 배경·키보드 인터랙션 등) -->
   <script src="../../assets/site.js"></script>
 
 <script>
@@ -254,8 +293,8 @@
   const prevIncomePath = g2.append('path').attr('class','prev-income').style('opacity',0);
   // 현재 경로
   const curve2Path = g2.append('path').attr('class','series-income');
-  const eq0DotR = g2.append('circle').attr('class','equilibrium').attr('r',4.5).style('fill','#cfd8ea'); // 오른쪽 초기 균형(회색)
-  const statePt = g2.append('circle').attr('class','equilibrium').attr('r',5).style('fill','var(--accent)');
+  const eq0DotR = g2.append('circle').attr('class','equilibrium').attr('r',4.5).style('fill','#cfd8ea'); // 초기 균형(회색)
+  const statePt = g2.append('circle').attr('class','equilibrium').attr('r',5).style('fill','var(--primary)');
   const yStarGuide = g2.append('line').attr('class','h-guide').style('opacity',0); // 시나리오3용 수평 보조선
 
   g2.append('text').attr('x', W2/2).attr('y', H2+28).attr('text-anchor','middle').attr('fill','var(--muted)').text('인구 N');
@@ -270,7 +309,7 @@
     const yNow = yOfN(currentN);
     statePt.attr('cx', x2(currentN)).attr('cy', y2(yNow));
 
-    // 초기 균형점(오른쪽) – 고정
+    // 초기 균형점 – 고정
     eq0DotR.attr('cx', x2(lin.N0)).attr('cy', y2(yStar0));
 
     // 시나리오3 보조선 (y = y*0)
@@ -349,41 +388,37 @@
     scenario3Btn.disabled = true;
   }
 
-  // 시나리오 1: 출생률 외생 증가 (출생률 곡선 상방 이동 → y*↓, N*↑)
+  // 시나리오 1
   function startScenario1(){
     if(scenarioActive) return; lockScenarios();
 
-    // 변경 전 곡선(점선) 저장
-    const birthDataOld = xs.map(x=>({x, y: b(x)}));
+    const birthDataOld = d3.range(0,100.001,0.5).map(x=>({x, y: b(x)}));
     prevBirthPath.datum(birthDataOld).attr('d', line1).style('opacity',.65);
 
-    // 새 파라미터 적용
     birthParams = {...birthParams, b0: birthParams.b0 + 0.6};
     yStarNew = findIncomeSteadyState();
     targetN = clamp(findNstar(yStarNew), lin.Nmin, lin.Nmax);
 
-    const birthDataNew = xs.map(x=>({x, y: b(x)}));
+    const birthDataNew = d3.range(0,100.001,0.5).map(x=>({x, y: b(x)}));
     birthPath
       .datum(birthDataNew)
       .transition().duration(1200).ease(d3.easeCubicInOut)
       .attr('d', line1)
-      .on('end', ()=> runToTarget({showEqDot:true})); // 곡선 이동 후 N 수렴 시작
+      .on('end', ()=> runToTarget({showEqDot:true}));
   }
 
-  // 시나리오 2: 사망률 외생 증가 (사망률 곡선 상방 이동 → y*↑, N*↓)
+  // 시나리오 2
   function startScenario2(){
     if(scenarioActive) return; lockScenarios();
 
-    // 변경 전 곡선(점선) 저장
-    const deathDataOld = xs.map(x=>({x, y: d(x)}));
+    const deathDataOld = d3.range(0,100.001,0.5).map(x=>({x, y: d(x)}));
     prevDeathPath.datum(deathDataOld).attr('d', line1).style('opacity',.65);
 
-    // 새 파라미터 적용
     deathParams = {...deathParams, dmin: deathParams.dmin + 0.6};
     yStarNew = findIncomeSteadyState();
     targetN = clamp(findNstar(yStarNew), lin.Nmin, lin.Nmax);
 
-    const deathDataNew = xs.map(x=>({x, y: d(x)}));
+    const deathDataNew = d3.range(0,100.001,0.5).map(x=>({x, y: d(x)}));
     deathPath
       .datum(deathDataNew)
       .transition().duration(1200).ease(d3.easeCubicInOut)
@@ -391,35 +426,27 @@
       .on('end', ()=> runToTarget({showEqDot:true}));
   }
 
-  // 시나리오 3: 기술 진보 (y(N) 상방 이동 → 초기엔 y↑, b>d → N↑ → y가 y*로 회귀)
+  // 시나리오 3
   function startScenario3(){
     if(scenarioActive) return; lockScenarios();
 
-    // 변경 전 곡선(점선) 저장
     const Ns = d3.range(lin.Nmin, lin.Nmax+0.001, 1);
     const dataOld = Ns.map(N=> ({N, y: yOfN(N)}));
     prevIncomePath.datum(dataOld).attr('d', line2).style('opacity',.65);
 
-    // 기술 충격: 절편 a 상향 (단, 곡선 애니메이션이 끝날 때까지 전역 aIntercept는 보류)
     const techBoost = 8;
     const aNew = aIntercept + techBoost;
-
-    // 새 곡선 데이터(전역 반영 전)
     const dataNew = Ns.map(N=> ({N, y: yOfNWith(aNew,N)}));
 
-    // 수평 보조선 표시
     d3.select(yStarGuide.node()).transition().duration(400).style('opacity',1);
 
-    // 곡선 먼저 천천히 이동
     d3.select(curve2Path.node())
       .datum(dataNew)
       .transition().duration(1200).ease(d3.easeCubicInOut)
       .attr('d', line2)
       .on('end', ()=>{
-        // 이제 전역 aIntercept를 갱신하고, N을 y*로 돌려보냄
         aIntercept = aNew;
         targetN = clamp(findNstarWithA(aIntercept, yStar0), lin.Nmin, lin.Nmax);
-        // 노란 점 비활성(이 케이스는 y* 고정 회귀)
         d3.select(eq1Dot.node()).style('opacity',0);
         runToTarget({showEqDot:false});
       });
@@ -431,7 +458,7 @@
     deathParams = {...deathBase};
     yStar0 = findIncomeSteadyState();
     yStarNew = yStar0;
-    aIntercept = yStar0 + lin.slope * lin.N0; // 기술 이전 상태로 복원
+    aIntercept = yStar0 + lin.slope * lin.N0;
     currentN = lin.N0;
     targetN = currentN;
 
@@ -441,17 +468,13 @@
     scenario2Btn.disabled = false;
     scenario3Btn.disabled = false;
 
-    // 곡선 원복
-    const birthDataBase = xs.map(x=>({x, y: b(x)}));
-    const deathDataBase = xs.map(x=>({x, y: d(x)}));
-    birthPath.datum(birthDataBase).attr('d', line1);
-    deathPath.datum(deathDataBase).attr('d', line1);
+    const xs = d3.range(0,100.001,0.5);
+    birthPath.datum(xs.map(x=>({x, y: b(x)}))).attr('d', line1);
+    deathPath.datum(xs.map(x=>({x, y: d(x)}))).attr('d', line1);
 
     const Ns = d3.range(lin.Nmin, lin.Nmax+0.001, 1);
-    const dataBase = Ns.map(N=> ({N, y: yOfN(N)}));
-    d3.select(curve2Path.node()).datum(dataBase).attr('d', line2);
+    d3.select(curve2Path.node()).datum(Ns.map(N=> ({N, y: yOfN(N)}))).attr('d', line2);
 
-    // 점선/보조선 숨김
     prevBirthPath.style('opacity',0);
     prevDeathPath.style('opacity',0);
     prevIncomePath.style('opacity',0);
