@@ -5,7 +5,7 @@
 // 연도 자동 표기
 document.getElementById('year')?.append(new Date().getFullYear());
 
-// 카드에 키보드 인터랙션(Enter/Space) 지원
+// 카드 키보드 인터랙션(Enter/Space) 지원
 document.querySelectorAll('.card').forEach(card => {
   card.setAttribute('role', 'link');
   card.setAttribute('tabindex', '0');
@@ -65,10 +65,10 @@ document.querySelectorAll('.card').forEach(card => {
     for (const layer of LAYERS) {
       for (let i = 0; i < layer.count; i++) {
         const size = rand(layer.size[0], layer.size[1]) * DPR;
-        const speedX = (layer.speedX + rand(-4, 6)) * DPR; // ➜ 오른쪽으로 흐름
+        const speedX = (layer.speedX + rand(-4, 6)) * DPR; // ➜ 오른쪽 흐름
         const speedY = (layer.speedY + rand(-2, 4)) * DPR; // ↘ 살짝 하강
-        const twFreq = rand(0.8, 2.0);  // 반짝 주기
-        const twAmp  = rand(layer.twinkle[0], layer.twinkle[1]); // 반짝 세기
+        const twFreq = rand(0.8, 2.0);
+        const twAmp  = rand(layer.twinkle[0], layer.twinkle[1]);
         const phase  = rand(0, Math.PI * 2);
 
         stars.push({
@@ -152,7 +152,7 @@ document.querySelectorAll('.card').forEach(card => {
     });
   }
 
-  /** 가시성 관리 */
+  /** 탭 가시성 관리 */
   function handleVisibility() {
     if (document.hidden) {
       if (rafId) cancelAnimationFrame(rafId), rafId = null;
