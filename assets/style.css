@@ -63,7 +63,7 @@ body::before{
   z-index: 1;
 }
 
-/* 기본 폭(전역). 홈에선 index.html의 .home-wrap로 100%로 덮어씀 */
+/* 기본 폭 (최대 1000px) */
 .site-header, .grid, .site-footer{
   position: relative;
   z-index: 2;
@@ -103,7 +103,7 @@ body::before{
   .grid{ grid-template-columns: 1fr; }
 }
 
-/* 카드 (전역) */
+/* 카드 (전역 기본 크기) */
 .card{
   background: var(--panel);
   border-radius: 18px;
@@ -148,7 +148,6 @@ body::before{
   height: auto;
   border-radius: 12px;
 }
-/* 아래에서 위로 80px 가림 + 레이아웃 높이 보정 */
 .crop-bottom-80{
   clip-path: inset(0 0 80px 0 round 12px);
   margin-bottom: -80px;
