@@ -37,7 +37,6 @@ body{
     url("./background.png"),
     var(--bg);
 
-  /* 각 레이어별 설정 (이미지만 cover) */
   background-size: auto, auto, cover, auto;
   background-position: center, center, center, center;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
@@ -53,7 +52,7 @@ body{
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 0; /* 배경층 가장 아래 */
+  z-index: 0;
 }
 
 /* 글자 가독성 위해 살짝 오버레이(별/배경 위) */
@@ -71,10 +70,9 @@ body::before{
   position: relative;
   z-index: 2;
   width: min(100%, 1000px);
-  margin-inline: auto; /* 가운데 정렬 */
+  margin-inline: auto;
 }
 
-/* 모바일에서 fixed가 버벅이면 스크롤로 전환 */
 @media (max-width: 768px){
   body{ background-attachment: scroll; }
 }
@@ -95,7 +93,7 @@ body::before{
   font-size: clamp(14px, 2vw, 16px);
 }
 
-/* 카드 그리드 */
+/* 카드 그리드 (기본: 다른 페이지에 영향) */
 .grid{
   padding:24px 20px 48px;
   display:grid;
@@ -106,7 +104,7 @@ body::before{
   .grid{ grid-template-columns: 1fr; }
 }
 
-/* 카드 */
+/* 카드 (기본) */
 .card{
   background: var(--panel);
   border-radius: 18px;
@@ -127,26 +125,29 @@ body::before{
   transform: translateY(-3px);
   border-color: rgba(106,169,255,.45);
 }
+
+.card .emoji{
+  font-size: 38px;
+  line-height:1;
+  margin-bottom: 12px;
+}
 .card h2{
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   font-size: 22px;
 }
+.card p{
+  margin:0;
+  color: var(--muted);
+  font-size: 15px;
+}
 
-/* 설명/이모지 제거했지만 규칙은 남겨둠 */
-.card .emoji{ display:none; }
-.card p{ display:none; }
-
-/* 카드 내 이미지 + 하단 80px 크롭 */
+/* 홈 화면에서 사용: 이미지 + 하단 80px 크롭 */
 .card-img{
   display:block;
   width: 100%;
   height: auto;
   border-radius: 12px;
 }
-
-/* 정확히 '아래에서 80px'을 잘라 보이게 함
-   - clip-path로 하단 80px 마스킹
-   - margin-bottom:-80px로 레이아웃 높이도 80px 줄임 */
 .crop-bottom-80{
   clip-path: inset(0 0 80px 0 round 12px);
   margin-bottom: -80px;
