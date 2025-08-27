@@ -33,24 +33,21 @@
     <h1>양재_archive</h1>
   </header>
 
-  <main class="grid">
+  <main class="grid" id="main">
     <!-- 각 카드에 data-section 키 부여 -->
     <a class="card" href="micro/" data-section="micro" aria-label="미시경제학으로 이동">
-      <div class="emoji" aria-hidden="true">📉</div>
       <h2>미시경제학</h2>
-      <p>개인과 기업의 의사결정, 시장 구조</p>
+      <img class="card-img crop-bottom-80" src="./assets/micro.png" alt="" loading="lazy" decoding="async">
     </a>
 
     <a class="card" href="macro/" data-section="macro" aria-label="거시경제학으로 이동">
-      <div class="emoji" aria-hidden="true">🌍</div>
       <h2>거시경제학</h2>
-      <p>성장·물가·실업, 경기 변동과 정책</p>
+      <img class="card-img crop-bottom-80" src="./assets/macro.png" alt="" loading="lazy" decoding="async">
     </a>
 
     <a class="card" href="metrics/" data-section="metrics" aria-label="계량경제학으로 이동">
-      <div class="emoji" aria-hidden="true">📊</div>
       <h2>계량경제학</h2>
-      <p>데이터로 경제를 추정하고 검정하기</p>
+      <img class="card-img crop-bottom-80" src="./assets/metric.png" alt="" loading="lazy" decoding="async">
     </a>
   </main>
 
@@ -74,9 +71,9 @@
       cards.forEach(function(card){
         var key = card.getAttribute('data-section');
         if (flags[key] === false) {
-          // 완전히 숨기기
           card.classList.add('is-hidden');
           card.setAttribute('aria-hidden', 'true');
+          card.hidden = true; // 표준 속성 추가
         }
       });
     })();
@@ -85,5 +82,3 @@
   <script src="./assets/site.js"></script>
 </body>
 </html>
-
-
