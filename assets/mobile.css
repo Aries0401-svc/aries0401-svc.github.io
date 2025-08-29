@@ -1,0 +1,17 @@
+/* Mobile-specific overrides */
+body {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.grid {
+  grid-template-columns: 1fr !important;
+}
+
+.controls {
+  flex-direction: column !important;
+}
+
+.card {
+  width: 100%;
+}
