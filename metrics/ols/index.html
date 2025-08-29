@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>OLS 최소제곱 회귀 | 경제학 노트</title>
 
   <!-- 공통: 폰트/스타일 -->
@@ -143,7 +143,7 @@
       </div>
 
       <div class="chart-wrap">
-        <canvas id="olsChart" aria-label="산점도와 회귀선"></canvas>
+        <canvas id="olsChart" data-responsive aria-label="산점도와 회귀선"></canvas>
       </div>
     </section>
   </main>
@@ -153,6 +153,7 @@
   </footer>
 
   <!-- 공통 스크립트 -->
+  <script src="../../assets/mobile-init.js" defer></script>
   <script src="../../assets/site.js" defer></script>
 
   <!-- 페이지 전용 스크립트 -->

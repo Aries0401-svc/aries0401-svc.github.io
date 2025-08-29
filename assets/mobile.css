@@ -1,17 +1,43 @@
 /* Mobile-specific overrides */
-body {
-  font-size: 16px;
-  line-height: 1.5;
+body{
+  font-size:16px;
+  line-height:1.5;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom));
 }
-
-.grid {
-  grid-template-columns: 1fr !important;
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+  padding:12px;
 }
-
-.controls {
-  flex-direction: column !important;
+.controls{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
 }
-
-.card {
-  width: 100%;
+.card,
+.panel{
+  display:block;
+  width:100%;
+  border-radius:14px;
+  min-height:44px;
+}
+img,
+svg{
+  max-width:100%;
+  height:auto;
+  display:block;
+}
+.chart-wrap canvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+html.slim-mode [data-desktop-only],
+html.slim-mode #starfield{
+  display:none !important;
+}
+.legend,
+.chart-legend{
+  display:none !important;
 }

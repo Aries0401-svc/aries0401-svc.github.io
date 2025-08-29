@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>계량경제학 · t-분포(표식 & p-value)</title>
 
   <!-- 공통 스타일 -->
@@ -78,7 +78,7 @@
       </div>
 
       <!-- 그래프 -->
-      <canvas id="chart" height="120"></canvas>
+      <div class="chart-wrap"><canvas id="chart" height="120" data-responsive></canvas></div>
     </section>
   </main>
 
@@ -86,6 +86,7 @@
     <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
     <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
   </footer>
+  <script src="../../assets/mobile-init.js"></script>
 
   <script src="../../assets/site.js"></script>
   <script>

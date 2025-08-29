@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>최적선택점 | Cobb–Douglas</title>
   <meta name="description" content="Cobb–Douglas U(x,y)=x^α·y^β에서 α,β·가격·소득을 조절하며 최적선택점을 시각화합니다. 분수/표현식 입력 지원." />
 
@@ -188,7 +188,7 @@
       </div>
 
       <div class="chart-wrap">
-        <canvas id="cdChart" aria-label="예산선과 무차별곡선, 최적점"></canvas>
+        <canvas id="cdChart" data-responsive aria-label="예산선과 무차별곡선, 최적점"></canvas>
       </div>
       <!-- 요청에 따라: 공식을 설명하는 문구 제거 -->
     </section>
@@ -201,6 +201,7 @@
   </footer>
 
   <!-- 공통 스크립트 -->
+  <script src="../../../assets/mobile-init.js"></script>
   <script src="../../../assets/site.js"></script>
 
   <!-- 페이지 전용 스크립트 -->

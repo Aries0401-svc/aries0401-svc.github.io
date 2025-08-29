@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>선형 수요·공급 곡선 | Micro</title>
   <meta name="description" content="수요 Q = s_d·P + t_d, 공급 Q = s_s·P + t_s 를 시각화하고 균형점과 소비자·생산자 잉여, 세금 효과를 보여줍니다." />
 
@@ -158,7 +158,7 @@
       </div>
 
       <div class="chart-wrap">
-        <canvas id="sdcChart" tabindex="0" aria-label="수요·공급 곡선과 균형점, 잉여, 세금 후 변화"></canvas>
+        <canvas id="sdcChart" data-responsive tabindex="0" aria-label="수요·공급 곡선과 균형점, 잉여, 세금 후 변화"></canvas>
       </div>
     </section>
   </main>
@@ -170,6 +170,7 @@
   </footer>
 
   <!-- 공통 스크립트 -->
+  <script src="../../assets/mobile-init.js" defer></script>
   <script src="../../assets/site.js" defer></script>
 
   <!-- 페이지 전용 스크립트 -->

@@ -22,6 +22,7 @@ document.querySelectorAll('.card').forEach(card => {
 // Starfield: 왼쪽 ➜ 오른쪽 (살짝 하강) 은하수 배경
 // =====================
 (() => {
+  if (document.documentElement.classList.contains('slim-mode')) return;
   const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   /** 캔버스 & 컨텍스트 */

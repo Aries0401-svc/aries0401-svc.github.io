@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>양재_archive | Micro · Macro · Metrics</title>
   <meta name="description" content="미시경제학, 거시경제학, 계량경제학 중에서 선택하세요." />
 
@@ -30,7 +30,7 @@
 </head>
 <body>
   <!-- ⭐ 배경 별 -->
-  <canvas id="starfield" aria-hidden="true"></canvas>
+  <canvas id="starfield" data-desktop-only aria-hidden="true"></canvas>
 
   <header class="site-header">
     <h1>양재_archive</h1>
@@ -75,6 +75,7 @@
       });
     })();
   </script>
+  <script src="./assets/mobile-init.js"></script>
 
   <script src="./assets/site.js"></script>
 </body>

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ICC | Cobb–Douglas</title>
   <meta name="description" content="Cobb–Douglas U(x,y)=x^α·y^β에서 파라미터와 소득을 바꾸며 ICC(소득–소비 곡선)를 시각화합니다." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -173,7 +173,7 @@
         <span class="badge"><span class="swatch" style="background:var(--panel); border-style:dashed;"></span>ICC</span>
       </div>
       <div class="chart-wrap">
-        <canvas id="iccChart" aria-label="ICC, 예산선, 무차별곡선, 최적점"></canvas>
+        <canvas id="iccChart" data-responsive aria-label="ICC, 예산선, 무차별곡선, 최적점"></canvas>
       </div>
     </section>
   </main>
@@ -183,6 +183,7 @@
     <a class="card" href="../../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
     <small>© <span id="year"></span> aries0401-svc</small>
   </footer>
+  <script src="../../../assets/mobile-init.js"></script>
 
   <script src="../../../assets/site.js"></script>
   <script>

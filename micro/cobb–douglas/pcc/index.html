@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>PCC | Cobb–Douglas</title>
   <meta name="description" content="Cobb–Douglas U(x,y)=x^α·y^β에서 파라미터와 가격을 바꾸며 PCC(가격–소비 곡선)를 시각화합니다." />
 
@@ -211,7 +211,7 @@
         <span class="badge"><span class="swatch" style="background:var(--panel); border-style:dashed;"></span>PCC</span>
       </div>
       <div class="chart-wrap">
-        <canvas id="pccChart" aria-label="PCC, 예산선, 무차별곡선, 최적점"></canvas>
+        <canvas id="pccChart" data-responsive aria-label="PCC, 예산선, 무차별곡선, 최적점"></canvas>
       </div>
     </section>
   </main>
@@ -223,6 +223,7 @@
   </footer>
 
   <!-- 공통 스크립트 -->
+  <script src="../../../assets/mobile-init.js"></script>
   <script src="../../../assets/site.js"></script>
 
   <!-- 페이지 전용 스크립트 -->
