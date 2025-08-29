@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>선형 수요·공급 곡선 | Micro</title>
-  <meta name="description" content="수요 Q = s_d·P + t_d, 공급 Q = s_s·P + t_s 를 시각화하고 균형점과 소비자·생산자 잉여를 한 그래프에서 보여줍니다. 분수/표현식 입력 지원." />
+  <meta name="description" content="수요 Q = s_d·P + t_d, 공급 Q = s_s·P + t_s 를 시각화하고 균형점과 소비자·생산자 잉여, 세금 효과를 보여줍니다." />
 
-  <!-- 공통: 폰트/스타일 (상대경로 고정) -->
+  <!-- 공통: 폰트/스타일 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../assets/style.css" />
 
-  <!-- 차트(CDN, 버전 고정) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 
   <style>
@@ -20,7 +20,7 @@
     .controls { display:flex; flex-direction:column; gap:12px; }
     .eq { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
     .eq code { color:var(--muted); }
-    .eq input{
+    .eq input, .eq select{
       width:16ch;
       border:1px solid var(--muted);
       background:var(--panel);
@@ -41,11 +41,14 @@
       cursor:pointer;
     }
     .controls input:focus-visible,
+    .controls select:focus-visible,
     .controls button:focus-visible,
     canvas:focus-visible { outline:0; box-shadow:0 0 0 4px var(--ring); }
     .invalid{ border-color:var(--ring); }
 
     .chart-wrap{ position:relative; height:460px; }
+
+    /* 커스텀 범례 (Cobb–Douglas 페이지 형식과 동일 스타일) */
     .legend { display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:.92rem; }
     .badge { display:inline-flex; align-items:center; gap:.4rem; }
     .swatch { width:.75rem; height:.75rem; border-radius:50%; border:1px solid var(--muted); background:var(--panel); }
@@ -56,6 +59,14 @@
 
     .muted{ color:var(--muted); }
     [hidden]{ display:none !important; }
+
+    /* 세금 패널 */
+    #taxPanel{
+      padding:12px;
+      background:var(--panel);
+      border:1px dashed var(--muted);
+      border-radius:.5rem;
+    }
   </style>
 </head>
 <body>
@@ -85,6 +96,32 @@
         <input id="ts" inputmode="text" value="20" aria-label="공급 절편 t_s (예: 20, 5/4)" placeholder="20">
       </div>
 
+      <!-- 세금부과 버튼/패널: '다시 렌더링'보다 위 -->
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.25rem;">
+        <button id="taxBtn" title="세금 설정 패널 열기/닫기">세금부과</button>
+      </div>
+
+      <!-- 세금 설정 패널 -->
+      <div id="taxPanel" hidden>
+        <h3 style="margin:0 0 .5rem 0;">세금 설정</h3>
+        <div class="eq" aria-label="세금 금액">
+          <strong>세액</strong>
+          <input id="taxAmt" inputmode="text" value="0" aria-label="1단위당 세액 (예: 10, 5/2)" placeholder="예: 10">
+          <span class="muted">/ 단위</span>
+        </div>
+        <div class="eq" aria-label="부과 대상">
+          <strong>부과 대상</strong>
+          <select id="taxSide" aria-label="세금을 부과할 쪽">
+            <option value="none">— 선택 —</option>
+            <option value="consumer">소비자(수요)</option>
+            <option value="producer">생산자(공급)</option>
+          </select>
+          <button id="applyTaxBtn" title="세금 적용">적용</button>
+          <button id="clearTaxBtn" title="세금 해제">해제</button>
+        </div>
+        <p class="muted" style="margin:.25rem 0 0 0;">세금은 1단위당 고정세입니다. (빨간색: 세후 곡선, 노란색: 자중손실)</p>
+      </div>
+
       <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.25rem;">
         <button id="refitBtn" title="현재 곡선과 균형점을 모두 포함하도록 축을 다시 맞춥니다.">다시 렌더링</button>
         <span class="muted" id="statusMsg" aria-live="polite"></span>
@@ -95,25 +132,33 @@
         <dt>Q* (균형수량)</dt><dd id="qStar">–</dd>
         <dt>소비자잉여 (CS)</dt><dd id="csVal">–</dd>
         <dt>생산자잉여 (PS)</dt><dd id="psVal">–</dd>
+        <dt>자중손실 (DWL)</dt><dd id="dwlVal">–</dd>
+        <dt>소비자 조세부담</dt><dd id="ctaxVal">–</dd>
+        <dt>생산자 조세부담</dt><dd id="ptaxVal">–</dd>
       </dl>
+
       <p class="muted">입력 예: <code>-1/2</code>, <code>(-3/4) + 0.1</code>, <code>1÷3</code>, <code>2·(3/5)</code> … (사칙/괄호 지원)</p>
     </section>
 
     <!-- 차트 -->
     <section class="card" aria-labelledby="chart-title">
-      <h2 id="chart-title">수요·공급, 균형점·잉여(한 그래프)</h2>
+      <h2 id="chart-title">수요·공급 그래프</h2>
 
-      <div class="legend" aria-hidden="true">
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>수요</span>
-        <span class="badge"><span class="swatch" style="background:var(--text)"></span>공급</span>
-        <span class="badge"><span class="swatch" style="background:var(--primary)"></span>소비자잉여</span>
-        <span class="badge"><span class="swatch" style="background:var(--text)"></span>생산자잉여</span>
+      <!-- 커스텀 범례 (차트 위에 배치) -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="legend" aria-hidden="true">
+          <span class="badge"><span class="swatch" style="background:var(--primary)"></span>수요곡선</span>
+          <span class="badge"><span class="swatch" style="background:var(--text)"></span>공급곡선</span>
+          <span class="badge"><span class="swatch" style="background:var(--primary)"></span>소비자잉여</span>
+          <span class="badge"><span class="swatch" style="background:var(--text)"></span>생산자잉여</span>
+          <span class="badge"><span class="swatch" style="background:#facc15"></span>자중손실</span>
+          <span class="badge"><span class="swatch" style="background:#e11d48"></span>세후곡선</span>
+        </div>
       </div>
 
       <div class="chart-wrap">
-        <canvas id="sdcChart" tabindex="0" aria-label="수요·공급 곡선과 균형점, 소비자/생산자 잉여"></canvas>
+        <canvas id="sdcChart" tabindex="0" aria-label="수요·공급 곡선과 균형점, 잉여, 세금 후 변화"></canvas>
       </div>
-      <p class="muted" style="margin-top:8px;">축: 가로(Q, 수량), 세로(P, 가격). 식을 바꾸면 곡선·균형점·잉여가 즉시 갱신됩니다.</p>
     </section>
   </main>
 
@@ -128,125 +173,91 @@
 
   <!-- 페이지 전용 스크립트 -->
   <script>
-    // ====== 선형 수요·공급 — 분수/표현식 입력 지원, 균형/잉여 시각화 ======
+    // ====== 유틸/상수 ======
     const $ = (s)=>document.querySelector(s);
 
-    // 입력
+    // 입력 엘리먼트
     const sd=$('#sd'), td=$('#td'), ss=$('#ss'), ts=$('#ts');
     const refitBtn=$('#refitBtn'), statusMsg=$('#statusMsg');
-    const pStarEl=$('#pStar'), qStarEl=$('#qStar'), csValEl=$('#csVal'), psValEl=$('#psVal');
+    const pStarEl=$('#pStar'), qStarEl=$('#qStar'), csValEl=$('#csVal'), psValEl=$('#psVal'), dwlValEl=$('#dwlVal');
+    const ctaxValEl=$('#ctaxVal'), ptaxValEl=$('#ptaxVal');
+    const taxBtn=$('#taxBtn'), taxPanel=$('#taxPanel'), taxAmt=$('#taxAmt'), taxSide=$('#taxSide');
+    const applyTaxBtn=$('#applyTaxBtn'), clearTaxBtn=$('#clearTaxBtn');
 
-    // CSS 변수 → 실제 색상
+    // CSS 색
     function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-    let C_TEXT, C_PRIMARY, C_MUTED;
-    function loadColors(){ C_TEXT=cssVar('--text'); C_PRIMARY=cssVar('--primary'); C_MUTED=cssVar('--muted'); }
     function withAlpha(color, alpha=0.22){
       const aByte = Math.round(alpha*255).toString(16).padStart(2,'0');
       if(/^#([0-9a-f]{6})$/i.test(color)) return color + aByte;
-      if(/^#([0-9a-f]{3})$/i.test(color)){ const r=color[1],g=color[2],b=color[3]; return '#'+r+r+g+g+b+b+aByte; }
-      return color; // rgb/hsl은 그대로
+      if(/^#([0-9a-f]{3})$/i.test(color)){
+        const r=color[1], g=color[2], b=color[3];
+        return '#'+r+r+g+g+b+b+aByte;
+      }
+      return color;
     }
+    const TAX_RED = '#e11d48';
+    const DWL_YELLOW = '#facc15';
 
-    // -------- 안전한 사칙연산 파서 (셔닝야드) --------
-    // 지원: + - ×(x/·) * ÷ /, (), 소수, 분수, 공백/유니코드 기호
+    // 안전한 사칙연산 파서
     function evalExpr(raw){
       if(typeof raw!=='string') return NaN;
       let s = raw.trim();
       if(!s) return NaN;
-      s = s.replace(/\s+/g,'')
-           .replace(/[−–—]/g,'-')        // 유니코드 마이너스
-           .replace(/[×·]/g,'*')         // 곱
-           .replace(/[÷]/g,'/')          // 나눗셈 기호
-           .replace(/[⁄]/g,'/');         // fraction slash
-      // 토크나이저
-      const tokens = [];
-      let i=0, prev=null;
-      const isDigit = c => /[0-9.]/.test(c);
+      s = s.replace(/\s+/g,'').replace(/[−–—]/g,'-').replace(/[×·]/g,'*').replace(/[÷⁄]/g,'/');
+      const tokens=[]; let i=0, prev=null;
+      const isDigit=c=>/[0-9.]/.test(c);
       while(i<s.length){
         const c=s[i];
         if(isDigit(c) || (c==='-' && (prev===null || /[+\-*/(]/.test(prev)) && isDigit(s[i+1]))){
-          // 숫자(선행 단항 - 포함)
-          let j=i+1;
-          while(j<s.length && /[0-9.]/.test(s[j])) j++;
-          tokens.push(s.slice(i,j));
-          prev='n'; i=j; continue;
+          let j=i+1; while(j<s.length && /[0-9.]/.test(s[j])) j++;
+          tokens.push(s.slice(i,j)); prev='n'; i=j; continue;
         }
-        if('+-*/()'.includes(c)){
-          tokens.push(c); prev=c; i++; continue;
-        }
-        // 에러 토큰
+        if('+-*/()'.includes(c)){ tokens.push(c); prev=c; i++; continue; }
         return NaN;
       }
-
-      // 셔닝야드로 RPN 변환
-      const out=[], op=[];
-      const prec = {'+':1,'-':1,'*':2,'/':2};
+      const out=[], op=[], prec={'+':1,'-':1,'*':2,'/':2};
       for(const t of tokens){
-        if(t==='+'||t==='-'||t==='*'||t==='/'){
-          while(op.length){
-            const k=op[op.length-1];
-            if((k==='+'||k==='-'||k==='*'||k==='/') && prec[k] >= prec[t]) out.push(op.pop());
-            else break;
-          }
+        if(t in prec){
+          while(op.length && (op[op.length-1] in prec) && prec[op[op.length-1]]>=prec[t]) out.push(op.pop());
           op.push(t);
         }else if(t==='('){ op.push(t); }
         else if(t===')'){
           while(op.length && op[op.length-1]!=='(') out.push(op.pop());
-          if(op.length===0) return NaN; // 괄호 불일치
-          op.pop(); // '(' 제거
-        }else{ // 숫자
-          out.push(t);
-        }
+          if(!op.length) return NaN; op.pop();
+        }else out.push(t);
       }
-      while(op.length){
-        const k=op.pop();
-        if(k==='('||k===')') return NaN;
-        out.push(k);
-      }
-
-      // RPN 평가
+      while(op.length){ const k=op.pop(); if(k==='('||k===')') return NaN; out.push(k); }
       const st=[];
       for(const t of out){
-        if(t==='+'||t==='-'||t==='*'||t==='/'){
-          const b=+st.pop(), a=+st.pop();
-          if(!Number.isFinite(a) || !Number.isFinite(b)) return NaN;
-          let v;
-          if(t==='+') v=a+b;
-          else if(t==='-') v=a-b;
-          else if(t==='*') v=a*b;
-          else { if(b===0) return NaN; v=a/b; }
-          st.push(v);
-        }else{
-          const v=+t;
-          if(!Number.isFinite(v)) return NaN;
-          st.push(v);
-        }
+        if(t in prec){
+          const b=+st.pop(), a=+st.pop(); if(!Number.isFinite(a)||!Number.isFinite(b)) return NaN;
+          st.push(t==='+'?a+b:t==='-'?a-b:t==='*'?a*b:(b===0?NaN:a/b));
+        }else{ const v=+t; if(!Number.isFinite(v)) return NaN; st.push(v); }
       }
       if(st.length!==1) return NaN;
-      const res=+st[0];
-      return Number.isFinite(res) ? res : NaN;
+      const res=+st[0]; return Number.isFinite(res)?res:NaN;
     }
-
     function parseInput(el){
       const v = evalExpr(el.value);
       el.classList.toggle('invalid', !Number.isFinite(v));
       return v;
     }
 
-    // 상태: 축 고정
+    // 축 상태 (단일 선언)
     let BASE_QMAX=1, BASE_PMAX=1;
 
+    // 세금 상태 (단일 선언)
+    let TAX_ON=false, TAX_T=0, TAX_SIDE='none';
+
+    // 포맷 유틸
     const fmt = (v, d=2)=> (Number.isFinite(v)?(+v).toFixed(d):'–');
+    const fmtPct = (v)=> (Number.isFinite(v)? (v*100).toFixed(1)+'%' : '–');
 
-    function params(){
-      return { sd:parseInput(sd), td:parseInput(td), ss:parseInput(ss), ts:parseInput(ts) };
-    }
+    function params(){ return { sd:parseInput(sd), td:parseInput(td), ss:parseInput(ss), ts:parseInput(ts) }; }
 
-    // 축 후보 계산
     function fitAxes(sd,td,ss,ts){
       const Pchoke = (sd!==0)? (-td/sd) : NaN;
       const Pmin   = (ss!==0)? (-ts/ss) : NaN;
-
       const denom  = (ss - sd);
       const pStar  = (denom!==0)? (td - ts)/denom : 0;
       const qStar  = (denom!==0)? (sd*pStar + td) : 0;
@@ -276,22 +287,46 @@
       sdcChart = new Chart(ctx,{
         type:'line',
         data:{ datasets:[
-          { label:'수요', data:[], borderColor:C_PRIMARY, borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false },
-          { label:'공급', data:[], borderColor:C_TEXT, borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false },
+          { label:'수요', data:[], borderColor:cssVar('--primary'), borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false },
+          { label:'공급', data:[], borderColor:cssVar('--text'), borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false },
 
           { label:'CS-Base', data:[], borderColor:'transparent', backgroundColor:'transparent', pointRadius:0, borderWidth:0, parsing:false, fill:false },
-          { label:'소비자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(C_PRIMARY,0.22),
+          { label:'소비자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(cssVar('--primary'),0.22),
             pointRadius:0, tension:0, parsing:false, fill:{ target:2 } },
 
           { label:'PS-Base', data:[], borderColor:'transparent', backgroundColor:'transparent', pointRadius:0, borderWidth:0, parsing:false, fill:false },
-          { label:'생산자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(C_TEXT,0.18),
+          { label:'생산자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(cssVar('--text'),0.18),
             pointRadius:0, tension:0, parsing:false, fill:{ target:4 } },
 
-          { label:'균형점', data:[], parsing:false, showLine:false, pointRadius:4, pointHoverRadius:5,
-            pointBackgroundColor:C_PRIMARY, pointBorderColor:C_TEXT, pointBorderWidth:0, type:'scatter' },
+          // ✅ 동그란 점(균형점)
+          { label:'균형점', data:[], parsing:false, showLine:false, pointRadius:5, pointHoverRadius:6,
+            pointBackgroundColor:cssVar('--primary'), pointBorderColor:cssVar('--text'), pointBorderWidth:0, type:'scatter' },
 
-          { label:'Q* 투영', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
-          { label:'P* 투영', data:[], borderColor:C_PRIMARY, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
+          // 점선 투영
+          { label:'Q* 투영', data:[], borderColor:cssVar('--primary'), borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
+          { label:'P* 투영', data:[], borderColor:cssVar('--primary'), borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
+
+          // 세금 후
+          { label:'세후 곡선', data:[], borderColor:TAX_RED, borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false },
+
+          { label:'세후 CS-Base', data:[], borderColor:'transparent', backgroundColor:'transparent', pointRadius:0, borderWidth:0, parsing:false, fill:false },
+          { label:'세후 소비자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(cssVar('--primary'),0.22),
+            pointRadius:0, tension:0, parsing:false, fill:{ target:10 } },
+
+          { label:'세후 PS-Base', data:[], borderColor:'transparent', backgroundColor:'transparent', pointRadius:0, borderWidth:0, parsing:false, fill:false },
+          { label:'세후 생산자잉여', data:[], borderColor:'transparent', backgroundColor:withAlpha(cssVar('--text'),0.18),
+            pointRadius:0, tension:0, parsing:false, fill:{ target:12 } },
+
+          // DWL (노란색 면적)
+          { label:'DWL-Top', data:[], borderColor:'transparent', backgroundColor:'transparent', pointRadius:0, borderWidth:0, parsing:false, fill:false },
+          { label:'자중손실', data:[], borderColor:'transparent', backgroundColor:withAlpha(DWL_YELLOW,0.5),
+            pointRadius:0, tension:0, parsing:false, fill:{ target:14 } },
+
+          // 세후 투영/쐐기
+          { label:'Q_t 투영', data:[], borderColor:TAX_RED, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
+          { label:'P_c(세후) 투영', data:[], borderColor:TAX_RED, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
+          { label:'P_p(세후) 투영', data:[], borderColor:TAX_RED, borderDash:[6,4], borderWidth:1.5, fill:false, tension:0, pointRadius:0, parsing:false },
+          { label:'세금쐐기', data:[], borderColor:TAX_RED, borderWidth:2, fill:false, tension:0, pointRadius:0, parsing:false }
         ]},
         options:{
           responsive:true,
@@ -299,36 +334,28 @@
           animation:false,
           elements:{ point:{ radius:0, hoverRadius:0 }, line:{ tension:0 } },
           scales:{
-            x:{ type:'linear', title:{display:true,text:'Q (수량)'}, grid:{ color:C_MUTED }, min:0, max:BASE_QMAX },
-            y:{ type:'linear', title:{display:true,text:'P (가격)'}, grid:{ color:C_MUTED }, min:0, max:BASE_PMAX }
+            x:{ type:'linear', title:{display:true,text:'Q (수량)'}, grid:{ color:cssVar('--muted') }, min:0, max:BASE_QMAX },
+            y:{ type:'linear', title:{display:true,text:'P (가격)'}, grid:{ color:cssVar('--muted') }, min:0, max:BASE_PMAX }
           },
           plugins:{
-            legend:{ display:true, labels:{ filter:(i)=> i.text!=='CS-Base' && i.text!=='PS-Base' } },
+            legend:{ display:false },  // ❗ 커스텀 범례만 사용 (Chart.js 범례 숨김)
             tooltip:{ mode:'nearest', intersect:false }
           }
         }
       });
     }
 
-    // 선 샘플링: P∈[0,Pmax] → (Q,P)
+    // 샘플링 유틸
     function sampleLineQP(qOfP, Pmax, N=240){
-      const arr=[];
-      for(let i=0;i<=N;i++){
-        const t=i/N, P=t*Pmax;
-        const Q=qOfP(P);
-        if(Number.isFinite(Q)) arr.push({x:Q, y:P});
-      }
+      const arr=[]; for(let i=0;i<=N;i++){ const t=i/N, P=t*Pmax; const Q=qOfP(P); if(Number.isFinite(Q)) arr.push({x:Q, y:P}); }
       return arr;
     }
-
-    // 잉여 세그먼트: Q∈[0,Q*]에서 P(Q) (음수 P도 생성 → 차트 뷰포트가 클리핑)
     function segment_PofQ(PofQ, QmaxSeg, N=100){
-      const arr=[];
-      for(let i=0;i<=N;i++){
-        const t=i/N, Q=t*QmaxSeg;
-        const P=PofQ(Q);
-        if(Number.isFinite(P)) arr.push({x:Q, y:P});
-      }
+      const arr=[]; for(let i=0;i<=N;i++){ const t=i/N, Q=t*QmaxSeg; const P=PofQ(Q); if(Number.isFinite(P)) arr.push({x:Q, y:P}); }
+      return arr;
+    }
+    function segment_PofQ_range(PofQ, Qstart, Qend, N=80){
+      const arr=[]; for(let i=0;i<=N;i++){ const t=i/N, Q=Qstart + t*(Qend-Qstart); const P=PofQ(Q); if(Number.isFinite(P)) arr.push({x:Q, y:P}); }
       return arr;
     }
 
@@ -337,94 +364,215 @@
 
       // 검증/안내
       const problems=[];
-      if(!Number.isFinite(SD)||!Number.isFinite(TD)||!Number.isFinite(SS)||!Number.isFinite(TS)){
-        problems.push('표현식을 올바르게 입력해주세요.');
-      }
+      if(!Number.isFinite(SD)||!Number.isFinite(TD)||!Number.isFinite(SS)||!Number.isFinite(TS)) problems.push('표현식을 올바르게 입력해주세요.');
       if(Number.isFinite(SD) && !(SD<0)) problems.push('수요 기울기 s_d는 보통 음수입니다.');
       if(Number.isFinite(SS) && !(SS>0)) problems.push('공급 기울기 s_s는 보통 양수입니다.');
       const denom = (SS - SD);
       if(Number.isFinite(denom) && denom===0) problems.push('s_s - s_d = 0이면 균형이 정의되지 않습니다.');
       statusMsg.textContent = problems.join(' ');
 
-      // 균형
-      const pStar = (denom!==0)? (TD - TS)/denom : NaN;
-      const qStar = (denom!==0)? (SD*pStar + TD) : NaN;
+      // (세전) 균형
+      const pStar0 = (denom!==0)? (TD - TS)/denom : NaN;
+      const qStar0 = (denom!==0)? (SD*pStar0 + TD) : NaN;
 
       // 축 재설정
       if(fit && [SD,TD,SS,TS].every(Number.isFinite)){ fitAxes(SD,TD,SS,TS); }
       sdcChart.options.scales.x.max = BASE_QMAX;
       sdcChart.options.scales.y.max = BASE_PMAX;
 
-      // 전체 라인
+      // 원곡선
       const demandAll = sampleLineQP(P=>SD*P + TD, BASE_PMAX);
       const supplyAll = sampleLineQP(P=>SS*P + TS, BASE_PMAX);
 
-      // 잉여 및 보조요소
+      // P(Q)
+      const Pd = (Q)=> (SD!==0)? ((Q - TD)/SD) : NaN;
+      const Ps = (Q)=> (SS!==0)? ((Q - TS)/SS) : NaN;
+
+      // (세전) 잉여 & 동그란 점/투영
       let csBase=[], csSeg=[], psBase=[], psSeg=[], eqPt=[], vProj=[], hProj=[];
-      let CS=NaN, PS=NaN;
+      let CS0=NaN, PS0=NaN;
+      const valid0 = [pStar0,qStar0,SD,SS].every(Number.isFinite) && (pStar0>=0) && (qStar0>=0);
+      if(valid0){
+        const Pchoke = (SD!==0)? (-TD/SD) : NaN;
+        const Pmin   = (SS!==0)? (-TS/SS) : NaN;
+        CS0 = 0.5 * Math.max(0, (Pchoke - pStar0)) * qStar0;
+        PS0 = 0.5 * Math.max(0, (pStar0 - Pmin)) * qStar0;
 
-      const valid = [pStar,qStar,SD,SS].every(Number.isFinite) && (pStar>=0) && (qStar>=0);
-
-      if(valid){
-        const Pd = (Q)=> (SD!==0)? ((Q - TD)/SD) : NaN;  // 수요의 P(Q)
-        const Ps = (Q)=> (SS!==0)? ((Q - TS)/SS) : NaN;  // 공급의 P(Q)
-
-        csBase = [{x:0, y:pStar}, {x:qStar, y:pStar}];
+        csBase = [{x:0, y:pStar0}, {x:qStar0, y:pStar0}];
         psBase = csBase.slice();
+        csSeg  = segment_PofQ(Pd, qStar0);
+        psSeg  = segment_PofQ(Ps, qStar0);
 
-        csSeg = segment_PofQ(Pd, qStar);
-        psSeg = segment_PofQ(Ps, qStar);
+        eqPt   = [{x:qStar0, y:pStar0}];                      // 동그란 점(세전)
+        vProj  = [{x:qStar0, y:0}, {x:qStar0, y:pStar0}];
+        hProj  = [{x:0, y:pStar0}, {x:qStar0, y:pStar0}];
+      }
 
-        eqPt = [{x:qStar, y:pStar}];
-        vProj = [{x:qStar, y:0}, {x:qStar, y:pStar}];
-        hProj = [{x:0, y:pStar}, {x:qStar, y:pStar}];
+      // === 세금 ===
+      let taxedLine=[], tcsBase=[], tcsSeg=[], tpsBase=[], tpsSeg=[];
+      let dwlTop=[], dwlFill=[], vProjTax=[], hPc=[], hPp=[], wedge=[];
+      let pC=NaN, pP=NaN, qT=NaN, CS=CS0, PS=PS0, DWL=NaN;
+      let CTAX_AMT=NaN, PTAX_AMT=NaN, CTAX_SH=NaN, PTAX_SH=NaN;
+
+      const T = TAX_ON ? TAX_T : 0;
+      const SIDE = TAX_ON ? TAX_SIDE : 'none';
+
+      if(T>0 && (SIDE==='consumer'||SIDE==='producer') && valid0){
+        if(SIDE==='consumer'){
+          const TDp = TD + SD*T;               // 수요를 T만큼 아래(생산자 가격 기준)
+          pP = (SS - SD)!==0 ? (TDp - TS)/(SS - SD) : NaN;
+          qT = Number.isFinite(pP) ? (SS*pP + TS) : NaN;
+          pC = Number.isFinite(pP) ? (pP + T) : NaN;
+          taxedLine = sampleLineQP(P=>SD*(P + T) + TD, BASE_PMAX);
+        }else{
+          const TSp = TS - SS*T;               // 공급을 T만큼 위(소비자 가격 기준)
+          pC = (SS - SD)!==0 ? (TD - TSp)/(SS - SD) : NaN;
+          qT = Number.isFinite(pC) ? (SD*pC + TD) : NaN;
+          pP = Number.isFinite(pC) ? (pC - T) : NaN;
+          taxedLine = sampleLineQP(P=>SS*(P - T) + TS, BASE_PMAX);
+        }
 
         const Pchoke = (SD!==0)? (-TD/SD) : NaN;
         const Pmin   = (SS!==0)? (-TS/SS) : NaN;
-        CS = 0.5 * Math.max(0, (Pchoke - pStar)) * qStar;
-        PS = 0.5 * Math.max(0, (pStar - Pmin)) * qStar;
+        if([pC,pP,qT,Pchoke,Pmin,pStar0].every(Number.isFinite) && qT>=0){
+          CS  = 0.5 * Math.max(0, (Pchoke - pC)) * qT;
+          PS  = 0.5 * Math.max(0, (pP - Pmin)) * qT;
+          const TR = T * qT;
+
+          // 조세부담 (금액/비중)
+          CTAX_AMT = Math.max(0, (pC - pStar0)) * qT;
+          PTAX_AMT = Math.max(0, (pStar0 - pP)) * qT;
+          if(TR>0){ CTAX_SH = CTAX_AMT/TR; PTAX_SH = PTAX_AMT/TR; }
+
+          // 자중손실
+          DWL = Math.max(0, (CS0 + PS0) - (CS + PS) - TR);
+
+          // 세후 잉여
+          tcsBase = [{x:0, y:pC}, {x:qT, y:pC}];
+          tcsSeg  = segment_PofQ(Pd, qT);
+          tpsBase = [{x:0, y:pP}, {x:qT, y:pP}];
+          tpsSeg  = segment_PofQ(Ps, qT);
+
+          // DWL (Q: qT → qStar0)
+          if(qT<=qStar0){
+            dwlTop  = segment_PofQ_range(Pd, qT, qStar0);
+            dwlFill = segment_PofQ_range(Ps, qT, qStar0);
+          }
+
+          // 동그란 점(세후, 소비자가격) & 투영
+          eqPt     = [{x:qT, y:pC}];
+          vProjTax = [{x:qT, y:0}, {x:qT, y:pC}];
+          hPc      = [{x:0, y:pC}, {x:qT, y:pC}];
+          hPp      = [{x:0, y:pP}, {x:qT, y:pP}];
+          wedge    = [{x:qT, y:pP}, {x:qT, y:pC}];
+        }
       }
 
       // 차트 반영
       const ds = sdcChart.data.datasets;
+
+      // 원곡선
       ds[0].data = demandAll;
       ds[1].data = supplyAll;
 
-      ds[2].data = csBase;
-      ds[3].data = csSeg;
+      // 잉여(세전/세후)
+      if(T>0 && Number.isFinite(CS) && Number.isFinite(PS) && Number.isFinite(pC) && Number.isFinite(pP) && Number.isFinite(qT)){
+        ds[2].data = tcsBase; ds[3].data = tcsSeg;
+        ds[4].data = tpsBase; ds[5].data = tpsSeg;
+      }else{
+        ds[2].data = csBase;  ds[3].data = csSeg;
+        ds[4].data = psBase;  ds[5].data = psSeg;
+      }
 
-      ds[4].data = psBase;
-      ds[5].data = psSeg;
+      // ✅ 동그란 점/투영 (세전/세후 전환)
+      if(T>0 && Number.isFinite(qT) && Number.isFinite(pC)){
+        ds[6].data = eqPt;
+        ds[7].data = vProjTax; ds[7].borderColor = TAX_RED;
+        ds[8].data = hPc;      ds[8].borderColor = TAX_RED;
+      }else{
+        ds[6].data = eqPt;
+        ds[7].data = vProj;    ds[7].borderColor = cssVar('--primary');
+        ds[8].data = hProj;    ds[8].borderColor = cssVar('--primary');
+      }
 
-      ds[6].data = eqPt;
-      ds[7].data = vProj;
-      ds[8].data = hProj;
+      // 세금 시각 요소
+      ds[9].data  = (T>0)? taxedLine : [];
+      ds[10].data = tcsBase; ds[11].data = tcsSeg;
+      ds[12].data = tpsBase; ds[13].data = tpsSeg;
+
+      ds[14].data = dwlTop;
+      ds[15].data = dwlFill;
+
+      ds[16].data = (T>0 && Number.isFinite(qT)) ? [{x:qT, y:0}, {x:qT, y:Math.max(pC||0,pP||0)}] : [];
+      ds[17].data = (T>0 && Number.isFinite(pC) && Number.isFinite(qT)) ? hPc : [];
+      ds[18].data = (T>0 && Number.isFinite(pP) && Number.isFinite(qT)) ? hPp : [];
+      ds[19].data = (T>0 && Number.isFinite(pC) && Number.isFinite(pP) && Number.isFinite(qT)) ? wedge : [];
 
       sdcChart.update('none');
 
       // 숫자 반영
-      pStarEl.textContent = fmt(pStar,2);
-      qStarEl.textContent = fmt(qStar,2);
-      csValEl.textContent = fmt(CS,2);
-      psValEl.textContent = fmt(PS,2);
+      const showP  = (T>0 && Number.isFinite(pC)) ? pC : pStar0;
+      const showQ  = (T>0 && Number.isFinite(qT)) ? qT : qStar0;
+      const showCS = (T>0 && Number.isFinite(CS)) ? CS : CS0;
+      const showPS = (T>0 && Number.isFinite(PS)) ? PS : PS0;
+      const showDWL= (T>0 && Number.isFinite(DWL)) ? DWL : NaN;
+
+      pStarEl.textContent = fmt(showP,2);
+      qStarEl.textContent = fmt(showQ,2);
+      csValEl.textContent = fmt(showCS,2);
+      psValEl.textContent = fmt(showPS,2);
+      dwlValEl.textContent= fmt(showDWL,2);
+
+      const TR = (T>0 && Number.isFinite(qT)) ? T*qT : NaN;
+      if(T>0 && Number.isFinite(TR) && TR>0 && Number.isFinite(CTAX_AMT) && Number.isFinite(PTAX_AMT)){
+        ctaxValEl.textContent = `${fmt(CTAX_AMT,2)} (${fmtPct(CTAX_SH)})`;
+        ptaxValEl.textContent = `${fmt(PTAX_AMT,2)} (${fmtPct(PTAX_SH)})`;
+      }else{
+        ctaxValEl.textContent = '–';
+        ptaxValEl.textContent = '–';
+      }
     }
 
-    // 바인딩
+    // 이벤트 바인딩
     [sd,td,ss,ts].forEach(inp=>{
       inp.addEventListener('input', ()=>recomputeAndDraw());
       inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); recomputeAndDraw(); } });
     });
     refitBtn.addEventListener('click', ()=>recomputeAndDraw({fit:true}));
 
+    function applyTaxFromUI(){
+      const t = parseInput(taxAmt);
+      const side = taxSide.value;
+      TAX_T = Math.max(0, Number.isFinite(t)? t : 0);
+      TAX_SIDE = (side==='consumer'||side==='producer') ? side : 'none';
+      TAX_ON = TAX_T>0 && TAX_SIDE!=='none';
+      recomputeAndDraw({fit:true});
+      statusMsg.textContent='';
+    }
+    taxBtn.addEventListener('click', ()=>{ taxPanel.hidden = !taxPanel.hidden; });
+    applyTaxBtn.addEventListener('click', applyTaxFromUI);
+    clearTaxBtn.addEventListener('click', ()=>{
+      TAX_ON=false; TAX_T=0; TAX_SIDE='none';
+      taxAmt.value='0'; taxSide.value='none';
+      recomputeAndDraw({fit:true});
+      statusMsg.textContent='';
+    });
+
+    // 자동 적용 제거: 값 변경 시 안내만 표시 (적용 버튼을 눌러야 반영)
+    taxAmt.addEventListener('input', ()=>{
+      statusMsg.textContent='세금 변경사항은 "적용"을 눌러야 반영됩니다.';
+    });
+    taxSide.addEventListener('change', ()=>{
+      statusMsg.textContent='세금 변경사항은 "적용"을 눌러야 반영됩니다.';
+    });
+
     // 초기화
     document.addEventListener('DOMContentLoaded', ()=>{
-      loadColors();
-      // 최초 파싱 후 축/차트 생성
+      const y = document.querySelector('#year'); if(y) y.textContent = new Date().getFullYear();
       const p = params();
       if([p.sd,p.td,p.ss,p.ts].every(Number.isFinite)) fitAxes(p.sd,p.td,p.ss,p.ts);
       createChart();
       recomputeAndDraw({fit:true});
-      const y = document.querySelector('#year'); if(y) y.textContent = new Date().getFullYear();
     });
   </script>
 </body>
