@@ -13,7 +13,14 @@
   <style>
     main.grid { grid-template-columns: minmax(300px,440px) 1fr; }
     .controls { display:flex; flex-direction:column; gap:10px; }
+
+    /* 기존 .row는 초기 입력용 유지 */
     .row { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; }
+
+    /* 슬라이더 한 줄 UI */
+    .row3 { display:grid; grid-template-columns: auto 1fr auto; gap:.5rem; align-items:center; }
+    .val { font-size:.9rem; color:var(--muted); font-variant-numeric: tabular-nums; min-width:3.5ch; text-align:right; }
+
     .controls input[type="range"],
     .controls input[type="number"],
     .controls button,
@@ -93,56 +100,41 @@
     <section class="card controls" id="ctl-card" aria-labelledby="ctl-title" hidden>
       <h2 id="ctl-title">파라미터·소득 조정</h2>
 
-      <div class="row">
+      <div class="row3">
         <label for="alpha">α (x의 지수)</label>
-        <input id="alpha" type="range">
-      </div>
-      <div class="row">
-        <span><strong>α = <span id="alphaVal">–</span></strong></span>
-        <input id="alphaNum" type="number" step="0.01" inputmode="decimal">
+        <input id="alpha" type="range" aria-describedby="alphaVal">
+        <small class="val" id="alphaVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="beta">β (y의 지수)</label>
-        <input id="beta" type="range">
-      </div>
-      <div class="row">
-        <span><strong>β = <span id="betaVal">–</span></strong></span>
-        <input id="betaNum" type="number" step="0.01" inputmode="decimal">
+        <input id="beta" type="range" aria-describedby="betaVal">
+        <small class="val" id="betaVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="px">가격 p<sub>x</sub></label>
-        <input id="px" type="range">
-      </div>
-      <div class="row">
-        <span><strong>p<sub>x</sub> = <span id="pxVal">–</span></strong></span>
-        <input id="pxNum" type="number" step="0.05" inputmode="decimal">
+        <input id="px" type="range" aria-describedby="pxVal">
+        <small class="val" id="pxVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="py">가격 p<sub>y</sub></label>
-        <input id="py" type="range">
-      </div>
-      <div class="row">
-        <span><strong>p<sub>y</sub> = <span id="pyVal">–</span></strong></span>
-        <input id="pyNum" type="number" step="0.05" inputmode="decimal">
+        <input id="py" type="range" aria-describedby="pyVal">
+        <small class="val" id="pyVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="M">소득 M (ICC 진행)</label>
-        <input id="M" type="range">
-      </div>
-      <div class="row">
-        <span><strong>M = <span id="MVal">–</span> / M<sub>max</sub>=<span id="MmaxView">–</span></strong></span>
-        <input id="MNum" type="number" step="1" inputmode="numeric">
+        <input id="M" type="range" aria-describedby="MVal">
+        <small class="val" id="MVal">–</small>
       </div>
 
       <div class="toolbar" style="margin-top:.25rem;">
         <button id="playBtn" title="0↔Mmax 자동 왕복">재생</button>
         <button id="pauseBtn" title="자동 왕복 정지" disabled>정지</button>
         <button id="refitBtn" title="현재 Mmax와 파라미터 기준으로 축을 재설정">축 재설정</button>
-        <span class="muted">px·py를 바꿔도 축은 고정되고, 예산선의 기울기만 바뀝니다.</span>
+        <!-- 요청에 따라 문구 제거 -->
       </div>
 
       <!-- 파라미터 재입력 -->
@@ -202,11 +194,11 @@
 
     // 컨트롤/표시
     const ctlCard=$('#ctl-card'), chartCard=$('#chart-card');
-    const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
-    const betaR =$('#beta'),  betaN =$('[id="betaNum"]'),  betaVal=$('#betaVal');
-    const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
-    const pyR=$('#py'), pyN=$('#pyNum'), pyVal=$('#pyVal');
-    const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal'); const mMaxView=$('#MmaxView');
+    const alphaR=$('#alpha'), alphaVal=$('#alphaVal');
+    const betaR =$('#beta'),  betaVal=$('#betaVal');
+    const pxR=$('#px'), pxVal=$('#pxVal');
+    const pyR=$('#py'), pyVal=$('#pyVal');
+    const mR=$('#M'),  mVal=$('#MVal');
 
     const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
     const statusMsg=$('#statusMsg');
@@ -231,37 +223,35 @@
     // 유틸
     function clamp(v,lo,hi){ return Math.min(Math.max(v,lo),hi); }
     function fmt(v,d=2){ if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–'; return (+v).toFixed(d); }
-    function setRange(rangeEl, numberEl, {min, max, step, value, decimals=2}){
+    function setRange(rangeEl, {min, max, step, value, decimals=2}){
       if(min===max){ max=min+(Math.abs(min)||1); }
       if(min>max){ const t=min; min=max; max=t; }
       rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+(+value).toFixed(decimals);
-      numberEl.min=min; numberEl.max=max; numberEl.step=step; numberEl.value=+(+value).toFixed(decimals);
     }
-    function setAroundAlphaBeta(rangeEl, numberEl, base){
+    function setAroundAlphaBeta(rangeEl, base){
       const span=Math.max(0.2, Math.abs(base)*0.2); // ±20%, 최소폭 0.2
-      setRange(rangeEl, numberEl, {min: base-span, max: base+span, step:0.01, value:base, decimals:2});
+      setRange(rangeEl, {min: base-span, max: base+span, step:0.01, value:base, decimals:2});
     }
-    function setAroundPrice(rangeEl, numberEl, base){
+    function setAroundPrice(rangeEl, base){
       const span=Math.max((Math.abs(base)||1)*0.5, 1); // ±50%, 최소폭 1
-      setRange(rangeEl, numberEl, {min: base-span, max: base+span, step:0.05, value:base, decimals:2});
+      setRange(rangeEl, {min: base-span, max: base+span, step:0.05, value:base, decimals:2});
     }
 
     // 현재 파라미터
     function params(){
       const a=+(+alphaR.value), b=+(+betaR.value);
       const px=+(+pxR.value),  py=+(+pyR.value);
-      const M =+mR.value;              // 소수도 허용
+      const M =+mR.value;
       const Mmax=+(mR.max);
       return {a,b,px,py,M,Mmax};
     }
     function syncUI(){
-      const {a,b,px,py,M,Mmax}=params();
-      alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2); alphaN.value=isNaN(a)?'':(+a).toFixed(2);
-      betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);  betaN.value =isNaN(b)?'':(+b).toFixed(2);
-      pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2); pxN.value  =isNaN(px)?'':(+px).toFixed(2);
-      pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2); pyN.value  =isNaN(py)?'':(+py).toFixed(2);
-      mVal    .textContent=isNaN(M)?'–':(+M).toFixed(0);   mN.value   =isNaN(M)?'':(+M).toFixed(0);
-      mMaxView.textContent=isNaN(Mmax)?'–':Mmax;
+      const {a,b,px,py,M}=params();
+      alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2);
+      betaVal .textContent=isNaN(b)?'–':(+b).toFixed(2);
+      pxVal   .textContent=isNaN(px)?'–':(+px).toFixed(2);
+      pyVal   .textContent=isNaN(py)?'–':(+py).toFixed(2);
+      mVal    .textContent=isNaN(M)?'–':(+M).toFixed(0);
     }
 
     // 차트
@@ -287,19 +277,16 @@
         options:{
           responsive:true,
           maintainAspectRatio:false,
-          elements:{
-            point:{ radius:0, hoverRadius:0 },
-            line:{ tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' }
-          },
-          // ★ 모든 애니메이션 비활성화 → 떨림 제거
-          animation:false,
-          animations:{},
-          transitions:{ active:{ animation:{ duration:0 } } },
+          elements:{ point:{ radius:0, hoverRadius:0 }, line:{ tension:0, borderCapStyle:'butt', borderJoinStyle:'miter' } },
+          animation:false, animations:{}, transitions:{ active:{ animation:{ duration:0 } } },
           scales:{
             x:{type:'linear', title:{display:true,text:'x'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_XMAX},
             y:{type:'linear', title:{display:true,text:'y'}, grid:{drawOnChartArea:true,color:C_MUTED}, min:0, max:BASE_YMAX}
           },
-          plugins:{legend:{display:true}, tooltip:{mode:'nearest', intersect:false}}
+          plugins:{
+            legend:{ display:false }, /* 요청: Chart.js 범례 비활성 */
+            tooltip:{ mode:'nearest', intersect:false }
+          }
         }
       });
     }
@@ -333,7 +320,7 @@
         iccChart.options.scales.y.max=BASE_YMAX;
       }
 
-      // 예산선 (축 고정, 기울기만 변화)
+      // 예산선
       let budgetData=[];
       if(px===0 && py===0){
         budgetData=[];
@@ -347,23 +334,19 @@
         budgetData=[{x:0,y:yInt},{x:xInt,y:0}];
       }
 
-      // ===== 무차별곡선(U*): 상단 경계(y=BASE_YMAX) 앵커 + 비선형 샘플링 =====
+      // 무차별곡선(U*): 상단 경계 앵커 + 비선형 샘플링
       let curve=[], optPt=[], projY=[], projX=[];
       if(validInterior){
-        // 1) y 상한과의 교점(앵커) xStart
         let xStart = 0;
         if (a > 0 && b > 0 && Ustar > 0 && BASE_YMAX > 0) {
           const denomAtTop = Math.pow(BASE_YMAX, b);
           const xTop = Math.pow(Ustar / denomAtTop, 1 / a);
           if (Number.isFinite(xTop)) xStart = Math.min(Math.max(xTop, 0), BASE_XMAX);
         }
-        // 2) 앵커 점 추가 (보이는 범위이면)
         if (Number.isFinite(xStart) && xStart >= 0 && xStart <= BASE_XMAX) {
           curve.push({ x: xStart, y: BASE_YMAX });
         }
-        // 3) xStart→BASE_XMAX 구간 비선형 샘플링(상단 근처에 촘촘)
-        const N = 240;
-        const gamma = 2.2; // 1<t^gamma → 시작부(앵커 근처) 더 촘촘
+        const N = 240, gamma = 2.2;
         for (let i = 1; i <= N; i++) {
           const t = i / N;
           const x = xStart + (BASE_XMAX - xStart) * Math.pow(t, gamma);
@@ -394,7 +377,7 @@
         iccChart.data.datasets[5].data=icc;
       }
 
-      // 적용 (★ 애니메이션 없이 즉시 갱신)
+      // 적용
       iccChart.data.datasets[0].data=budgetData;
       iccChart.data.datasets[1].data=curve;
       iccChart.data.datasets[2].data=optPt;
@@ -417,14 +400,8 @@
       }
     }
 
-    function bindPair(rangeEl, numberEl, decimals, onChange){
-      rangeEl.addEventListener('input', ()=>{ numberEl.value=(+rangeEl.value).toFixed(decimals); onChange(); });
-      numberEl.addEventListener('change', ()=>{
-        const v=+numberEl.value;
-        numberEl.value=v.toFixed(decimals);
-        rangeEl.value=numberEl.value;
-        onChange();
-      });
+    function bindSlider(rangeEl, decimals, onChange){
+      rangeEl.addEventListener('input', onChange);
     }
 
     function stopAnim(){ if(timer){ clearInterval(timer); timer=null; } playBtn.disabled=false; pauseBtn.disabled=true; }
@@ -437,20 +414,20 @@
         let v=+mR.value + dir*step;
         if(v>=+mR.max){ v=+mR.max; dir=-1; }
         if(v<=0){ v=0; dir=1; }
-        mR.value=v; mN.value=v; recomputeAndDraw();
+        mR.value=v; recomputeAndDraw();
       }, 30);
     }
 
     // 초기값 적용
     function applyInitial(a0,b0,px0,py0,M0,Mmax0){
       const Mmax = Number.isFinite(+Mmax0) && +Mmax0>0 ? +Mmax0 : Math.max(10, Math.ceil((+M0||0)*2));
-      setAroundAlphaBeta(alphaR, alphaN, a0);
-      setAroundAlphaBeta(betaR,  betaN,  b0);
-      setAroundPrice(pxR, pxN, px0);
-      setAroundPrice(pyR, pyN, py0);
-      setRange(mR, mN, {min:0, max:Mmax, step:1, value: clamp(+M0||0,0,Mmax), decimals:0});
+      setAroundAlphaBeta(alphaR, a0);
+      setAroundAlphaBeta(betaR,  b0);
+      setAroundPrice(pxR, px0);
+      setAroundPrice(pyR, py0);
+      setRange(mR, {min:0, max:Mmax, step:1, value: clamp(+M0||0,0,Mmax), decimals:0});
 
-      // 축: Mmax 기준 절편으로 고정 (초기 한 번만)
+      // 축: Mmax 기준 절편으로 고정
       const xMaxCand = (px0===0)? 1 : Math.max(0, Mmax/Math.abs(px0))*1.2;
       const yMaxCand = (py0===0)? 1 : Math.max(0, Mmax/Math.abs(py0))*1.2;
       BASE_XMAX = xMaxCand>0?xMaxCand:1;
@@ -460,11 +437,11 @@
 
       // 바인딩(1회)
       if(!alphaR.dataset.bound){
-        bindPair(alphaR, alphaN, 2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
-        bindPair(betaR,  betaN,  2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
-        bindPair(pxR,    pxN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
-        bindPair(pyR,    pyN,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
-        bindPair(mR,     mN,     0, ()=>{ stopAnim(); recomputeAndDraw(); });
+        bindSlider(alphaR, 2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
+        bindSlider(betaR,  2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
+        bindSlider(pxR,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
+        bindSlider(pyR,    2, ()=>{ stopAnim(); recomputeAndDraw({fitAxes:false, rebuildICC:true}); });
+        bindSlider(mR,     0, ()=>{ stopAnim(); recomputeAndDraw(); });
         alphaR.dataset.bound=betaR.dataset.bound=pxR.dataset.bound=pyR.dataset.bound=mR.dataset.bound='1';
       }
 

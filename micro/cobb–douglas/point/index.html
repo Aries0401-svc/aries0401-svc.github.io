@@ -19,6 +19,11 @@
     main.grid { grid-template-columns: minmax(300px,460px) 1fr; }
     .controls { display:flex; flex-direction:column; gap:10px; }
     .row { display:grid; grid-template-columns: 1fr auto; gap:.5rem; align-items:center; }
+
+    /* 단순화된 한 줄 컨트롤: 라벨 · 슬라이더 · 값 */
+    .row3 { display:grid; grid-template-columns: auto 1fr auto; gap:.5rem; align-items:center; }
+    .val { font-size:.9rem; color:var(--muted); font-variant-numeric: tabular-nums; min-width:3.5ch; text-align:right; }
+
     .controls input[type="range"],
     .controls input[type="text"],
     .controls button,
@@ -95,54 +100,38 @@
     <section class="card controls" id="ctl-card" aria-labelledby="ctl-title" hidden>
       <h2 id="ctl-title">값 조정</h2>
 
-      <div class="row">
+      <div class="row3">
         <label for="alpha">α (x의 지수)</label>
-        <input id="alpha" type="range">
-      </div>
-      <div class="row">
-        <span><strong>α = <span id="alphaVal">–</span></strong></span>
-        <input id="alphaNum" type="text" inputmode="text" placeholder="예: 1/2">
+        <input id="alpha" type="range" aria-describedby="alphaVal">
+        <small class="val" id="alphaVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="beta">β (y의 지수)</label>
-        <input id="beta" type="range">
-      </div>
-      <div class="row">
-        <span><strong>β = <span id="betaVal">–</span></strong></span>
-        <input id="betaNum" type="text" inputmode="text" placeholder="예: 3/5">
+        <input id="beta" type="range" aria-describedby="betaVal">
+        <small class="val" id="betaVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="px">가격 p<sub>x</sub></label>
-        <input id="px" type="range">
-      </div>
-      <div class="row">
-        <span><strong>p<sub>x</sub> = <span id="pxVal">–</span></strong></span>
-        <input id="pxNum" type="text" inputmode="text" placeholder="예: 3/2">
+        <input id="px" type="range" aria-describedby="pxVal">
+        <small class="val" id="pxVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="py">가격 p<sub>y</sub></label>
-        <input id="py" type="range">
-      </div>
-      <div class="row">
-        <span><strong>p<sub>y</sub> = <span id="pyVal">–</span></strong></span>
-        <input id="pyNum" type="text" inputmode="text" placeholder="예: 1/3">
+        <input id="py" type="range" aria-describedby="pyVal">
+        <small class="val" id="pyVal">–</small>
       </div>
 
-      <div class="row">
+      <div class="row3">
         <label for="M">소득 M</label>
-        <input id="M" type="range">
-      </div>
-      <div class="row">
-        <span><strong>M = <span id="MVal">–</span></strong></span>
-        <input id="MNum" type="text" inputmode="text" placeholder="예: 120/2">
+        <input id="M" type="range" aria-describedby="MVal">
+        <small class="val" id="MVal">–</small>
       </div>
 
       <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem;">
         <button id="refitBtn" title="현재 값 기준으로 축 범위를 다시 맞춥니다.">축 재설정</button>
-        <span class="muted">가격·소득을 바꿔도 축은 고정되고, 예산선이 실제로 회전/이동합니다.</span>
       </div>
 
       <!-- (2-1) 파라미터 재입력 칸 (분수/표현식 가능) -->
@@ -200,8 +189,7 @@
       <div class="chart-wrap">
         <canvas id="cdChart" aria-label="예산선과 무차별곡선, 최적점"></canvas>
       </div>
-
-      <p class="muted" style="margin-top:8px;">무차별곡선(U*): <em>y = (U*/x<sup>α</sup>)<sup>1/β</sup></em></p>
+      <!-- 요청에 따라: 공식을 설명하는 문구 제거 -->
     </section>
   </main>
 
@@ -217,16 +205,15 @@
   <!-- 페이지 전용 스크립트 -->
   <script>
     // ===== 안전한 사칙연산 파서 (셔닝야드) — 분수/표현식 지원 =====
-    // 지원: + - ×(x/·) * ÷ /, (), 소수, 분수, 공백/유니코드 기호
     function evalExpr(raw){
       if(typeof raw!=='string') return NaN;
       let s = raw.trim();
       if(!s) return NaN;
       s = s.replace(/\s+/g,'')
-           .replace(/[−–—]/g,'-')   // 유니코드 마이너스
-           .replace(/[×·x]/g,'*')   // 곱
-           .replace(/[÷]/g,'/')     // 나눗셈 기호
-           .replace(/[⁄]/g,'/');    // fraction slash
+           .replace(/[−–—]/g,'-')
+           .replace(/[×·x]/g,'*')
+           .replace(/[÷]/g,'/')
+           .replace(/[⁄]/g,'/');
       const tokens=[], isDigit=c=>/[0-9.]/.test(c); let i=0, prev=null;
       while(i<s.length){
         const c=s[i];
@@ -265,11 +252,11 @@
 
     // 컨트롤/표시 엘리먼트
     const ctlCard=$('#ctl-card'), chartCard=$('#chart-card');
-    const alphaR=$('#alpha'), alphaN=$('#alphaNum'), alphaVal=$('#alphaVal');
-    const betaR=$('#beta'),   betaN=$('#betaNum'),  betaVal=$('#betaVal');
-    const pxR=$('#px'), pxN=$('#pxNum'), pxVal=$('#pxVal');
-    const pyR=$('#py'), pyN=$('#pyNum'), pyVal=$('#pyVal');
-    const mR=$('#M'),  mN=$('#MNum'),  mVal=$('#MVal');
+    const alphaR=$('#alpha'), alphaVal=$('#alphaVal');
+    const betaR=$('#beta'),   betaVal=$('#betaVal');
+    const pxR=$('#px'), pxVal=$('#pxVal');
+    const pyR=$('#py'), pyVal=$('#pyVal');
+    const mR=$('#M'),  mVal=$('#MVal');
 
     const xStarEl=$('#xStar'), yStarEl=$('#yStar'), xIntEl=$('#xInt'), yIntEl=$('#yInt');
     const refitBtn=$('#refitBtn');
@@ -288,23 +275,13 @@
     // 상태: 축 고정 범위
     let BASE_XMAX=1, BASE_YMAX=1;
 
-    // 사용자 표현(문자열) 유지용
-    const lastExpr = { a:'', b:'', px:'', py:'', M:'' };
-    function applyExprToNumberInputs(){
-      if(alphaN){ alphaN.value = lastExpr.a || (+alphaR.value).toFixed(2); alphaN.dataset.mode='expr'; alphaN.classList.remove('invalid'); }
-      if(betaN ){ betaN.value  = lastExpr.b || (+betaR.value).toFixed(2);  betaN.dataset.mode='expr';  betaN.classList.remove('invalid'); }
-      if(pxN   ){ pxN.value    = lastExpr.px|| (+pxR.value).toFixed(2);    pxN.dataset.mode='expr';    pxN.classList.remove('invalid'); }
-      if(pyN   ){ pyN.value    = lastExpr.py|| (+pyR.value).toFixed(2);    pyN.dataset.mode='expr';    pyN.classList.remove('invalid'); }
-      if(mN    ){ mN.value     = lastExpr.M || (+mR.value).toFixed(0);     mN.dataset.mode='expr';     mN.classList.remove('invalid'); }
-    }
-
     // 유틸
     function fmt(v,d=2){
       if(!Number.isFinite(v)) return (v===Infinity||v===-Infinity)?'∞':'–';
       return (+v).toFixed(d);
     }
-    // 숫자 슬라이더 범위만 설정(텍스트 칸은 건드리지 않음)
-    function setRange(rangeEl, _numberEl_unused, {min, max, step, value, decimals=2}){
+    // 숫자 슬라이더 범위만 설정
+    function setRange(rangeEl, _unused, {min, max, step, value, decimals=2}){
       if(min===max){ max = min + (Math.abs(min)||1); }
       if(min>max){ const t=min; min=max; max=t; }
       rangeEl.min=min; rangeEl.max=max; rangeEl.step=step; rangeEl.value=+(+value).toFixed(decimals);
@@ -319,7 +296,7 @@
       const M =+mR.value;
       return {a,b,px,py,M};
     }
-    // 화면 표시(텍스트 칸은 건드리지 않음)
+    // 화면 표시(작은 값 텍스트 갱신)
     function syncUI(){
       const {a,b,px,py,M}=params();
       alphaVal.textContent=isNaN(a)?'–':(+a).toFixed(2);
@@ -353,7 +330,10 @@
             x:{ type:'linear', title:{display:true,text:'x'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_XMAX },
             y:{ type:'linear', title:{display:true,text:'y'}, grid:{ drawOnChartArea:true, color:C_MUTED }, min:0, max:BASE_YMAX }
           },
-          plugins:{ legend:{ display:true }, tooltip:{ mode:'nearest', intersect:false } }
+          plugins:{
+            legend:{ display:false }, /* 요청: Chart.js 인터랙티브 범례 제거 */
+            tooltip:{ mode:'nearest', intersect:false }
+          }
         }
       });
     }
@@ -462,38 +442,17 @@
       }
     }
 
-    // 슬라이더-텍스트 상호작용
-    function bindPair(rangeEl, numberEl, decimals, onChange){
-      // 슬라이더 → 텍스트(소수 표기)
-      rangeEl.addEventListener('input', ()=>{
-        if(numberEl){
-          numberEl.value=(+rangeEl.value).toFixed(decimals);
-          numberEl.dataset.mode='decimal';
-          numberEl.classList.remove('invalid');
-        }
-        onChange();
-      });
-      // 텍스트(표현식) → 슬라이더(커밋)
-      const commitFromText = ()=>{
-        const v = evalExpr(numberEl.value);
-        if(!Number.isFinite(v)){ numberEl.classList.add('invalid'); return; }
-        numberEl.classList.remove('invalid');
-        const min=+rangeEl.min, max=+rangeEl.max;
-        const vv = Math.min(Math.max(v, min), max);
-        rangeEl.value = vv.toFixed(decimals);
-        numberEl.dataset.mode='expr';
-        onChange();
-      };
-      numberEl.addEventListener('change', commitFromText);
-      numberEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); commitFromText(); } });
+    // 슬라이더 바인딩 (한 줄 UI)
+    function bindSlider(rangeEl, decimals, onChange){
+      rangeEl.addEventListener('input', onChange);
     }
 
     // 슬라이더 범위 생성 헬퍼
-    function setAroundAlphaBeta(rangeEl, numberEl, base){
+    function setAroundAlphaBeta(rangeEl, _unused, base){
       const span = Math.max(0.2, Math.abs(base)*0.2); // ±20% (최소 폭 0.2)
       setRange(rangeEl, null, { min: base - span, max: base + span, step: 0.01, value: base, decimals: 2 });
     }
-    function setAroundPriceOrIncome(rangeEl, numberEl, base, decimals, step){
+    function setAroundPriceOrIncome(rangeEl, _unused, base, decimals, step){
       const span = Math.max((Math.abs(base)||1)*0.5, 1); // 기준 ±50%, 최소 폭 1
       setRange(rangeEl, null, { min: base - span, max: base + span, step, value: base, decimals });
     }
@@ -501,11 +460,11 @@
     // 초기값 제출 → 슬라이더 범위/축 고정/차트 생성
     function applyInitial(a0,b0,px0,py0,M0){
       // 1) 슬라이더 범위
-      setAroundAlphaBeta(alphaR, alphaN, a0);
-      setAroundAlphaBeta(betaR,  betaN,  b0);
-      setAroundPriceOrIncome(pxR, pxN, px0, 2, 0.05);
-      setAroundPriceOrIncome(pyR, pyN, py0, 2, 0.05);
-      setAroundPriceOrIncome(mR,  mN,  M0,  0, 1);
+      setAroundAlphaBeta(alphaR, null, a0);
+      setAroundAlphaBeta(betaR,  null, b0);
+      setAroundPriceOrIncome(pxR, null, px0, 2, 0.05);
+      setAroundPriceOrIncome(pyR, null, py0, 2, 0.05);
+      setAroundPriceOrIncome(mR,  null, M0,  0, 1);
 
       // 2) 축 고정
       const xInt0 = (px0===0)? 0 : M0/px0;
@@ -527,19 +486,18 @@
       // 4) 색상/차트 생성(보이는 상태에서)
       if(!cdChart){ loadColors(); createChart(); }
 
-      // 5) 페어 바인딩(한 번만)
+      // 5) 슬라이더 바인딩(한 번만)
       if(!alphaR.dataset.bound){
-        bindPair(alphaR, alphaN, 2, ()=>recomputeAndDraw());
-        bindPair(betaR,  betaN,  2, ()=>recomputeAndDraw());
-        bindPair(pxR,    pxN,    2, ()=>recomputeAndDraw());
-        bindPair(pyR,    pyN,    2, ()=>recomputeAndDraw());
-        bindPair(mR,     mN,     0, ()=>recomputeAndDraw());
+        bindSlider(alphaR, 2, ()=>recomputeAndDraw());
+        bindSlider(betaR,  2, ()=>recomputeAndDraw());
+        bindSlider(pxR,    2, ()=>recomputeAndDraw());
+        bindSlider(pyR,    2, ()=>recomputeAndDraw());
+        bindSlider(mR,     0, ()=>recomputeAndDraw());
         alphaR.dataset.bound = betaR.dataset.bound = pxR.dataset.bound = pyR.dataset.bound = mR.dataset.bound = '1';
       }
 
-      // 6) 첫 렌더 + 사용자 표현 그대로 반영
+      // 6) 첫 렌더
       recomputeAndDraw({fitAxes:true});
-      applyExprToNumberInputs();
     }
 
     // 초기 그리기 버튼: 표현식 파싱 후 적용
@@ -554,13 +512,6 @@
         return;
       }
       initStatus.textContent = '';
-      // 사용자 입력 문자열 저장(그대로 보여주기 위함)
-      lastExpr.a  = iA.value.trim();
-      lastExpr.b  = iB.value.trim();
-      lastExpr.px = iPx.value.trim();
-      lastExpr.py = iPy.value.trim();
-      lastExpr.M  = iM.value.trim();
-
       applyInitial(a0,b0,px0,py0,M0);
     });
 
@@ -584,13 +535,6 @@
       const py0 = parseInput(riPy);
       const M0  = parseInput(riM);
       if([a0,b0,px0,py0,M0].some(v=>!Number.isFinite(v))) return;
-
-      // 사용자가 재입력한 표현 그대로 저장
-      lastExpr.a  = riA.value.trim();
-      lastExpr.b  = riB.value.trim();
-      lastExpr.px = riPx.value.trim();
-      lastExpr.py = riPy.value.trim();
-      lastExpr.M  = riM.value.trim();
 
       applyInitial(a0,b0,px0,py0,M0);
       reinitBox.open = false;
