@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>최적선택점 · ICC | Leontief (완전보완재)</title>
+  <title>완전보완재(레온티에프 효용함수)</title>
   <meta name="description" content="완전보완재 U(x,y)=min(x/α, y/β)에서 α,β·가격·소득을 입력해 최적선택점을 시각화하고 ICC(소득–소비 곡선)를 선으로 표시합니다. 분수/표현식 입력 지원." />
 
   <!-- 공통: 폰트/스타일 -->
@@ -71,7 +71,7 @@
 </head>
 <body>
   <header class="site-header">
-    <h1>최적선택점 · ICC</h1>
+    <h1>완전보완재(레온티에프 효용함수)</h1>
     <p class="subtitle">U(x,y)=min(x/α, y/β), 예산: pₓx + pᵧy = M</p>
   </header>
 
@@ -178,7 +178,7 @@
         <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">–</dd>
       </dl>
       <p id="statusMsg" class="muted" aria-live="polite"></p>
-      <p class="muted">내부해(α,β&gt;0 &amp; αpₓ+βpᵧ&gt;0): <em>t*=M/(αpₓ+βpᵧ), x*=αt*, y*=βt*</em>. ICC: <em>y=(β/α)x</em>.</p>
+      <!-- 요청 2: 내부해/ICC 설명 문장 삭제됨 -->
     </section>
 
     <!-- (3) 차트 카드 -->
@@ -196,7 +196,7 @@
         <canvas id="leoChart" aria-label="예산선, ICC, 무차별곡선, 최적점"></canvas>
       </div>
 
-      <p class="muted" style="margin-top:8px;">무차별곡선(U=t): <em>min(x/α, y/β)=t</em>의 자취 — 굴곡점이 (<em>αt, βt</em>). ICC: <em>y=(β/α)x</em>.</p>
+      <!-- 요청 3: 무차별곡선/ICC 설명 문장 삭제됨 -->
     </section>
   </main>
 
