@@ -1,1 +1,360 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>카이제곱(χ²) 시뮬레이터</title>
 
+  <!-- 공통 스타일 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/style.css" />
+
+  <style>
+    /* 레이아웃: 컨트롤은 전체폭, 그래프 2열(모바일 1열) */
+    main.grid { grid-template-columns: 1fr 1fr; }
+    #controls.card { grid-column: 1 / -1; }
+    @media (max-width: 900px){ main.grid { grid-template-columns: 1fr; } }
+
+    /* 컨트롤 박스 (사이트 톤) */
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:8px}
+    .ctrl{background:var(--panel);border:1px solid rgba(255,255,255,.08);padding:12px 14px;border-radius:12px;box-shadow: var(--shadow)}
+    .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .ctrl input[type="range"], .ctrl button{
+      background:var(--panel);color:var(--text);
+      border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 10px;font:inherit;
+      box-shadow: var(--shadow);
+    }
+    .ctrl input[type="range"]{padding:0;width:min(340px,45vw)}
+    .ctrl input:focus,.ctrl button:focus{outline:none;box-shadow:0 0 0 4px var(--ring)}
+
+    /* 작은 배지 */
+    .badge{display:inline-flex;align-items:center;gap:.35rem;padding:.1rem .5rem;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg, rgba(106,169,255,.12), rgba(106,169,255,.06));color:var(--text);}
+
+    /* 캔버스 카드 내부 */
+    .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-bottom:6px}
+    .sw{display:inline-block;width:10px;height:10px;border-radius:2px;border:1px solid rgba(255,255,255,.2);}
+    .plot{background:var(--panel);border-radius:18px;box-shadow: var(--shadow);padding:10px;width:100%;height:360px;display:block}
+
+    /* 우측 카드 상단 통계(제목 자리 대체) */
+    .statline{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:14px;margin:0 0 8px}
+    .statline strong{font-weight:700}
+  </style>
+</head>
+<body>
+  <!-- 배경 효과 쓰면 주석 해제
+  <canvas id="starfield"></canvas> -->
+
+  <header class="site-header">
+    <h1>카이제곱(χ²) 시뮬레이터</h1>
+    <p class="subtitle">표준정규표본 k개의 제곱합 → χ²ₖ</p>
+  </header>
+
+  <main class="grid">
+    <!-- 컨트롤 -->
+    <section id="controls" class="card">
+      <div class="controls" role="group" aria-label="시뮬레이션 컨트롤">
+        <!-- 속도 -->
+        <div class="ctrl">
+          <label for="speed">속도 (초당 샘플)</label>
+          <input id="speed" type="range" min="0" max="200" step="1" value="30" aria-describedby="speedVal"/>
+          <small id="speedVal" class="badge">30/s</small>
+        </div>
+
+        <!-- 자유도: 속도와 동일 폼팩터의 슬라이더 + 간결한 라벨 -->
+        <div class="ctrl">
+          <label for="df">자유도 <strong id="kBadge">1</strong></label>
+          <input id="df" type="range" min="1" max="10" step="1" value="1" />
+        </div>
+
+        <!-- 동작 버튼 -->
+        <div class="ctrl" style="display:flex;gap:.5rem;align-items:center;">
+          <button id="toggle">▶ 시작</button>
+          <button id="step">⏭ 한 번</button>
+          <button id="reset">↺ 초기화</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 좌측: 표준정규 PDF -->
+    <section class="card">
+      <h2 style="margin:0 0 8px;">표준정규분포 PDF</h2>
+      <div class="legend" aria-hidden="true">
+        <span><span class="sw" style="background:#7dd3fc"></span>φ(x)</span>
+        <span><span class="sw" style="background:#fbbf24"></span>최근 샘플 xᵢ</span>
+      </div>
+      <canvas id="normalCanvas" class="plot" aria-label="표준정규분포 곡선과 최근 샘플 표시"></canvas>
+      <p class="muted" style="margin:.5rem 0 0;color:var(--muted)">범위: x ∈ [−4, 4]</p>
+    </section>
+
+    <!-- 우측: χ² PDF + 히스토그램 (제목 대신 통계 표시) -->
+    <section class="card">
+      <div class="statline" aria-live="polite">
+        <span>표본수 n = <strong id="nCountTop">0</strong></span>
+        <span>표본평균 ȳ = <strong id="meanValTop">0.000</strong></span>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><span class="sw" style="background:#a78bfa"></span>PDF</span>
+        <span><span class="sw" style="background:transparent;border-style:dashed"></span>기대값 k (점선)</span>
+        <span><span class="sw" style="background:#34d399"></span>히스토그램(밀도)</span>
+      </div>
+      <canvas id="chisqCanvas" class="plot" aria-label="카이제곱 분포 PDF와 정규화 히스토그램"></canvas>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+    <small>© <span id="year"></span> aries0401-svc</small>
+  </footer>
+
+  <!-- 공통 스크립트 -->
+  <script src="../../assets/site.js"></script>
+
+  <!-- 페이지 전용 스크립트 -->
+  <script>
+  // ===== 색상 팔레트 (원래 코드 존중) =====
+  const COL = {
+    normal: '#7dd3fc',   // 표준정규 PDF
+    chisq:  '#a78bfa',   // χ² PDF
+    hist:   '#34d399',   // 히스토그램
+    flash:  '#fbbf24'    // 방금 bin / 최근 샘플 하이라이트
+  };
+  function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  const C_MUTED = cssVar('--muted') || 'rgba(255,255,255,.6)';
+
+  // ===== HiDPI 캔버스 =====
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  function setupHiDPICanvas(canvas){
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+
+  // ===== 수학 =====
+  function normalPdf(x){ return Math.exp(-0.5*x*x) / Math.sqrt(2*Math.PI); }
+  function randn(){ let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+
+  // Lanczos log Γ, χ²(k) PDF
+  function logGamma(z){
+    const p=[676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+    if(z<0.5) return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-logGamma(1-z);
+    z-=1; let x=0.99999999999980993; for(let i=0;i<p.length;i++) x+=p[i]/(z+i+1);
+    const t=z+p.length-0.5; return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);
+  }
+  function chisqPdf(y,k){
+    if(y<=0) return 0;
+    const half=k/2, logc=-(half)*Math.log(2)-logGamma(half), logf=logc+(half-1)*Math.log(y)-y/2;
+    return Math.exp(logf);
+  }
+
+  // ===== 상태 & 요소 =====
+  const normal = { xMin:-4, xMax:4, yMin:0, yMax:0.45 };
+  const hist = { yMin:0, yMax:12, binWidth:0.20, counts:[], n:0, sumY:0, lastBin:-1, lastAt:0 };
+  let k = 1;
+
+  const normalCanvas = document.getElementById('normalCanvas');
+  const chisqCanvas  = document.getElementById('chisqCanvas');
+  const nCtx = setupHiDPICanvas(normalCanvas);
+  const cCtx = setupHiDPICanvas(chisqCanvas);
+
+  const speedEl = document.getElementById('speed');
+  const speedValEl = document.getElementById('speedVal');
+  const toggleBtn = document.getElementById('toggle');
+  const stepBtn = document.getElementById('step');
+  const resetBtn = document.getElementById('reset');
+
+  const dfEl = document.getElementById('df');
+  const kBadgeEl = document.getElementById('kBadge');
+
+  const nCountTopEl = document.getElementById('nCountTop');
+  const meanTopEl   = document.getElementById('meanValTop');
+
+  // ===== 유틸 =====
+  function ensureBinsUpToY(y){
+    const need = Math.floor((y - hist.yMin) / hist.binWidth);
+    if(need >= hist.counts.length){
+      const add = need - hist.counts.length + 1;
+      for(let i=0;i<add;i++) hist.counts.push(0);
+      hist.yMax = hist.yMin + hist.counts.length * hist.binWidth;
+    }
+  }
+  function resetHist(){
+    const bins = Math.ceil((hist.yMax - hist.yMin)/hist.binWidth);
+    hist.counts = new Array(bins).fill(0);
+    hist.n=0; hist.sumY=0; hist.lastBin=-1; hist.lastAt=0;
+    nCountTopEl.textContent='0'; meanTopEl.textContent='0.000';
+  }
+  resetHist();
+
+  // 좌표 변환
+  function scaler(xMin,xMax,yMin,yMax,canvas){
+    const pad={l:42,r:16,t:14,b:30};
+    const W=canvas.clientWidth, H=canvas.clientHeight;
+    const innerW=W-pad.l-pad.r, innerH=H-pad.t-pad.b;
+    const x2px=x=>pad.l + ((x-xMin)/(xMax-xMin))*innerW;
+    const y2px=y=>pad.t + innerH - ((y-yMin)/(yMax-yMin))*innerH;
+    return {x2px,y2px,pad,W,H,innerW,innerH};
+  }
+
+  // ===== 그리기(좌) =====
+  let lastXs=[];
+  function drawNormal(){
+    const s=scaler(normal.xMin,normal.xMax,normal.yMin,normal.yMax,normalCanvas);
+    const ctx=nCtx; ctx.save();
+    ctx.clearRect(0,0,normalCanvas.width/dpr,normalCanvas.height/dpr);
+
+    // 보조격자 & 축
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(255,255,255,.06)';
+    for(let xv=-4;xv<=4;xv++){ const x=s.x2px(xv); ctx.beginPath(); ctx.moveTo(x,s.y2px(normal.yMin)); ctx.lineTo(x,s.y2px(normal.yMax)); ctx.stroke(); }
+    ctx.strokeStyle=C_MUTED;
+    ctx.beginPath(); ctx.moveTo(s.x2px(0),s.y2px(normal.yMin)); ctx.lineTo(s.x2px(0),s.y2px(normal.yMax)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(s.x2px(normal.xMin),s.y2px(0)); ctx.lineTo(s.x2px(normal.xMax),s.y2px(0)); ctx.stroke();
+
+    // 눈금
+    ctx.fillStyle=C_MUTED; ctx.font='12px "Noto Sans KR", system-ui'; ctx.textAlign='center';
+    for(let xv=-4;xv<=4;xv++) ctx.fillText(String(xv), s.x2px(xv), s.y2px(0)+14);
+    ctx.textAlign='right'; ['0.0','0.2','0.4'].forEach((t,i)=>ctx.fillText(t, s.x2px(normal.xMin)-4, s.y2px(i*0.2)+4));
+
+    // PDF
+    ctx.beginPath();
+    for(let i=0;i<=400;i++){
+      const t=i/400, x=normal.xMin + (normal.xMax-normal.xMin)*t, y=normalPdf(x);
+      const px=s.x2px(x), py=s.y2px(y);
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.strokeStyle=COL.normal; ctx.lineWidth=2; ctx.stroke();
+
+    // 최근 샘플
+    if(lastXs.length){
+      lastXs.forEach((xv,i)=>{
+        const px=s.x2px(xv), py=s.y2px(normalPdf(xv));
+        ctx.setLineDash([4,4]); ctx.strokeStyle=COL.flash; ctx.globalAlpha = 0.9 - Math.min(i*0.15, .6);
+        ctx.beginPath(); ctx.moveTo(px,s.y2px(normal.yMin)); ctx.lineTo(px,s.y2px(normal.yMax)); ctx.stroke();
+        ctx.setLineDash([]); ctx.beginPath(); ctx.arc(px,py,4 - Math.min(i,2)*0.8,0,Math.PI*2);
+        ctx.fillStyle=COL.flash; ctx.fill(); ctx.globalAlpha=1;
+      });
+    }
+    ctx.restore();
+  }
+
+  // χ² y축 상한(고정)
+  let yMaxFixed=null;
+  function computeFixedYMax(){
+    const robustClip=(k<=2?0.05:0), yMinClip=1e-4;
+    const startY=Math.min(hist.yMax, Math.max(hist.yMin+yMinClip, robustClip));
+    let maxF=0; const N=1000;
+    for(let i=0;i<=N;i++){ const y=startY + (hist.yMax-startY)*i/N; const f=chisqPdf(y,k); if(f>maxF) maxF=f; }
+    const minY=(k<=2?1.2:0.6);
+    return Math.max(minY, maxF*1.25);
+  }
+
+  // ===== 그리기(우) =====
+  function drawChisq(){
+    if(yMaxFixed===null) yMaxFixed = computeFixedYMax();
+    const s=scaler(hist.yMin, hist.yMax, 0, yMaxFixed, chisqCanvas);
+    const ctx=cCtx; ctx.save();
+    ctx.clearRect(0,0,chisqCanvas.width/dpr,chisqCanvas.height/dpr);
+
+    // 그리드 & x축
+    ctx.strokeStyle='rgba(255,255,255,.06)';
+    const yStep = yMaxFixed <= 1 ? 0.2 : (yMaxFixed <= 2 ? 0.5 : (yMaxFixed <= 5 ? 1 : 2));
+    for(let y=0;y<=yMaxFixed+1e-9;y+=yStep){ ctx.beginPath(); ctx.moveTo(s.x2px(hist.yMin),s.y2px(y)); ctx.lineTo(s.x2px(hist.yMax),s.y2px(y)); ctx.stroke(); }
+    ctx.strokeStyle=C_MUTED; ctx.beginPath(); ctx.moveTo(s.x2px(hist.yMin), s.y2px(0)); ctx.lineTo(s.x2px(hist.yMax), s.y2px(0)); ctx.stroke();
+
+    // 눈금
+    ctx.fillStyle=C_MUTED; ctx.font='12px "Noto Sans KR", system-ui'; ctx.textAlign='center';
+    const xStep = hist.yMax <= 8 ? 1 : 2;
+    for(let x=0;x<=hist.yMax+1e-9;x+=xStep) ctx.fillText(String(x), s.x2px(x), s.y2px(0)+14);
+    ctx.textAlign='right';
+    for(let y=0;y<=yMaxFixed+1e-9;y+=yStep) ctx.fillText(y.toFixed(1), s.x2px(hist.yMin)-4, s.y2px(y)+4);
+
+    // 기대값 k 점선
+    ctx.setLineDash([6,4]); ctx.strokeStyle = '#a78bfaAA';
+    ctx.beginPath(); ctx.moveTo(s.x2px(k), s.y2px(0)); ctx.lineTo(s.x2px(k), s.y2px(yMaxFixed)); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 히스토그램(정규화 밀도)
+    if(hist.counts.length>0 && hist.n>0){
+      const bw=hist.binWidth, now=performance.now();
+      for(let i=0;i<hist.counts.length;i++){
+        const x0=hist.yMin + i*bw;
+        const density = hist.counts[i] / (hist.n * bw);
+        const xL=s.x2px(x0), xR=s.x2px(x0+bw), y0=s.y2px(0), yH=s.y2px(density);
+        ctx.fillStyle = (i===hist.lastBin && (now-hist.lastAt)<280) ? COL.flash : COL.hist;
+        ctx.globalAlpha = (i===hist.lastBin && (now-hist.lastAt)<280) ? 1 : 0.5;
+        ctx.fillRect(xL, yH, Math.max(1,xR-xL-1), Math.max(0,y0-yH));
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // 이론 χ²(k) PDF
+    ctx.beginPath(); let first=true; const N=800, yMinClip=1e-4;
+    for(let i=0;i<=N;i++){
+      const y = hist.yMin + yMinClip + (hist.yMax - (hist.yMin + yMinClip))*i/N;
+      const f = chisqPdf(y,k); const px=s.x2px(y), py=s.y2px(Math.min(f, yMaxFixed));
+      if(first){ ctx.moveTo(px,py); first=false; } else ctx.lineTo(px,py);
+    }
+    ctx.strokeStyle=COL.chisq; ctx.lineWidth=2; ctx.stroke();
+
+    ctx.restore();
+
+    // 표본 통계(제목 자리)
+    nCountTopEl.textContent = String(hist.n);
+    const mean = hist.n>0 ? (hist.sumY / hist.n) : 0;
+    meanTopEl.textContent = mean.toFixed(3);
+  }
+
+  // ===== 시뮬레이션 루프 =====
+  let running=false, rate=parseInt(speedEl.value,10), acc=0, lastT=null;
+  function stepOnce(){
+    lastXs=[]; let y=0;
+    for(let i=0;i<k;i++){ const x=randn(); lastXs.push(Math.max(normal.xMin, Math.min(normal.xMax, x))); y+=x*x; }
+    ensureBinsUpToY(y);
+    const idx=Math.floor((y - hist.yMin)/hist.binWidth);
+    hist.counts[idx]+=1; hist.n+=1; hist.sumY+=y; hist.lastBin=idx; hist.lastAt=performance.now();
+  }
+  function loop(ts){
+    if(lastT==null) lastT=ts;
+    const dt=(ts-lastT)/1000; lastT=ts;
+    if(running && rate>0){
+      acc += rate*dt;
+      let ksteps = Math.floor(acc);
+      if(ksteps>300) ksteps=300;
+      for(let i=0;i<ksteps;i++) stepOnce();
+      acc -= ksteps;
+    }
+    drawNormal(); drawChisq();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ===== 이벤트 =====
+  speedEl.addEventListener('input', ()=>{ rate=parseInt(speedEl.value,10); speedValEl.textContent=`${rate}/s`; });
+  dfEl.addEventListener('input', ()=>{
+    k=parseInt(dfEl.value,10);
+    kBadgeEl.textContent = String(k);
+    lastXs=[]; hist.yMax=12; resetHist(); yMaxFixed=null; drawNormal(); drawChisq();
+  });
+  toggleBtn.addEventListener('click', ()=>{ running=!running; toggleBtn.textContent = running ? '⏸ 일시정지' : '▶ 시작'; });
+  stepBtn.addEventListener('click', ()=>{ stepOnce(); drawNormal(); drawChisq(); });
+  resetBtn.addEventListener('click', ()=>{ lastXs=[]; hist.yMax=12; resetHist(); yMaxFixed=null; drawNormal(); drawChisq(); });
+
+  // 리사이즈
+  let rsz=null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(rsz);
+    rsz=setTimeout(()=>{
+      setupHiDPICanvas(normalCanvas);
+      setupHiDPICanvas(chisqCanvas);
+      drawNormal(); drawChisq(); // yMaxFixed 유지
+    }, 120);
+  });
+  </script>
+</body>
+</html>
