@@ -70,7 +70,7 @@
   <main class="grid">
     <!-- (1) 시작 화면: 초기값 먼저 받기 (분수/표현식 입력 지원) -->
     <section class="card controls" id="init-card" aria-labelledby="init-title">
-      <h2 id="init-title">초기값 입력 후 그리기 (분수/표현식 가능)</h2>
+      <h2 id="init-title">값 입력(분수 가능)</h2>
       <div class="row">
         <label for="i-alpha">α (x의 지수)</label>
         <input id="i-alpha" type="text" inputmode="text" value="1/2" placeholder="예: 1/2, 0.5">
@@ -92,7 +92,6 @@
         <input id="i-M" type="text" inputmode="text" value="60" placeholder="예: 60, 120/2">
       </div>
       <button id="drawBtn" style="margin-top:.5rem;">그리기</button>
-      <p class="muted" style="margin-top:6px;">※ 그리기 후에 각 값 주변 범위로 슬라이더가 자동 생성됩니다. 분수/표현식 입력 가능.</p>
       <p class="muted" id="initStatus" aria-live="polite"></p>
     </section>
 
@@ -171,12 +170,12 @@
         <dt>y절편 (M/p<sub>y</sub>)</dt><dd id="yInt">–</dd>
       </dl>
       <p id="statusMsg" class="muted" aria-live="polite"></p>
-      <p class="muted">내부해(α,β&gt;0): <em>x*=(α/(α+β))·M/p<sub>x</sub>,&nbsp; y*=(β/(α+β))·M/p<sub>y</sub></em></p>
+
     </section>
 
     <!-- (3) 차트 카드: 초기 그리기 이후에만 표시 -->
     <section class="card" id="chart-card" hidden aria-labelledby="chart-title">
-      <h2 id="chart-title">예산선 · 무차별곡선(U*) · 최적점</h2>
+      <h2 id="chart-title">예산선 · 무차별곡선 · 최적점</h2>
 
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <div class="legend" aria-hidden="true">
