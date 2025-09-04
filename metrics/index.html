@@ -5,25 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>계량경제학 | 경제학 노트</title>
 
+  <!-- 폰트 (규칙 준수) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
 
+  <!-- 공통 리소스: 상대경로 -->
   <link rel="stylesheet" href="../assets/style.css" />
 
   <!-- 카드 숨김용 간단 스타일(완전 제거) -->
   <style>
     .is-hidden { display: none !important; }
   </style>
-
-  <!-- ✅ MathJax: 제목의 LaTeX (X^2) 렌더링용 -->
-  <script>
-    window.MathJax = {
-      tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
-      chtml: { scale: 1 }
-    };
-  </script>
-  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -31,33 +24,40 @@
     <p class="subtitle">회귀·추정·인과추론, 실증연구</p>
   </header>
 
-  <main class="grid" style="grid-template-columns:1fr;">
-    <!-- 표준정규분포 -->
-    <a class="card" href="normal-distribution/" data-section="normal">
+  <main class="grid">
+    <!-- 표준정규분포로 이동하는 카드 (맨 앞) -->
+    <a class="card" href="./normal-distribution/" data-section="normal" aria-label="표준정규분포 p-value 시각화로 이동">
       <div class="emoji" aria-hidden="true">📊</div>
       <h2>표준정규분포 p-value 시각화</h2>
       <p>p-value 계산(면적) 인터랙티브</p>
     </a>
 
-    <!-- t-분포 (새로 추가된 카드) -->
-    <a class="card" href="t-distribution/" data-section="t_dist">
+    <!-- t-분포로 이동하는 카드 -->
+    <a class="card" href="t-distribution/" data-section="t_dist" aria-label="t-분포 p-value 시각화로 이동">
       <div class="emoji" aria-hidden="true">📐</div>
       <h2>t-분포 p-value 시각화</h2>
       <p>자유도 ν 입력 · p-value/신뢰구간</p>
     </a>
 
-    <!-- OLS 회귀 -->
-    <a class="card" href="ols/" data-section="ols">
+    <!-- OLS 회귀로 이동하는 카드 -->
+    <a class="card" href="ols/" data-section="ols" aria-label="OLS 회귀 직선 그리기로 이동">
       <div class="emoji" aria-hidden="true">📈</div>
       <h2>OLS 회귀 직선 그리기</h2>
       <p>x·y 데이터로 회귀선, 식, R² 계산</p>
     </a>
 
-    <!-- ✅ 카이제곱 분포 카드 -->
-    <a class="card" href="chi-squared/" data-section="chi2">
+    <!-- 카이제곱 분포로 이동하는 카드 -->
+    <a class="card" href="chi-squared/" data-section="chi2" aria-label="카이제곱 분포 시뮬레이터로 이동">
       <div class="emoji" aria-hidden="true">🎲</div>
-      <h2>카이제곱(\(X^2\))분포 시물레이터</h2>
+      <h2>카이제곱(X²) 분포 시뮬레이터</h2>
       <p>자유도 k 설정 · p-value/임계값 · 시뮬레이션</p>
+    </a>
+
+    <!-- CLT로 이동하는 카드 -->
+    <a class="card" href="clt/" data-section="clt" aria-label="중심극한정리 시뮬레이터로 이동">
+      <div class="emoji" aria-hidden="true">🎯</div>
+      <h2>중심극한정리( CLT ) 시뮬레이터</h2>
+      <p>표본평균 분포 · 정규근사 · 시뮬레이션</p>
     </a>
   </main>
 
@@ -65,14 +65,15 @@
     <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
   </footer>
 
-  <!-- ✅ 하위 주제 가시성 토글: true면 보임, false면 숨김 -->
+  <!-- ✅ 섹션 가시성 토글: true면 보임, false면 숨김 -->
   <script>
     /* 🔧 여기에서 true/false만 바꾸세요 */
     window.SECTION_VISIBILITY = {
-      normal: true,   // 표준정규분포
-      t_dist: true,   // t-분포
-      ols:    true,   // OLS 회귀
-      chi2:   true    // ✅ 카이제곱 분포
+      normal: true,  // 표준정규분포
+      t_dist: true,  // t-분포
+      ols:    true,  // OLS 회귀
+      chi2:   true,  // 카이제곱 분포
+      clt:    true   // 중심극한정리(CLT)
     };
 
     // 렌더 직후 적용: false인 카드를 완전히 숨김(시각/키보드 접근 차단)
@@ -89,6 +90,7 @@
     })();
   </script>
 
-  <script src="../assets/site.js"></script>
+  <!-- 공통 스크립트: 상대경로 -->
+  <script src="../assets/site.js" defer></script>
 </body>
 </html>

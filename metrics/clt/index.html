@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>중심극한정리( CLT ) 시뮬레이터</title>
+
+  <!-- 에셋: 폰트/스타일 (상대경로는 페이지 깊이에 맞게 조정) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/style.css" />
+
+  <!-- favicon 404 방지 -->
+  <link rel="icon" href="data:," />
+
+  <style>
+    /* ===== 이 페이지 전용 최소 스타일 (공용 에셋과 충돌 최소화) ===== */
+
+    /* 메인 그리드: 2열(좌: 확률/컨트롤, 우: 히스토그램/컨트롤) */
+    main.grid.two-col { grid-template-columns: minmax(300px, 420px) 1fr; }
+    @media (max-width: 980px){ main.grid.two-col { grid-template-columns: 1fr; } }
+
+    /* 배지/힌트/작은 텍스트 */
+    .badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+            background: rgba(106,169,255,.15); color: var(--primary); font-weight:700; font-size:12px; }
+    .legend, .small, .hint{ color: var(--muted); font-size: 12px; }
+
+    /* 좌측: 확률 그리드 & 막대 차트 */
+    .prob-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+    .prob-item{ background: var(--panel); border:1px solid rgba(255,255,255,.06);
+                border-radius:12px; padding:12px; cursor:pointer; box-shadow: var(--shadow); }
+    @media (prefers-color-scheme: light){
+      .prob-item{ border-color: rgba(2,6,23,.12); }
+    }
+    .prob-item h4{ margin:0 0 8px 0; font-size:14px; color: var(--muted); }
+    .units{ display:grid; grid-template-columns: repeat(6, 1fr); gap:6px; margin-top:8px; }
+    .unit{ height:14px; border-radius:999px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .unit.filled{ background: linear-gradient(180deg, var(--primary), rgba(106,169,255,.35)); border-color: rgba(106,169,255,.45); }
+
+    /* 버튼 */
+    .actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .btn{
+      cursor:pointer; border:1px solid rgba(255,255,255,.06);
+      background:#1a2446; color: var(--text);
+      padding:10px 14px; border-radius:12px; font-weight:600; letter-spacing:.2px;
+      transition: transform .15s ease, border-color .15s ease, filter .15s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(106,169,255,.45); }
+    @media (prefers-color-scheme: light){
+      .btn{ border-color: rgba(2,6,23,.12); }
+    }
+    .btn.primary{ background:#23407a; border-color:#2a4e9b; }
+    .btn.warn{ background:#7a4a12; border-color:#9b5c17; }
+    .checkbox{ display:flex; align-items:center; gap:8px; }
+
+    /* 차트 캔버스 */
+    .chart-wrap{ padding:10px; background: var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:12px; box-shadow: var(--shadow); }
+    #probChart{ width:100%; height:220px; display:block; }
+    #sumChart { width:100%; height:360px; display:block; }
+
+    /* 통계 박스 */
+    .stats{ display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); }
+    .stat{ background: var(--panel); padding:8px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.06); }
+  </style>
+</head>
+<body>
+  <!-- ⭐ 별 애니메이션 제거: #starfield 캔버스를 포함하지 않음 -->
+
+  <!-- 공용 헤더 -->
+  <header class="site-header">
+    <h1>중심극한정리( CLT ) 시뮬레이터</h1>
+    <!-- 요청 2: 부제 삭제 -->
+  </header>
+
+  <main class="grid two-col">
+    <!-- 왼쪽: 확률 설정 + 면별 막대 -->
+    <section class="card" aria-label="주사위 확률 설정">
+      <div class="badge">🎲 주사위 확률 설정</div>
+      <!-- 요청 3: 힌트 문구 교체 -->
+      <p class="hint" style="margin-top:8px">좌클릭: 증가 / 우클릭: 감소</p>
+
+      <div class="actions" style="margin-top:10px">
+        <button id="btnUniform" class="btn">균등 분포(2/12)</button>
+        <button id="btnRandom" class="btn">무작위 분포(정수칸)</button>
+        <span class="checkbox">
+          <input type="checkbox" id="chkResetOnChange" checked />
+          <label for="chkResetOnChange" class="small">확률 변경 시 결과 초기화</label>
+        </span>
+      </div>
+
+      <div class="prob-grid" id="probGrid" style="margin-top:12px"></div>
+
+      <div class="chart-wrap" style="margin-top:12px">
+        <canvas id="probChart" role="img" aria-label="면별 확률 막대 차트"></canvas>
+      </div>
+    </section>
+
+    <!-- 오른쪽: 히스토그램 + 컨트롤/통계 -->
+    <section class="card" aria-label="합 히스토그램 및 실행 컨트롤">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <!-- 요청 4: 배지 텍스트 교체 -->
+        <div class="badge">히스토그램(밀도)</div>
+        <!-- 요청 5: 안내 문구 교체 -->
+        <div class="legend">왼쪽에 설정된 주사위를 12번 굴려서 각 눈금의 합을 히스토그램에 표현</div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <label for="speed" class="small">속도 (세션/초)</label>
+        <input type="range" id="speed" min="1" max="2000" value="200" />
+        <span id="speedLabel" class="small" style="min-width:3ch; text-align:right">200</span>
+      </div>
+
+      <div class="actions" style="margin-top:8px">
+        <button class="btn primary" id="btnStartStop">▶︎ 시작</button>
+        <button class="btn" id="btnStep">한 번 실행</button>
+        <button class="btn warn" id="btnReset">초기화</button>
+      </div>
+
+      <div class="stats" style="margin-top:8px">
+        <div class="stat">세션 수: <b id="statSessions">0</b></div>
+        <!-- 요청 7: 라벨 변경 -->
+        <div class="stat">모평균: <b id="statPopMean">–</b></div>
+        <div class="stat">표본평균(합): <b id="statMean">–</b></div>
+        <!-- 요청 6: 표본표준편차(합) 박스 삭제 -->
+      </div>
+
+      <div class="chart-wrap" style="margin-top:12px">
+        <canvas id="sumChart" role="img" aria-label="합의 밀도 히스토그램"></canvas>
+      </div>
+
+      <!-- 요청 8: 팁 문구 교체 -->
+      <p class="small" style="margin-top:10px">
+        중심극한정리에 의해서, 모집단과 상관없이 12개의 합은 종모양에 가까워진다.
+      </p>
+    </section>
+  </main>
+
+  <!-- 네비게이션 풋터 (예시와 동일 크기/패딩) -->
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+    <div style="margin-top:10px;"><small>© <span id="year"></span> aries0401-svc</small></div>
+  </footer>
+
+  <!-- 공통 스크립트(키보드 인터랙션/연도 표기) -->
+  <script src="../../assets/site.js"></script>
+
+  <script>
+    // ===== 고해상도 캔버스 스케일 =====
+    function fitCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.round(rect.width * dpr), h = Math.round(rect.height * dpr);
+      if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+      return dpr;
+    }
+
+    // ===== 전역 상태 =====
+    const FACES = 6;
+    const TRIALS_PER_SESSION = 12; // 동일 주사위를 12번 굴림
+    const TOTAL_UNITS = 12;        // 확률 단위 = 12칸 → 확률은 k/12
+
+    const MIN_SUM = TRIALS_PER_SESSION * 1;
+    const MAX_SUM = TRIALS_PER_SESSION * 6;
+    const BINS = MAX_SUM - MIN_SUM + 1; // 61
+
+    // 확률은 1/12 단위로만 변화 (초기 각 2칸)
+    let countsUnits = new Array(FACES).fill(TOTAL_UNITS / FACES);
+    let probs = countsUnits.map(k => k/TOTAL_UNITS);
+    let cdf = buildCDF(probs);
+
+    let counts = new Array(BINS).fill(0); // 합 히스토그램 카운트
+    let sessions = 0;
+
+    let running = false;
+    let speed = 200; // sessions/sec (초기값)
+    let lastTs = 0;
+    let carry = 0; // 누적 소수 세션
+
+    // ===== DOM =====
+    const probGrid = document.getElementById('probGrid');
+    const probChart = document.getElementById('probChart');
+    const sumChart = document.getElementById('sumChart');
+
+    const btnUniform = document.getElementById('btnUniform');
+    const btnRandom = document.getElementById('btnRandom');
+    const chkResetOnChange = document.getElementById('chkResetOnChange');
+
+    const speedInput = document.getElementById('speed');
+    const speedLabel = document.getElementById('speedLabel');
+
+    const btnStartStop = document.getElementById('btnStartStop');
+    const btnStep = document.getElementById('btnStep');
+    const btnReset = document.getElementById('btnReset');
+
+    const statSessions = document.getElementById('statSessions');
+    const statMean = document.getElementById('statMean');
+    const statPopMean = document.getElementById('statPopMean');
+    // 요청 6: statStd 제거
+
+    // ===== 확률 입력 UI (1/12 단위) =====
+    function updateFromCounts(){
+      probs = countsUnits.map(k => k/TOTAL_UNITS);
+      cdf = buildCDF(probs);
+    }
+    function faceHTML(i){
+      const k = countsUnits[i];
+      let units='';
+      for (let u=0; u<TOTAL_UNITS; u++) units += '<div class="unit ' + (u<k? 'filled':'') + '"></div>';
+      return '<h4>'+(i+1)+'번 면</h4>'
+           + '<div class="units">'+units+'</div>'
+           + '<div class="small">'+k+'/'+TOTAL_UNITS+'</div>';
+    }
+    function renderProbCells(){
+      probGrid.innerHTML = '';
+      for (let i=0;i<FACES;i++){
+        const item = document.createElement('div');
+        item.className = 'prob-item';
+        item.innerHTML = faceHTML(i);
+        item.addEventListener('click', (e)=>{ if(e.shiftKey||e.altKey||e.metaKey||e.ctrlKey) adjustFace(i,-1); else adjustFace(i,+1); });
+        item.addEventListener('contextmenu', (e)=>{ e.preventDefault(); adjustFace(i,-1); });
+        probGrid.appendChild(item);
+      }
+      drawProb();
+      updateStats();
+    }
+    function adjustFace(i, delta){
+      if (delta>0){
+        // +1: 다른 면(최대 보유)에서 1칸 가져와 i에 더함
+        let donor=-1, max=-1;
+        for (let j=0;j<FACES;j++) if (j!==i && countsUnits[j]>max){ max=countsUnits[j]; donor=j; }
+        if (donor===-1 || countsUnits[donor]===0 || countsUnits[i]===TOTAL_UNITS) return;
+        countsUnits[donor]--; countsUnits[i]++;
+      } else if (delta<0){
+        // -1: i에서 1칸 빼서 다른 면(최소 보유)에 더함
+        if (countsUnits[i]===0) return;
+        let receiver=-1, min=Infinity;
+        for (let j=0;j<FACES;j++) if (j!==i && countsUnits[j]<min){ min=countsUnits[j]; receiver=j; }
+        if (receiver===-1 || countsUnits[receiver]===TOTAL_UNITS) return;
+        countsUnits[i]--; countsUnits[receiver]++;
+      } else { return; }
+      updateFromCounts();
+      if (chkResetOnChange && chkResetOnChange.checked) reset();
+      renderProbCells();
+    }
+
+    // ===== 이벤트 =====
+    btnUniform.addEventListener('click', () => {
+      setUniform();
+      if (chkResetOnChange && chkResetOnChange.checked) reset();
+      renderProbCells();
+    });
+    btnRandom.addEventListener('click', () => {
+      setRandom();
+      if (chkResetOnChange && chkResetOnChange.checked) reset();
+      renderProbCells();
+    });
+
+    speedInput.addEventListener('input', () => {
+      speed = parseInt(speedInput.value,10);
+      speedLabel.textContent = String(speed);
+    });
+
+    btnStartStop.addEventListener('click', () => {
+      running = !running;
+      btnStartStop.textContent = running ? '⏸ 일시정지' : '▶︎ 시작';
+      if (running){ lastTs = performance.now(); requestAnimationFrame(loop); }
+    });
+
+    btnStep.addEventListener('click', () => { runSessions(1); });
+    btnReset.addEventListener('click', () => { reset(); drawSum(); });
+
+    window.addEventListener('resize', () => { drawProb(); drawSum(); });
+
+    function setUniform(){
+      countsUnits = new Array(FACES).fill(TOTAL_UNITS / FACES);
+      updateFromCounts();
+    }
+    function setRandom(){
+      countsUnits = new Array(FACES).fill(0);
+      for (let t=0;t<TOTAL_UNITS;t++) countsUnits[Math.floor(Math.random()*FACES)]++;
+      updateFromCounts();
+    }
+
+    function buildCDF(p){
+      const c = []; let acc = 0;
+      for (let i=0;i<p.length;i++){ acc += p[i]; c.push(acc); }
+      c[c.length-1] = 1; // 수치 오차 보정
+      return c;
+    }
+
+    // ===== 시뮬레이션 루프 =====
+    function loop(ts){
+      if (!running) return;
+      const dt = Math.max(0, ts - lastTs) / 1000; // sec
+      lastTs = ts;
+      const target = speed * dt + carry;
+      const n = Math.floor(target);
+      carry = target - n;
+      if (n > 0) runSessions(n);
+      requestAnimationFrame(loop);
+    }
+
+    function runSessions(n){
+      for (let k=0;k<n;k++){
+        let sum = 0;
+        for (let t=0;t<TRIALS_PER_SESSION;t++) sum += sampleDie();
+        counts[sum - MIN_SUM]++;
+        sessions++;
+      }
+      updateStats();
+      drawSum();
+    }
+
+    function sampleDie(){
+      const u = Math.random();
+      for (let i=0;i<FACES;i++) if (u <= cdf[i]) return i+1;
+      return FACES; // fallback
+    }
+
+    // ===== 통계 =====
+    function updateStats(){
+      statSessions.textContent = sessions.toLocaleString();
+
+      // 이론(모) 평균: 12 * E[X]
+      const e1 = probs.reduce((acc,p,i)=> acc + (i+1)*p, 0);
+      const popMean = TRIALS_PER_SESSION * e1;
+      statPopMean.textContent = popMean.toFixed(3);
+
+      if (sessions === 0){
+        statMean.textContent = '–';
+        return;
+      }
+      let mean = 0;
+      for (let i=0;i<BINS;i++){
+        const value = i + MIN_SUM;
+        const freq = counts[i];
+        mean += value * freq;
+      }
+      mean /= sessions;
+      statMean.textContent = mean.toFixed(3);
+      // 요청 6: 표본표준편차 계산/표시는 제거
+    }
+
+    function reset(){
+      counts.fill(0); sessions = 0; carry = 0; updateStats();
+    }
+
+    // ===== 그리기: 면 확률 바 차트 =====
+    function drawProb(){
+      const dpr = fitCanvas(probChart);
+      const ctx = probChart.getContext('2d');
+      const W = probChart.width, H = probChart.height;
+      ctx.clearRect(0,0,W,H);
+
+      const margin = {l: 48, r: 20, t: 18, b: 40};
+      const w = W - margin.l - margin.r;
+      const h = H - margin.t - margin.b;
+
+      // 축/그리드
+      ctx.strokeStyle = 'rgba(148,163,184,0.2)'; // var(--muted) 근사
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.l, margin.t); ctx.lineTo(margin.l, margin.t + h); ctx.lineTo(margin.l + w, margin.t + h); ctx.stroke();
+
+      // y 눈금
+      const maxP = Math.max(0.25, Math.max(...probs) * 1.1);
+      const ticks = 5;
+      ctx.fillStyle = 'rgba(148,163,184,.9)';
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.font = (12*dpr)+'px "Noto Sans KR", system-ui';
+      for (let i=0;i<=ticks;i++){
+        const y = margin.t + h - (h * i / ticks);
+        const v = (maxP * i / ticks);
+        ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(margin.l + w, y); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.fillText(v.toFixed(2), margin.l - 6, y);
+      }
+
+      // 막대
+      const barGap = 12 * dpr;
+      const barW = (w - barGap*(FACES-1)) / FACES;
+      for (let i=0;i<FACES;i++){
+        const x = margin.l + i*(barW + barGap);
+        const y = margin.t + h;
+        const bh = h * (probs[i] / maxP);
+        const grad = ctx.createLinearGradient(0, y-bh, 0, y);
+        grad.addColorStop(0, 'rgba(106,169,255,0.95)');   // var(--primary) 근사
+        grad.addColorStop(1, 'rgba(106,169,255,0.25)');
+        ctx.fillStyle = grad;
+        roundRect(ctx, x, y-bh, barW, bh, 6*dpr); ctx.fill();
+
+        // 라벨
+        ctx.fillStyle = 'rgba(232,236,241,.95)'; // var(--text) 근사
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (12*dpr)+'px "Noto Sans KR", system-ui';
+        ctx.fillText(String(i+1), x + barW/2, margin.t + h + 18*dpr);
+
+        ctx.textBaseline = 'bottom'; ctx.font = (11*dpr)+'px "Noto Sans KR", system-ui';
+        ctx.fillText((probs[i]).toFixed(3), x + barW/2, y - bh - 4*dpr);
+      }
+    }
+
+    // ===== 그리기: 합 히스토그램 (밀도) =====
+    function drawSum(){
+      const dpr = fitCanvas(sumChart);
+      const ctx = sumChart.getContext('2d');
+      const W = sumChart.width, H = sumChart.height;
+      ctx.clearRect(0,0,W,H);
+
+      const margin = {l: 54, r: 20, t: 18, b: 46};
+      const w = W - margin.l - margin.r;
+      const h = H - margin.t - margin.b;
+
+      // 배경 프레임/그리드
+      ctx.strokeStyle = 'rgba(148,163,184,0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.l, margin.t); ctx.lineTo(margin.l, margin.t + h); ctx.lineTo(margin.l + w, margin.t + h); ctx.stroke();
+
+      // y-스케일: 밀도 [0, max]
+      let maxDensity = 0;
+      if (sessions > 0){
+        for (let i=0;i<BINS;i++) maxDensity = Math.max(maxDensity, counts[i] / sessions);
+        maxDensity *= 1.1; // 여백
+      } else {
+        maxDensity = 0.1;
+      }
+
+      const yTicks = 5;
+      ctx.fillStyle = 'rgba(148,163,184,.9)';
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.font = (12*dpr)+'px "Noto Sans KR", system-ui';
+      for (let i=0;i<=yTicks;i++){
+        const y = margin.t + h - (h * i / yTicks);
+        const v = (maxDensity * i / yTicks);
+        ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(margin.l, y); ctx.lineTo(margin.l + w, y); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.fillText(v.toFixed(3), margin.l - 6, y);
+      }
+
+      // x-축 눈금
+      const xTicks = 10;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (12*dpr)+'px "Noto Sans KR", system-ui';
+      for (let i=0;i<=xTicks;i++){
+        const value = MIN_SUM + Math.round((MAX_SUM - MIN_SUM) * i / xTicks);
+        const x = margin.l + (w * (value - MIN_SUM) / (MAX_SUM - MIN_SUM));
+        ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.moveTo(x, margin.t); ctx.lineTo(x, margin.t + h); ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.fillText(String(value), x, margin.t + h + 22*dpr);
+      }
+
+      // 막대 (녹색 계열)
+      const binW = w / BINS;
+      for (let i=0;i<BINS;i++){
+        const density = sessions === 0 ? 0 : counts[i] / sessions; // 합이 1인 밀도
+        const bh = h * (density / maxDensity);
+        const x = margin.l + i * binW + 0.5*dpr;
+        const y = margin.t + h - bh;
+        const inset = Math.max(0.15*binW, 1*dpr);
+        const width = Math.max(binW - inset, 1.5*dpr);
+        const grad = ctx.createLinearGradient(0,y,0,y+bh);
+        grad.addColorStop(0, 'rgba(34,197,94,0.95)'); // #22c55e
+        grad.addColorStop(1, 'rgba(34,197,94,0.20)');
+        ctx.fillStyle = grad;
+        roundRect(ctx, x, y, width, bh, 4*dpr); ctx.fill();
+      }
+
+      // x축 라벨
+      ctx.fillStyle = 'rgba(148,163,184,.85)';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.font = (12*dpr)+'px "Noto Sans KR", system-ui';
+      ctx.fillText('합', margin.l + w/2, margin.t + h + 36*dpr);
+    }
+
+    function roundRect(ctx, x, y, w, h, r){
+      r = Math.min(r, w/2, h/2);
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.arcTo(x+w, y, x+w, y+h, r);
+      ctx.arcTo(x+w, y+h, x, y+h, r);
+      ctx.arcTo(x, y+h, x, y, r);
+      ctx.arcTo(x, y, x+w, y, r);
+      ctx.closePath();
+    }
+
+    // ===== 초기 렌더 =====
+    speedLabel.textContent = String(speed);
+    renderProbCells();
+    drawSum();
+  </script>
+</body>
+</html>
