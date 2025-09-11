@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IS–LM | 거시경제학</title>
+  <meta name="description" content="IS–LM 모형 하위 주제(도출)로 이동하세요." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- 공통 리소스: 상대경로 필수 -->
+  <link rel="stylesheet" href="../../assets/style.css" />
+
+  <!-- 카드 숨김/수식용 간단 스타일 -->
+  <style>
+    .is-hidden { display: none !important; }
+    /* 간단한 분수 표현 (JS/LaTeX 없이 모든 브라우저에서 동작) */
+    .frac { display:inline-block; vertical-align:middle; text-align:center; }
+    .frac .num { display:block; padding:0 2px; }
+    .frac .den { display:block; border-top:1px solid currentColor; line-height:1.1; padding:0 2px; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>IS–LM</h1>
+  </header>
+
+  <main class="grid">
+    <section class="card" aria-labelledby="islm-intro-title">
+      <h2 id="islm-intro-title">개요</h2>
+      <p>재화시장(<strong>IS</strong>)과 화폐시장(<strong>LM</strong>)의 동시균형으로 산출 <em>Y</em>와 이자율 <em>r</em>이 결정되는 기본 거시 모형.</p>
+      <ul>
+        <li>재화시장 균형( IS ): <em>Y = C(Y - T) + I(r) + G</em></li>
+        <li>화폐시장 균형( LM ): <em>\( M/P = L(Y, r) \)</em></li>
+        <li>정책 변수: <em>G, T, M, P</em> &nbsp;|&nbsp; 내생 변수: <em>Y, r</em></li>
+      </ul>
+      <!-- 안내 문구 불필요로 미표기 -->
+    </section>
+
+    <!-- 하위 주제 카드: data-section 부여 -->
+    <a class="card" href="islm_gen/" data-section="islm_gen" aria-label="IS-LM 도출로 이동">
+      <div class="emoji" aria-hidden="true">🧭</div>
+      <h2>IS-LM 도출</h2>
+      <p>모형 가정에서 IS와 LM 곡선을 단계적으로 도출</p>
+    </a>
+  </main>
+
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+  </footer>
+
+  <!-- ✅ 하위 주제 가시성 토글: true면 보임, false면 숨김 -->
+  <script>
+    /* 🔧 여기에서 true/false만 바꾸세요 */
+    window.SECTION_VISIBILITY = {
+      islm_gen: true // IS-LM 도출
+    };
+
+    // 렌더 직후 적용: false인 카드를 완전히 숨김(시각/키보드 접근 차단)
+    (function () {
+      var flags = window.SECTION_VISIBILITY || {};
+      var cards = document.querySelectorAll('[data-section]');
+      cards.forEach(function(card){
+        var key = card.getAttribute('data-section');
+        if (flags[key] === false) {
+          card.classList.add('is-hidden');
+          card.setAttribute('aria-hidden', 'true');
+        }
+      });
+    })();
+  </script>
+
+  <!-- 공통 스크립트: 상대경로 + 지연 로드 -->
+  <script src="../../assets/site.js" defer></script>
+</body>
+</html>

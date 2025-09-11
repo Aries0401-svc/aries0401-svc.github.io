@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IS–LM 인터랙티브 | Macro</title>
+  <meta name="description" content="IS–45°선/LM 단일 패널과 IS–LM 평면을 동기화해 토글·순차 애니메이션으로 보여줍니다.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../assets/style.css">
+  <link rel="icon" href="data:,">
+
+  <style>
+    /* ——— 페이지 전용 ——— */
+    main.grid.two-col{ grid-template-columns:minmax(300px,460px) 1fr; }
+    @media (max-width:980px){ main.grid.two-col{ grid-template-columns:1fr; } }
+
+    .islm{
+      --is: var(--primary);
+      --is-light:#93c5fd;
+      --lm:#22c55e;
+      --lm-light:#86efac;
+      --diag:#a78bfa;
+      --eq:#fbbf24;
+      --axis:var(--muted);
+    }
+
+    .islm .controls{ display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:56px; }
+    .islm .toggle{ display:flex; gap:8px; flex-wrap:wrap; }
+    .islm .toggle button{
+      border:1px solid rgba(255,255,255,.12);
+      background:transparent; color:var(--text);
+      padding:8px 12px; border-radius:12px; cursor:pointer; font-weight:700;
+      box-shadow:var(--shadow); transition:transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+    @media (prefers-color-scheme:light){ .islm .toggle button{ border-color:rgba(2,6,23,.12); } }
+    .islm .toggle button.active{ background:rgba(148,163,184,.12); }
+    .islm .toggle button:focus-visible{ outline:0; box-shadow:0 0 0 6px var(--ring), var(--shadow); }
+
+    .islm .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background:var(--panel); color:var(--text);
+      padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer;
+      box-shadow:var(--shadow);
+      transition:transform .15s ease, border-color .15s ease, background .15s ease, opacity .15s ease;
+    }
+    @media (prefers-color-scheme:light){ .islm .btn{ border-color:rgba(2,6,23,.12); } }
+    .islm .btn:hover{ transform:translateY(-1px); border-color:rgba(106,169,255,.45); }
+    .islm .btn:focus-visible{ outline:0; box-shadow:0 0 0 6px var(--ring), var(--shadow); }
+    .islm .btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+    .islm .btn.primary{ background:linear-gradient(180deg, rgba(106,169,255,.22), rgba(106,169,255,.08)); border-color:rgba(106,169,255,.45); }
+    .islm .btn.success{ background:linear-gradient(180deg, rgba(34,197,94,.25), rgba(34,197,94,.10)); border-color:rgba(34,197,94,.45); }
+    .islm .btn.ghost{ background:transparent; }
+
+    .islm .legend{ display:flex; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:12px; }
+    .islm .badge{ display:inline-flex; align-items:center; gap:6px; }
+    .islm .dot{ width:9px; height:9px; border-radius:50%; }
+    .islm .dot.ae0{ background:var(--is-light); }
+    .islm .dot.ae1{ background:var(--is); }
+    .islm .dot.md0{ background:var(--lm-light); }
+    .islm .dot.md1{ background:var(--lm); }
+    .islm .dot.base{ background:var(--eq); }
+    .islm .dot.diag{ background:var(--diag); }
+
+    .islm svg{ width:100%; height:auto; display:block; border-radius:12px; background:var(--panel); }
+    .islm .subtitle{ color:var(--muted); font-size:12px; }
+    [hidden]{ display:none !important; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>IS–LM 인터랙티브</h1>
+    <p class="subtitle">토글로 좌측 단일 모형(IS–45°선 / LM–유동성선호) ↔ 우측 IS–LM 평면을 연동</p>
+  </header>
+
+  <main class="grid two-col islm">
+    <section class="card" aria-labelledby="left-title">
+      <h2 id="left-title">모형 패널 <span class="subtitle" id="mode-label">IS–45°선</span></h2>
+      <div class="controls">
+        <div class="toggle" role="tablist" aria-label="모형 전환">
+          <button id="btn-mode-is" class="active" role="tab" aria-selected="true">IS-45도선 모형</button>
+          <button id="btn-mode-lm" role="tab" aria-selected="false">LM-유동성 선호설</button>
+        </div>
+
+        <div id="actions-cross" style="display:flex; gap:8px">
+          <button id="btn-rate-down" class="btn primary" aria-label="이자율 하락 시나리오">이자율 ↓</button>
+          <button id="btn-reset-cross" class="btn ghost" title="초기 상태로">리셋</button>
+        </div>
+        <div id="actions-money" style="display:none; gap:8px">
+          <button id="btn-y-up" class="btn success" title="소득 증가 시나리오">Y 늘리기</button>
+          <button id="btn-reset-money" class="btn ghost" title="초기 상태로">리셋</button>
+        </div>
+      </div>
+
+      <svg id="svg-left" viewBox="0 0 760 560" aria-label="단일 모형 그래프"></svg>
+
+      <div class="legend" style="margin-top:10px">
+        <div id="legend-cross">
+          <span class="badge"><span class="dot ae0"></span>초기 AE</span>
+          <span class="badge"><span class="dot ae1"></span>이자율 하락 후 AE</span>
+          <span class="badge"><span class="dot diag"></span>45°선</span>
+          <span class="badge"><span class="dot base"></span>균형점</span>
+        </div>
+        <div id="legend-money" hidden>
+          <span class="badge"><span class="dot md0"></span>L(Y₀)</span>
+          <span class="badge"><span class="dot md1"></span>L(Y↑)</span>
+          <span class="badge"><span class="dot base"></span>균형점</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="right-title">
+      <h2 id="right-title">IS–LM 평면 <span class="subtitle">(i vs Y · 전체 직선)</span></h2>
+      <svg id="svg-islm" viewBox="0 0 760 560" aria-label="IS–LM 그래프"></svg>
+      <div class="legend" style="margin-top:6px">
+        <span class="badge"><span class="dot base"></span>초기/후기 점</span>
+        <span class="badge"><span class="dot ae1"></span>IS(전체 직선)</span>
+        <span class="badge"><span class="dot md1"></span>LM(전체 직선)</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="card" href="../" style="display:inline-block;padding:12px 18px;">← 이전으로</a>
+    <a class="card" href="../../../" style="display:inline-block;padding:12px 18px;">← 처음으로</a>
+  </footer>
+
+  <script src="../../../assets/site.js" defer></script>
+
+  <script>
+  (()=>{
+    const scale={ Ymax:100, imax:0.20, Mmax:40 };
+    const cross={ Abar:20, c:0.6, deltaAE:18 };
+    const money={ a:0.03, Mbar:15 };
+    const deltas={ dI:0.04, dY:20 };
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    const EASE=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+    function tween({from=0,to=1,duration=800,ease=EASE,onUpdate=()=>{},onComplete=()=>{}}){
+      if(prefersReduced||duration<=0){ onUpdate(to,1); onComplete(); return; }
+      const start=performance.now();
+      function frame(now){ const p=Math.min(1,(now-start)/duration), v=from+(to-from)*ease(p);
+        onUpdate(v,p); if(p<1) requestAnimationFrame(frame); else onComplete(); }
+      requestAnimationFrame(frame);
+    }
+
+    // SVG 유틸
+    function el(tag,attrs={},children=[]){ const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+      for(const[k,v] of Object.entries(attrs)) e.setAttribute(k,v); for(const c of children) e.appendChild(c); return e; }
+    function line(x1,y1,x2,y2,stroke='var(--axis)',w=1.6,dash=''){ const a={x1,y1,x2,y2,stroke,'stroke-width':w}; if(dash) a['stroke-dasharray']=dash; return el('line',a); }
+    function circ(cx,cy,r,fill){ return el('circle',{cx,cy,r,fill}); }
+    function text(x,y,t,fill='var(--text)',fs=12,anchor='start'){ const T=el('text',{x,y,fill,'font-size':fs,'dominant-baseline':'middle'}); T.setAttribute('text-anchor',anchor); T.textContent=t; return T; }
+    function labelPill(g,str,x,y,fs=16,anchor='start'){
+      const T=text(x,y,str,'var(--text)',fs,anchor); g.appendChild(T);
+      const bb=T.getBBox(), padX=8, padY=6;
+      const R=el('rect',{x:bb.x-padX,y:bb.y-padY,width:bb.width+2*padX,height:bb.height+2*padY,fill:'var(--panel)',opacity:.9,stroke:'rgba(255,255,255,.12)','stroke-width':1,rx:8});
+      g.insertBefore(R,T); return T;
+    }
+    function scaler(xmax,ymax,pad,W,H){ const w=W-pad.l-pad.r, h=H-pad.t-pad.b;
+      return { x:x=>pad.l+(x/xmax)*w, y:y=>pad.t+h-(y/ymax)*h, w, h, pad, W, H }; }
+
+    const Y0=cross.Abar/(1-cross.c);
+    const i0=(money.a*Y0)/money.Mbar;
+
+    // 상태 + 시나리오 1회 실행 플래그
+    const state={ mode:'IS', crossShift:0, yLift:Y0, isProg:0, lmProg:0, isEnabled:false, lmEnabled:false, animating:false };
+    let ranIS=false, ranLM=false;
+
+    // 버튼 상태 갱신 (여기만 건드리면 됨)
+    function refreshButtons(){
+      const anim=state.animating;
+      // 액션: 이미 실행한 쪽만 잠금
+      document.getElementById('btn-rate-down').disabled = anim || ranIS;
+      document.getElementById('btn-y-up').disabled     = anim || ranLM;
+      // 리셋/모드: 애니 중만 잠금, 그 외엔 항상 가능
+      ['btn-reset-cross','btn-reset-money','btn-mode-is','btn-mode-lm'].forEach(id=>{
+        const b=document.getElementById(id); b.disabled = !!anim;
+      });
+    }
+
+    function setMode(newMode){
+      state.mode=newMode;
+      const isBtn=document.getElementById('btn-mode-is'), lmBtn=document.getElementById('btn-mode-lm');
+      isBtn.classList.toggle('active',newMode==='IS'); isBtn.setAttribute('aria-selected',newMode==='IS');
+      lmBtn.classList.toggle('active',newMode==='LM'); lmBtn.setAttribute('aria-selected',newMode==='LM');
+      document.getElementById('actions-cross').style.display=newMode==='IS'?'flex':'none';
+      document.getElementById('actions-money').style.display=newMode==='LM'?'flex':'none';
+      document.getElementById('legend-cross').hidden=!(newMode==='IS');
+      document.getElementById('legend-money').hidden=!(newMode==='LM');
+      document.getElementById('mode-label').textContent=newMode==='IS'?'IS–45°선':'LM–유동성 선호설';
+      drawLeft();
+      refreshButtons(); // 모드 전환 시도 때도 버튼 상태 재평가
+    }
+
+    // 좌측
+    const svgLeft=document.getElementById('svg-left'); const gLeft=el('g'); svgLeft.appendChild(gLeft);
+    function drawLeft(){ gLeft.innerHTML=''; if(state.mode==='IS') drawCross(); else drawMoney(); }
+
+    function drawCross(){
+      const pad={l:58,t:18,r:22,b:44}; const S=scaler(scale.Ymax,scale.Ymax,pad,760,560);
+      gLeft.appendChild(el('rect',{x:pad.l,y:pad.t,width:S.w,height:S.h,fill:'var(--panel)',rx:12}));
+      gLeft.appendChild(line(pad.l,S.y(0),pad.l+S.w,S.y(0)));
+      gLeft.appendChild(line(pad.l,S.y(0),pad.l,pad.t));
+      labelPill(gLeft,'AE',pad.l+18,pad.t+24,18,'start');
+      labelPill(gLeft,'Y', pad.l+S.w-18,S.y(0)-22,18,'end');
+
+      // 45°선
+      gLeft.appendChild(line(S.x(0),S.y(0),S.x(scale.Ymax),S.y(scale.Ymax),'var(--diag)',2,'6 4'));
+
+      const AE=(Y,A)=>A+cross.c*Y;
+      gLeft.appendChild(line(S.x(0),S.y(AE(0,cross.Abar)),S.x(scale.Ymax),S.y(AE(scale.Ymax,cross.Abar)),'var(--is-light)',3));
+
+      const p0={x:S.x(Y0),y:S.y(Y0)}; gLeft.appendChild(circ(p0.x,p0.y,5,'var(--eq)')); gLeft.appendChild(text(p0.x+8,p0.y-10,'E₀','var(--text)',12));
+
+      if(state.crossShift>0){
+        const A1=cross.Abar+state.crossShift;
+        gLeft.appendChild(line(S.x(0),S.y(AE(0,A1)),S.x(scale.Ymax),S.y(AE(scale.Ymax,A1)),'var(--is)',3.2));
+        const Y1=A1/(1-cross.c); const p1={x:S.x(Y1),y:S.y(Y1)}; gLeft.appendChild(circ(p1.x,p1.y,5,'var(--eq)'));
+      }
+    }
+
+    function drawMoney(){
+      const pad={l:66,t:18,r:22,b:44}; const S=scaler(scale.Mmax,scale.imax,pad,760,560);
+      gLeft.appendChild(el('rect',{x:pad.l,y:pad.t,width:S.w,height:S.h,fill:'var(--panel)',rx:12}));
+      gLeft.appendChild(line(pad.l,S.y(0),pad.l+S.w,S.y(0)));
+      gLeft.appendChild(line(pad.l,S.y(0),pad.l,pad.t));
+      labelPill(gLeft,'i',pad.l+18,pad.t+24,18,'start');
+      labelPill(gLeft,'M/P',pad.l+S.w-18,S.y(0)-22,18,'end');
+
+      const xMs=S.x(money.Mbar); gLeft.appendChild(line(xMs,pad.t,xMs,pad.t+S.h,'rgba(148,163,184,.7)',2,'3 3'));
+
+      function drawDemand(Y,color){
+        const pts=[]; const i_min=Math.max(0.01,(money.a*Y)/scale.Mmax+1e-4);
+        for(let i=scale.imax;i>=i_min;i-=0.002){ const M=(money.a*Y)/i; pts.push([S.x(M),S.y(i)]); }
+        for(let k=1;k<pts.length;k++) gLeft.appendChild(line(pts[k-1][0],pts[k-1][1],pts[k][0],pts[k][1],color,3));
+      }
+      drawDemand(Y0,'var(--lm-light)');
+      const i_eq0=(money.a*Y0)/money.Mbar; gLeft.appendChild(circ(xMs,S.y(i_eq0),5,'var(--eq)'));
+
+      if(state.yLift>Y0){
+        drawDemand(state.yLift,'var(--lm)');
+        const i_eq1=(money.a*state.yLift)/money.Mbar; gLeft.appendChild(circ(xMs,S.y(i_eq1),5,'var(--eq)'));
+      }
+    }
+
+    // 우측
+    const svgISLM=document.getElementById('svg-islm'); const gISLM=el('g'); svgISLM.appendChild(gISLM);
+    function drawISLM(){
+      gISLM.innerHTML='';
+      const pad={l:58,t:18,r:22,b:44}; const S=scaler(scale.Ymax,scale.imax,pad,760,560);
+      gISLM.appendChild(el('rect',{x:pad.l,y:pad.t,width:S.w,height:S.h,fill:'var(--panel)',rx:12}));
+      gISLM.appendChild(line(pad.l,S.y(0),pad.l+S.w,S.y(0)));
+      gISLM.appendChild(line(pad.l,S.y(0),pad.l,pad.t));
+      labelPill(gISLM,'i',pad.l+18,pad.t+24,18,'start');
+      labelPill(gISLM,'Y',pad.l+S.w-18,S.y(0)-22,18,'end');
+
+      gISLM.appendChild(circ(S.x(Y0),S.y(i0),6,'var(--eq)'));
+
+      if(state.isEnabled){
+        const A1=cross.Abar+state.crossShift; const Y1=A1/(1-cross.c);
+        const i1=Math.max(0,i0-deltas.dI);
+        const m=(i1-i0)/(Y1-Y0||1e-6);
+        const iAt=Y=> i0+m*(Y-Y0);
+        const pA={x:S.x(0), y:S.y(Math.max(0,Math.min(scale.imax,iAt(0))))};
+        const pB={x:S.x(scale.Ymax), y:S.y(Math.max(0,Math.min(scale.imax,iAt(scale.Ymax))))};
+        const L=Math.hypot(pB.x-pA.x,pB.y-pA.y);
+        const IS=line(pA.x,pA.y,pB.x,pB.y,'var(--is)',3,`${L} ${L}`); IS.setAttribute('stroke-dashoffset',L-L*state.isProg); gISLM.appendChild(IS);
+        gISLM.appendChild(circ(S.x(Y1),S.y(i1),5,'var(--eq)'));
+        const t=.14, lx=pA.x+(pB.x-pA.x)*t, ly=pA.y+(pB.y-pA.y)*t; gISLM.appendChild(text(lx+10,ly-10,'IS','var(--is)',13));
+      }
+
+      if(state.lmEnabled){
+        const slope=money.a/money.Mbar;
+        const pA={x:S.x(0),y:S.y(0)}, pB={x:S.x(scale.Ymax),y:S.y(Math.min(scale.imax,slope*scale.Ymax))};
+        const L=Math.hypot(pB.x-pA.x,pB.y-pA.y);
+        const LM=line(pA.x,pA.y,pB.x,pB.y,'var(--lm)',3,`${L} ${L}`); LM.setAttribute('stroke-dashoffset',L-L*state.lmProg); gISLM.appendChild(LM);
+        const Y1=Math.min(scale.Ymax,Y0+deltas.dY), i1=slope*Y1; gISLM.appendChild(circ(S.x(Y1),S.y(i1),5,'var(--eq)'));
+        gISLM.appendChild(text(pB.x-26,pB.y+16,'LM','var(--lm)',13,'end'));
+      }
+    }
+
+    // 초기 렌더/바인딩
+    drawLeft(); drawISLM(); refreshButtons();
+    document.getElementById('btn-mode-is').addEventListener('click',()=>setMode('IS'));
+    document.getElementById('btn-mode-lm').addEventListener('click',()=>setMode('LM'));
+
+    // 시나리오(원샷)
+    const D1=prefersReduced?0:900, D2=prefersReduced?0:800;
+
+    document.getElementById('btn-rate-down').addEventListener('click',()=>{
+      if(state.animating || ranIS) return;
+      state.animating=true; refreshButtons(); setMode('IS');
+      tween({from:state.crossShift,to:cross.deltaAE,duration:D1,onUpdate:v=>{state.crossShift=v; drawLeft();},onComplete:()=>{
+        state.isEnabled=true; state.isProg=0; drawISLM();
+        tween({from:0,to:1,duration:D2,onUpdate:p=>{state.isProg=p; drawISLM();},onComplete:()=>{
+          state.animating=false; ranIS=true; refreshButtons();
+        }});
+      }});
+    });
+
+    document.getElementById('btn-reset-cross').addEventListener('click',()=>{
+      if(state.animating) return;
+      state.animating=true; refreshButtons();
+      tween({from:state.isProg,to:0,duration:500,onUpdate:p=>{state.isProg=p; drawISLM();},onComplete:()=>{
+        state.isEnabled=false; drawISLM();
+        tween({from:state.crossShift,to:0,duration:600,onUpdate:v=>{state.crossShift=v; drawLeft();},onComplete:()=>{
+          state.animating=false; ranIS=false; setMode('IS'); refreshButtons();
+        }});
+      }});
+    });
+
+    document.getElementById('btn-y-up').addEventListener('click',()=>{
+      if(state.animating || ranLM) return;
+      state.animating=true; refreshButtons(); setMode('LM');
+      tween({from:state.yLift,to:Math.min(scale.Ymax,Y0+deltas.dY),duration:D1,onUpdate:v=>{state.yLift=v; drawLeft();},onComplete:()=>{
+        state.lmEnabled=true; state.lmProg=0; drawISLM();
+        tween({from:0,to:1,duration:D2,onUpdate:p=>{state.lmProg=p; drawISLM();},onComplete:()=>{
+          state.animating=false; ranLM=true; refreshButtons();
+        }});
+      }});
+    });
+
+    document.getElementById('btn-reset-money').addEventListener('click',()=>{
+      if(state.animating) return;
+      state.animating=true; refreshButtons();
+      tween({from:state.lmProg,to:0,duration:500,onUpdate:p=>{state.lmProg=p; drawISLM();},onComplete:()=>{
+        state.lmEnabled=false; drawISLM();
+        tween({from:state.yLift,to:Y0,duration:600,onUpdate:v=>{state.yLift=v; drawLeft();},onComplete:()=>{
+          state.animating=false; ranLM=false; setMode('LM'); refreshButtons();
+        }});
+      }});
+    });
+
+    setMode('IS');
+  })();
+  </script>
+</body>
+</html>
