@@ -29,13 +29,14 @@
     /* 좌측: 확률 그리드 & 막대 차트 */
     .prob-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
     .prob-item{ background: var(--panel); border:1px solid rgba(255,255,255,.06);
-                border-radius:12px; padding:12px; cursor:pointer; box-shadow: var(--shadow); }
+                border-radius:12px; padding:12px; cursor:default; box-shadow: var(--shadow); }
     @media (prefers-color-scheme: light){
       .prob-item{ border-color: rgba(2,6,23,.12); }
     }
     .prob-item h4{ margin:0 0 8px 0; font-size:14px; color: var(--muted); }
     .units{ display:grid; grid-template-columns: repeat(6, 1fr); gap:6px; margin-top:8px; }
-    .unit{ height:14px; border-radius:999px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .unit{ display:block; width:100%; height:14px; padding:0; border-radius:999px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); cursor:pointer; }
+    .unit:focus-visible{ outline:2px solid rgba(106,169,255,.7); outline-offset:1px; }
     .unit.filled{ background: linear-gradient(180deg, var(--primary), rgba(106,169,255,.35)); border-color: rgba(106,169,255,.45); }
 
     /* 버튼 */
@@ -78,7 +79,7 @@
     <section class="card" aria-label="주사위 확률 설정">
       <div class="badge">🎲 주사위 확률 설정</div>
       <!-- 요청 3: 힌트 문구 교체 -->
-      <p class="hint" style="margin-top:8px">좌클릭: 증가 / 우클릭: 감소</p>
+      <p class="hint" style="margin-top:8px">원하는 칸을 클릭하면 해당 면의 확률이 설정됩니다</p>
 
       <div class="actions" style="margin-top:10px">
         <button id="btnUniform" class="btn">균등 분포(2/12)</button>
@@ -206,7 +207,10 @@
     function faceHTML(i){
       const k = countsUnits[i];
       let units='';
-      for (let u=0; u<TOTAL_UNITS; u++) units += '<div class="unit ' + (u<k? 'filled':'') + '"></div>';
+      for (let u=0; u<TOTAL_UNITS; u++){
+        const filled = u < k ? ' filled' : '';
+        units += '<button type="button" class="unit' + filled + '" data-units="' + (u+1) + '" aria-label="' + (i+1) + '번 면 ' + (u+1) + '칸"></button>';
+      }
       return '<h4>'+(i+1)+'번 면</h4>'
            + '<div class="units">'+units+'</div>'
            + '<div class="small">'+k+'/'+TOTAL_UNITS+'</div>';
@@ -217,28 +221,60 @@
         const item = document.createElement('div');
         item.className = 'prob-item';
         item.innerHTML = faceHTML(i);
-        item.addEventListener('click', (e)=>{ if(e.shiftKey||e.altKey||e.metaKey||e.ctrlKey) adjustFace(i,-1); else adjustFace(i,+1); });
-        item.addEventListener('contextmenu', (e)=>{ e.preventDefault(); adjustFace(i,-1); });
+        const unitButtons = item.querySelectorAll('.unit');
+        unitButtons.forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetUnits = parseInt(btn.getAttribute('data-units'), 10);
+            setFaceUnits(i, targetUnits);
+          });
+        });
         probGrid.appendChild(item);
       }
       drawProb();
       updateStats();
     }
-    function adjustFace(i, delta){
-      if (delta>0){
-        // +1: 다른 면(최대 보유)에서 1칸 가져와 i에 더함
-        let donor=-1, max=-1;
-        for (let j=0;j<FACES;j++) if (j!==i && countsUnits[j]>max){ max=countsUnits[j]; donor=j; }
-        if (donor===-1 || countsUnits[donor]===0 || countsUnits[i]===TOTAL_UNITS) return;
-        countsUnits[donor]--; countsUnits[i]++;
-      } else if (delta<0){
-        // -1: i에서 1칸 빼서 다른 면(최소 보유)에 더함
-        if (countsUnits[i]===0) return;
-        let receiver=-1, min=Infinity;
-        for (let j=0;j<FACES;j++) if (j!==i && countsUnits[j]<min){ min=countsUnits[j]; receiver=j; }
-        if (receiver===-1 || countsUnits[receiver]===TOTAL_UNITS) return;
-        countsUnits[i]--; countsUnits[receiver]++;
-      } else { return; }
+    function setFaceUnits(faceIdx, targetUnits){
+      const clamped = Math.max(0, Math.min(TOTAL_UNITS, targetUnits));
+      const current = countsUnits[faceIdx];
+      if (clamped === current) return;
+
+      if (clamped > current){
+        let needed = clamped - current;
+        while (needed > 0){
+          let donor = -1;
+          let max = -1;
+          for (let j=0;j<FACES;j++){
+            if (j === faceIdx) continue;
+            if (countsUnits[j] > max){
+              max = countsUnits[j];
+              donor = j;
+            }
+          }
+          if (donor === -1 || countsUnits[donor] === 0) break;
+          countsUnits[donor]--;
+          needed--;
+        }
+        countsUnits[faceIdx] = clamped - needed;
+      } else {
+        let spare = current - clamped;
+        countsUnits[faceIdx] = clamped;
+        while (spare > 0){
+          let receiver = -1;
+          let min = Infinity;
+          for (let j=0;j<FACES;j++){
+            if (j === faceIdx) continue;
+            if (countsUnits[j] < min){
+              min = countsUnits[j];
+              receiver = j;
+            }
+          }
+          if (receiver === -1) break;
+          countsUnits[receiver]++;
+          spare--;
+        }
+      }
+
       updateFromCounts();
       if (chkResetOnChange && chkResetOnChange.checked) reset();
       renderProbCells();
